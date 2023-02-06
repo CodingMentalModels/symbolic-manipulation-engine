@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 
 
 #[derive(Clone, Debug, Hash, PartialEq, Eq)]
@@ -52,6 +54,19 @@ impl SymbolNode {
         }
     }
 
+    pub fn relabel(&self, old_label: String, new_label: String) -> Self {
+        let new_children = self.children.iter().map(|child| child.relabel(old_label.clone(), new_label.clone())).collect();
+        if self.root == old_label {
+            Self::new(new_label, new_children)
+        } else {
+            Self::new( self.root.clone(), new_children)
+        }
+    }
+
+    pub fn relabel_all(&self, relabelling: Vec<(String, String)>) -> Self {
+        relabelling.into_iter().fold(self.clone(), |acc, (old_label, new_label)| acc.relabel(old_label, new_label))
+    }
+
 }
 
 
@@ -61,7 +76,7 @@ mod test_statement {
 
 
     #[test]
-    fn test_statement_initializes() {
+    fn test_symbol_node_initializes() {
 
         let a_equals_b_plus_c = SymbolNode::new(
             "=".to_string(), 
@@ -106,5 +121,85 @@ mod test_statement {
 
         assert_eq!(factorial_definition.get_depth(), 3);
         
+    }
+
+    #[test]
+    fn test_symbol_nodes_relabel() {
+        
+        let a_equals_b_plus_c = SymbolNode::new(
+            "=".to_string(), 
+            vec![
+                SymbolNode::leaf("a".to_string()),
+                SymbolNode::new(
+                    "+".to_string(),
+                    vec![
+                        SymbolNode::leaf("b".to_string()),
+                        SymbolNode::leaf("c".to_string())
+                    ]
+                )
+            ]
+        );
+
+        let x_equals_b_plus_c = a_equals_b_plus_c.relabel("a".to_string(), "x".to_string());
+        let expected = SymbolNode::new(
+            "=".to_string(), 
+            vec![
+                SymbolNode::leaf("x".to_string()),
+                SymbolNode::new(
+                    "+".to_string(),
+                    vec![
+                        SymbolNode::leaf("b".to_string()),
+                        SymbolNode::leaf("c".to_string())
+                    ]
+                )
+            ]
+        );
+        assert_eq!(x_equals_b_plus_c, expected);
+
+        let x_equals_y_plus_y = x_equals_b_plus_c
+            .relabel("b".to_string(), "y".to_string())
+            .relabel("c".to_string(), "y".to_string());
+        let expected = SymbolNode::new(
+            "=".to_string(), 
+            vec![
+                SymbolNode::leaf("x".to_string()),
+                SymbolNode::new(
+                    "+".to_string(),
+                    vec![
+                        SymbolNode::leaf("y".to_string()),
+                        SymbolNode::leaf("y".to_string())
+                    ]
+                )
+            ]
+        );
+        assert_eq!(x_equals_y_plus_y, expected);
+
+        let x_equals_x_plus_x = x_equals_y_plus_y
+            .relabel("y".to_string(), "x".to_string());
+        let expected = SymbolNode::new(
+            "=".to_string(), 
+            vec![
+                SymbolNode::leaf("x".to_string()),
+                SymbolNode::new(
+                    "+".to_string(),
+                    vec![
+                        SymbolNode::leaf("x".to_string()),
+                        SymbolNode::leaf("x".to_string())
+                    ]
+                )
+            ]
+        );
+        assert_eq!(x_equals_x_plus_x, expected);
+
+        let also_x_equals_x_plus_x = a_equals_b_plus_c
+            .relabel_all(vec![
+                ("b".to_string(), "x".to_string()),
+                ("c".to_string(), "x".to_string()),
+                ("a".to_string(), "x".to_string()),
+            ]
+        );
+
+        assert_eq!(x_equals_x_plus_x, also_x_equals_x_plus_x);
+
     }
 }
