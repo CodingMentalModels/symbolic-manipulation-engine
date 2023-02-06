@@ -36,7 +36,7 @@ $$
 \exists b \in \mathbb{Z} \enspace 2b = y \\
 z = 2a + 2b \\
 z = 2 \cdot (a + b) \\
-\exists c \in \mathbb{Z} c = a + b
+\exists c \in \mathbb{Z} \enspace c = a + b \\
 z \in 2\mathbb{Z}
 \end{align}
 $$
@@ -89,3 +89,7 @@ It's going to be convenient to be able to evaluate arithmatic.  Create an extens
 ### Further Ideas
 
 - Embed this into a text editor, e.g. Sublime, VSCode, Neovim
+- Automated Interpolation, e.g. we wouldn't want someone to have to spell out that:
+
+$(15 + 3x + (5 + (2x^2 - 4)) + 7) \implies (15 + 5 - 4 + 7) + 3x + 2x^2$, it should be interpolated.
+
