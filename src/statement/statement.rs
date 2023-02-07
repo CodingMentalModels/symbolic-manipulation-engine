@@ -2,26 +2,28 @@ use std::collections::HashMap;
 
 use crate::statement::symbol_type::Type;
 
+pub type SymbolName = String;
+
 #[derive(Clone, Debug, Default, Hash, PartialEq, Eq)]
 pub struct Symbol {
-    name: String,
+    name: SymbolName,
     symbol_type: Type,
 }
 
 impl Symbol {
     
-        pub fn new(name: String, symbol_type: Type) -> Self {
+        pub fn new(name: SymbolName, symbol_type: Type) -> Self {
             Self {
                 name,
                 symbol_type,
             }
         }
 
-        pub fn new_object(name: String) -> Self {
+        pub fn new_object(name: SymbolName) -> Self {
             Self::new(name, Type::default())
         }
     
-        pub fn get_name(&self) -> String {
+        pub fn get_name(&self) -> SymbolName {
             self.name.clone()
         }
     

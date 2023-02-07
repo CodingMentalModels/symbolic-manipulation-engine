@@ -50,7 +50,7 @@ impl Type {
                     format!("Object({})", args_string).to_string()
                 }
             },
-            Type::Type(name, parent) => {
+            Type::Type(name, _parent) => {
                 if args.len() == 0 {
                     name.clone()
                 } else {
