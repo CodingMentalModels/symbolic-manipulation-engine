@@ -24,6 +24,9 @@ Given an algebraic expression like \$x^3 - 3x^2 + 3x - 1\$, factor and simplify 
 
 Manipulations with complex numbers, manipulations with Eisenstein Integers, manipulations with Clifford Algebras, etc.  Because each of these can be defined via a series of formal transformations on symbols, this should all be possible.
 
+Example `Transformation`s:
+- $x \in \mathbb{Z}, y \in \mathbb{Z}, + \in +: \enspace x + y \implies y + x$
+
 ### Proofs
 
 Given several hypothesized statements, manipulate them to reach a new conclusion.  E.g. given: $ x \in 2\mathbb{Z}, \enspace y \in 2\mathbb{Z} $, we should be able to show that $x + y \in 2\mathbb{Z}$.  
@@ -49,13 +52,35 @@ Many other similar cases, including:
 
 In each case, the point is to have a `Context` (or several) which provide valid transformations of symbols in that context.  
 
+## Type System
+
+A type system is necessary because:
+- It allows us to constrain the types of valid transformations in a super useful way.
+- When we write math, we implicitly know what types things are, and notation, etc. reflects that.  
+
+Our type system should:
+- Allow for different "arities" of symbols; that is, how many "arguments" they take.  
+    - `5` has arity 0
+    - `+` has arity 2
+    - `!` (factorial) has arity 1
+- Allow for "return types", e.g. `+` returns a $\mathbb{R}$, a logical predicate returns a boolean. This allows nesting of `SymbolNode`s.
+- Model and enforce a type hierarchy, to allow e.g. $\mathbb{N} \subset \mathbb{Z} \subset \mathbb{Q} \subset \ldots$.  
+- Each "function signature" (i.e. arity, return type) gets its own hierarchy.  
+    - A 0-arity symbol with a return type is not the same as a 0-arity symbol of that type.  e.g. $x \in \mathbb{Z}$ and $y \in \cdot \mapsto \mathbb{Z}$ are considered different types.
+- Allow transformations to be predicated on the types of the variables involved.
 
 ## Features
 
 ### Core Manipulations
 
 - `Symbol`s are pure syntax; they have no inherent meaning but have `Type`s, format strings, and (optionally) `LaTeX` representations.
-- `Type`s are also purely syntactic; they restrict the types of transformations that are valid.
+- `Type`s are also purely syntactic; they restrict the types of transformations that are valid.  For example:
+    - Integer (arity = 0), e.g. 2, 5, -2, x
+    - 2 (arity = 0), uniquely corresponds to the number 2.  Has $2 \in \mathbb{Z} \subset \mathbb{Q} \subset \mathbb{R} \ldots$ etc. as part of its type hierarchy.
+    - Proposition (arity = 0), e.g. p, q
+    - `+` (arity = 2, variable types, but we can define it on e.g. Quaternions and it'll apply to everything else in the type hierarchy)
+    - Function (arity = 2, the domain and the range)
+
 - `Statement`s are trees of `Symbol`s
 - `Transformation`s are rules for mapping one or more `Statement`s to a new `Statement`.  
 - `Context`s are groups of saved, allowable `Transformation`s which can be imported and used, e.g. one might have a `Basic Algebra` `Context`, which can perform algebraic manipulations.
@@ -92,4 +117,3 @@ It's going to be convenient to be able to evaluate arithmatic.  Create an extens
 - Automated Interpolation, e.g. we wouldn't want someone to have to spell out that:
 
 $(15 + 3x + (5 + (2x^2 - 4)) + 7) \implies (15 + 5 - 4 + 7) + 3x + 2x^2$, it should be interpolated.
-
