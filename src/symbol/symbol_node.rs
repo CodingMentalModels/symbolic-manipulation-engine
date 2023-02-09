@@ -1,6 +1,6 @@
 use std::collections::{HashMap, HashSet};
 
-use crate::statement::symbol_type::Type;
+use crate::symbol::symbol_type::Type;
 
 pub type SymbolName = String;
 
