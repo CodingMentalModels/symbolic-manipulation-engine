@@ -26,6 +26,10 @@ impl Type {
         Type::Type(name, Box::new(Type::default()))
     }
 
+    pub fn new_generic_function(args: Vec<Self>, return_type: Self) -> Self {
+        Type::Generic(args, Box::new(return_type))
+    }
+
     pub fn new_generic_function_with_arguments(n_arguments: usize) -> Self {
         Type::Generic((0..n_arguments).map(|_| Type::default()).collect(), Box::new(Type::default()))
     }

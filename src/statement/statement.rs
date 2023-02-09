@@ -391,5 +391,20 @@ mod test_statement {
         );
         assert_eq!(a_equals_b_plus_c_valid_equals.get_incorrect_argument_types(), vec![].into_iter().collect());
 
+        let a_equals_b_plus_c_invalid_return_type = SymbolNode::new(
+            Symbol::new("=".to_string(), Type::new_generic_function(vec![Type::new_from_object("Specific".to_string()), Type::new_from_object("Specific".to_string())], Type::new_from_object("Specific".to_string()))),
+            vec![
+                SymbolNode::leaf_object("a".to_string()),
+                SymbolNode::new(
+                    Symbol::new("+".to_string(), Type::new_generic_function(vec![Type::default(), Type::default()], Type::new_from_object("Different Specific".to_string()))),
+                    vec![
+                        SymbolNode::leaf_object("b".to_string()),
+                        SymbolNode::leaf(Symbol::new("c".to_string(), Type::new_from_object("Variable".to_string())))
+                    ]
+                )
+            ]
+        );
+
+        assert_eq!(a_equals_b_plus_c_invalid_return_type.get_incorrect_argument_types(), vec!["=".to_string()].into_iter().collect());
     }
 }
