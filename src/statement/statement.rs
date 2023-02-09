@@ -4,33 +4,10 @@ use crate::statement::symbol_type::Type;
 
 pub type SymbolName = String;
 
-#[derive(Clone, Debug, Default, Hash, PartialEq, Eq)]
-pub struct Symbol {
-    name: SymbolName,
-    symbol_type: Type,
-}
-
-impl Symbol {
-    
-        pub fn new(name: SymbolName, symbol_type: Type) -> Self {
-            Self {
-                name,
-                symbol_type,
-            }
-        }
-
-        pub fn new_object(name: SymbolName) -> Self {
-            Self::new(name, Type::default())
-        }
-    
-        pub fn get_name(&self) -> SymbolName {
-            self.name.clone()
-        }
-    
-        pub fn get_type(&self) -> Type {
-            self.symbol_type.clone()
-        }
-    
+#[derive(Clone, Debug, Hash, PartialEq, Eq)]
+pub enum SymbolNodeError {
+    IncorrectArgumentTypes(Vec<String>),
+    TypeConflicts(Vec<String>),
 }
 
 #[derive(Clone, Debug, Hash, PartialEq, Eq)]
@@ -112,6 +89,20 @@ impl SymbolNode {
         relabelling.into_iter().fold(self.clone(), |acc, (old_label, new_label)| acc.relabel(old_label, new_label))
     }
 
+    pub fn validate(&self) -> Result<(), SymbolNodeError> {
+        let type_conflicts = self.get_type_conflicts();
+        let incorrect_argument_types = self.get_incorrect_argument_types();
+
+        if type_conflicts.len() > 0 {
+            return Err(SymbolNodeError::TypeConflicts(type_conflicts.into_iter().map(|x| x.to_string()).collect()));
+        }
+        if incorrect_argument_types.len() > 0 {
+            return Err(SymbolNodeError::IncorrectArgumentTypes(incorrect_argument_types.into_iter().map(|x| x.to_string()).collect()));
+        }
+
+        Ok(())
+    }
+
     pub fn get_type_conflicts(&self) -> HashSet<SymbolName> {
         let mut to_return: HashSet<_> = Vec::new().into_iter().collect();
         let mut type_map = HashMap::new();
@@ -145,6 +136,35 @@ impl SymbolNode {
         return to_return;
     }
 
+}
+
+#[derive(Clone, Debug, Default, Hash, PartialEq, Eq)]
+pub struct Symbol {
+    name: SymbolName,
+    symbol_type: Type,
+}
+
+impl Symbol {
+    
+        pub fn new(name: SymbolName, symbol_type: Type) -> Self {
+            Self {
+                name,
+                symbol_type,
+            }
+        }
+
+        pub fn new_object(name: SymbolName) -> Self {
+            Self::new(name, Type::default())
+        }
+    
+        pub fn get_name(&self) -> SymbolName {
+            self.name.clone()
+        }
+    
+        pub fn get_type(&self) -> Type {
+            self.symbol_type.clone()
+        }
+    
 }
 
 
