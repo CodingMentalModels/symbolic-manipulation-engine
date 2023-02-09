@@ -52,6 +52,22 @@ Many other similar cases, including:
 
 In each case, the point is to have a `Context` (or several) which provide valid transformations of symbols in that context.  
 
+## Type System
+
+A type system is necessary because:
+- It allows us to constrain the types of valid transformations in a super useful way.
+- When we write math, we implicitly know what types things are, and notation, etc. reflects that.  
+
+Our type system should:
+- Allow for different "arities" of symbols; that is, how many "arguments" they take.  
+    - `5` has arity 0
+    - `+` has arity 2
+    - `!` (factorial) has arity 1
+- Allow for "return types", e.g. `+` returns a $\mathbb{R}$, a logical predicate returns a boolean. This allows nesting of `SymbolNode`s.
+- Model and enforce a type hierarchy, to allow e.g. $\mathbb{N} \subset \mathbb{Z} \subset \mathbb{Q} \subset \ldots$.  
+- Each "function signature" (i.e. arity, return type) gets its own hierarchy.  
+    - A 0-arity symbol with a return type is not the same as a 0-arity symbol of that type.  e.g. $x \in \mathbb{Z}$ and $y \in \cdot \mapsto \mathbb{Z}$ are considered different types.
+- Allow transformations to be predicated on the types of the variables involved.
 
 ## Features
 
@@ -101,4 +117,3 @@ It's going to be convenient to be able to evaluate arithmatic.  Create an extens
 - Automated Interpolation, e.g. we wouldn't want someone to have to spell out that:
 
 $(15 + 3x + (5 + (2x^2 - 4)) + 7) \implies (15 + 5 - 4 + 7) + 3x + 2x^2$, it should be interpolated.
-

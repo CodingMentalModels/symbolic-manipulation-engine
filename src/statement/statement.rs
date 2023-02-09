@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 
 use crate::statement::symbol_type::Type;
 
@@ -57,7 +57,7 @@ impl SymbolNode {
     }
 
     pub fn new_object(root: String, children: Vec<Self>) -> Self {
-        Self::new(Symbol::new_object(root), children)
+        Self::new(Symbol::new(root, Type::new_generic_function_with_arguments(children.len())), children)
     }
 
     pub fn leaf_object(root: String) -> Self {
@@ -78,6 +78,14 @@ impl SymbolNode {
 
     pub fn get_n_children(&self) -> usize {
         self.children.len()
+    }
+
+    pub fn get_symbols(&self) -> Vec<Symbol> {
+        let mut result = vec![self.root.clone()];
+        for child in &self.children {
+            result.extend(child.get_symbols());
+        }
+        result
     }
 
     pub fn to_symbol_string(&self) -> String {
@@ -102,6 +110,39 @@ impl SymbolNode {
 
     pub fn relabel_all(&self, relabelling: Vec<(String, String)>) -> Self {
         relabelling.into_iter().fold(self.clone(), |acc, (old_label, new_label)| acc.relabel(old_label, new_label))
+    }
+
+    pub fn get_type_conflicts(&self) -> HashSet<SymbolName> {
+        let mut to_return: HashSet<_> = Vec::new().into_iter().collect();
+        let mut type_map = HashMap::new();
+        for symbol in self.get_symbols() {
+            if type_map.contains_key(&symbol.get_name()) {
+                if type_map.get(&symbol.get_name()).unwrap() != &symbol.get_type() {
+                    to_return.insert(symbol.get_name());
+                }
+            } else {
+                type_map.insert(symbol.get_name(), symbol.get_type());
+            }
+        }
+
+        return to_return;
+    }
+
+    pub fn get_incorrect_argument_types(&self) -> HashSet<SymbolName> {
+        let mut to_return: HashSet<_> = Vec::new().into_iter().collect();
+
+        let argument_types_from_type = self.root.get_type().get_argument_types();
+        let argument_types_from_children = self.children.iter().map(|child| child.root.get_type()).collect::<Vec<_>>();
+
+        if !Type::are_pairwise_allowed_to_take(argument_types_from_type, argument_types_from_children) {
+            to_return.insert(self.root.get_name());
+        }
+
+        for child in &self.children {
+            to_return.extend(child.get_incorrect_argument_types());
+        }
+
+        return to_return;
     }
 
 }
@@ -237,6 +278,118 @@ mod test_statement {
         );
 
         assert_eq!(x_equals_x_plus_x, also_x_equals_x_plus_x);
+
+    }
+
+    #[test]
+    fn test_symbol_node_identifies_conflicts() {
+
+        let a_equals_b_plus_c = SymbolNode::new_object(
+            "=".to_string(), 
+            vec![
+                SymbolNode::leaf_object("a".to_string()),
+                SymbolNode::new_object(
+                    "+".to_string(),
+                    vec![
+                        SymbolNode::leaf_object("b".to_string()),
+                        SymbolNode::leaf(Symbol::new("c".to_string(), Type::new_from_object("Variable".to_string())))
+                    ]
+                )
+            ]
+        );
+        assert_eq!(a_equals_b_plus_c.get_type_conflicts(), vec![].into_iter().collect());
+
+        let a_equals_b_plus_a = SymbolNode::new_object(
+            "=".to_string(), 
+            vec![
+                SymbolNode::leaf_object("a".to_string()),
+                SymbolNode::new_object(
+                    "+".to_string(),
+                    vec![
+                        SymbolNode::leaf_object("b".to_string()),
+                        SymbolNode::leaf_object("a".to_string())
+                    ]
+                )
+            ]
+        );
+        assert_eq!(a_equals_b_plus_a.get_type_conflicts(), vec![].into_iter().collect());
+
+        let a_equals_b_plus_a_conflicting = SymbolNode::new_object(
+            "=".to_string(), 
+            vec![
+                SymbolNode::leaf_object("a".to_string()),
+                SymbolNode::new_object(
+                    "+".to_string(),
+                    vec![
+                        SymbolNode::leaf_object("b".to_string()),
+                        SymbolNode::leaf(Symbol::new("a".to_string(), Type::new_from_object("Variable".to_string())))
+                    ]
+                )
+            ]
+        );
+        assert_eq!(a_equals_b_plus_a_conflicting.get_type_conflicts(), vec!["a".to_string()].into_iter().collect());
+        
+    }
+
+    #[test]
+    fn test_symbol_node_identifies_incorrect_argument_types() {
+
+        assert_eq!(SymbolNode::leaf_object("a".to_string()).get_incorrect_argument_types(), vec![].into_iter().collect());
+        assert_eq!(SymbolNode::leaf(Symbol::new("a".to_string(), Type::new_from_object("Variable".to_string()))).get_incorrect_argument_types(), vec![].into_iter().collect());
+        assert_eq!(
+            SymbolNode::new(
+                Symbol::new_object("a".to_string()),
+                vec![
+                    SymbolNode::leaf_object("b".to_string()),
+                    SymbolNode::leaf_object("c".to_string()),
+                ]
+            ).get_incorrect_argument_types(), vec!["a".to_string()].into_iter().collect());
+
+        assert_eq!(
+            SymbolNode::new(
+                Symbol::new("a".to_string(), Type::new_generic_function_with_arguments(3)),
+                vec![
+                    SymbolNode::leaf_object("b".to_string()),
+                    SymbolNode::leaf_object("c".to_string()),
+                ]
+         ).get_incorrect_argument_types(), vec!["a".to_string()].into_iter().collect());
+
+        let a_equals_b_plus_c = SymbolNode::new_object(
+            "=".to_string(), 
+            vec![
+                SymbolNode::leaf_object("a".to_string()),
+                SymbolNode::new_object(
+                    "+".to_string(),
+                    vec![
+                        SymbolNode::leaf_object("b".to_string()),
+                        SymbolNode::leaf(Symbol::new("c".to_string(), Type::new_from_object("Variable".to_string())))
+                    ]
+                )
+            ]
+        );
+
+        assert_eq!(a_equals_b_plus_c.get_incorrect_argument_types(), vec![].into_iter().collect());
+
+        let a_equals_b_plus_c_valid_equals = SymbolNode::new(
+            Symbol::new(
+                "=".to_string(), 
+                Type::new(
+                    "=".to_string(),
+                    Type::new_generic_function_with_arguments(2)
+                )
+            ),
+            vec![
+                SymbolNode::leaf_object("a".to_string()),
+                SymbolNode::new_object(
+                    "+".to_string(),
+                    vec![
+                        SymbolNode::leaf_object("b".to_string()),
+                        SymbolNode::leaf(Symbol::new("c".to_string(), Type::new_from_object("Variable".to_string())))
+                    ]
+                )
+            ],
+        );
+        assert_eq!(a_equals_b_plus_c_valid_equals.get_incorrect_argument_types(), vec![].into_iter().collect());
 
     }
 }
