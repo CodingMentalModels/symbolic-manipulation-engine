@@ -58,7 +58,7 @@ impl Transformation {
         let substituted_from = self.from.relabel_all(substitutions.clone().into_iter().collect());
         let substituted_to = self.to.relabel_all(substitutions.into_iter().collect());
 
-        if statement == substituted_from {
+        if statement.is_a_specific_case_of(&substituted_from) {
             Ok(substituted_to)
         } else {
             Err(TransformationError::StatementDoesNotMatch)

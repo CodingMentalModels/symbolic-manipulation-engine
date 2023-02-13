@@ -166,6 +166,20 @@ impl SymbolNode {
         return to_return;
     }
 
+    pub fn generalizes(&self, other: &Self) -> bool {
+        self.root.get_name() == other.root.get_name() && 
+        self.root.get_type().is_allowed_to_take(&other.root.get_type()) &&
+        self.children.len() == other.children.len() &&
+        self.children.iter().zip(other.children.iter()).all(|(x, y)| x.generalizes(y))
+    }
+
+    pub fn is_a_specific_case_of(&self, other: &Self) -> bool {
+        self.root.get_name() == other.root.get_name() && 
+        other.root.get_type().is_allowed_to_take(&self.root.get_type()) &&
+        self.children.len() == other.children.len() &&
+        self.children.iter().zip(other.children.iter()).all(|(x, y)| x.is_a_specific_case_of(y))
+    }
+
 }
 
 #[derive(Clone, Debug, Default, Hash, PartialEq, Eq)]
@@ -477,5 +491,10 @@ mod test_statement {
         );
 
         assert_eq!(a_equals_b_plus_c_invalid_return_type.get_incorrect_argument_types(), vec!["=".to_string()].into_iter().collect());
+    }
+
+    #[test]
+    fn test_generalizes() {
+        todo!("Generalizes and is_specific_instance_of seem not to be working.  Start here.")
     }
 }
