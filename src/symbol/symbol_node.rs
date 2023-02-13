@@ -54,8 +54,16 @@ impl SymbolNode {
         }
     }
 
+    pub fn get_children(&self) -> &Vec<SymbolNode> {
+        &self.children
+    }
+
     pub fn get_n_children(&self) -> usize {
         self.children.len()
+    }
+
+    pub fn get_symbol(&self) -> &Symbol {
+        &self.root
     }
 
     pub fn get_symbols(&self) -> HashSet<Symbol> {
