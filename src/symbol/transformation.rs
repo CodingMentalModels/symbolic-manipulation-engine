@@ -96,7 +96,7 @@ mod test_transformation {
 
         let transformed = transformation.transform(
             self_equals_statement.clone(),
-            vec![("a".to_string(), "a".to_string()), ("b".to_string(), "a".to_string())].into_iter().collect()
+            vec![("a".to_string(), "a".to_string()), ("b".to_string(), "a".to_string()), ("=".to_string(), "=".to_string())].into_iter().collect()
         );
         assert_eq!(transformed, Ok(self_equals_statement));
 
