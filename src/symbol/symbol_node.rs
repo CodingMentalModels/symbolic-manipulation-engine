@@ -1,13 +1,17 @@
 use std::collections::{HashMap, HashSet};
 
-use crate::statement::symbol_type::Type;
+use crate::symbol::symbol_type::Type;
 
 pub type SymbolName = String;
+pub type SymbolNodeAddress = Vec<usize>;
 
 #[derive(Clone, Debug, Hash, PartialEq, Eq)]
 pub enum SymbolNodeError {
     IncorrectArgumentTypes(Vec<String>),
     TypeConflicts(Vec<String>),
+    DifferentNumberOfArguments,
+    RelabellingNotInjective,
+    InvalidAddress,
 }
 
 #[derive(Clone, Debug, Hash, PartialEq, Eq)]
@@ -33,7 +37,7 @@ impl SymbolNode {
         Self::new(root, vec![SymbolNode::leaf(child)])
     }
 
-    pub fn new_object(root: String, children: Vec<Self>) -> Self {
+    pub fn new_generic(root: String, children: Vec<Self>) -> Self {
         Self::new(Symbol::new(root, Type::new_generic_function_with_arguments(children.len())), children)
     }
 
@@ -53,16 +57,76 @@ impl SymbolNode {
         }
     }
 
+    pub fn get_children(&self) -> &Vec<SymbolNode> {
+        &self.children
+    }
+
     pub fn get_n_children(&self) -> usize {
         self.children.len()
     }
 
-    pub fn get_symbols(&self) -> Vec<Symbol> {
+    pub fn get_symbol(&self) -> &Symbol {
+        &self.root
+    }
+
+    pub fn get_node(&self, address: SymbolNodeAddress) -> Option<Self> {
+        let mut current_node = self.clone();
+        for i in address {
+            if i < current_node.get_n_children() {
+                current_node = current_node.children[i].clone();
+            } else {
+                return None;
+            }
+        }
+        Some(current_node)
+    }
+
+    pub fn replace_node(&self, address: SymbolNodeAddress, new_node: SymbolNode) -> Result<Self, SymbolNodeError> {
+        let mut to_return = self.clone();
+        let mut current_node = &mut to_return;
+        for i in address {
+            if i < current_node.get_n_children() {
+                current_node = &mut current_node.children[i];
+            } else {
+                return Err(SymbolNodeError::InvalidAddress);
+            }
+        }
+        *current_node = new_node;
+
+        Ok(to_return)
+
+    }
+
+    pub fn find_where(&self, condition: &dyn Fn(Self) -> bool) -> HashSet<SymbolNodeAddress> {
+        let mut result = HashSet::new();
+        if condition(self.clone()) {
+            result.insert(Vec::new());
+        }
+        for (i, child) in self.children.iter().enumerate() {
+            let child_result = child.find_where(&condition);
+            for address in child_result {
+                let mut new_address = address.clone();
+                new_address.push(i);
+                result.insert(new_address);
+            }
+        }
+        result
+    }
+
+    pub fn find_symbol(&self, symbol: Symbol) -> HashSet<SymbolNodeAddress> {
+        self.find_where(&|node| node.root == symbol)
+    }
+
+    pub fn find_symbol_name(&self, symbol_name: String) -> HashSet<SymbolNodeAddress> {
+        self.find_where(&|node| node.root.get_name() == symbol_name)
+    }
+
+    pub fn get_symbols(&self) -> HashSet<Symbol> {
         let mut result = vec![self.root.clone()];
         for child in &self.children {
             result.extend(child.get_symbols());
         }
-        result
+        result.into_iter().collect()
     }
 
     pub fn to_symbol_string(&self) -> String {
@@ -77,16 +141,57 @@ impl SymbolNode {
     }
 
     pub fn relabel(&self, old_label: String, new_label: String) -> Self {
-        let new_children = self.children.iter().map(|child| child.relabel(old_label.clone(), new_label.clone())).collect();
-        if self.root.get_name() == old_label {
-            Self::new(Symbol::new(new_label, self.root.get_type()), new_children)
+        self.relabel_and_get_addresses_if(old_label, new_label, Vec::new(), &|x| true).0
+    }
+
+    fn relabel_and_get_addresses_if(&self, old_label: String, new_label: String, current_address: SymbolNodeAddress, condition: &dyn Fn((Self, SymbolNodeAddress)) -> bool) -> (Self, HashSet<SymbolNodeAddress>) {
+        let (new_children, children_addresses) = self.children.iter().enumerate().map(|(i, child)| {
+            let mut child_address = current_address.clone();
+            child_address.push(i);
+            child.relabel_and_get_addresses_if(old_label.clone(), new_label.clone(), child_address, condition)
+            }
+        ).fold((Vec::new(), HashSet::new()), |acc, elt| {
+            let (new_children, new_children_addresses) = acc;
+            let (new_child, new_child_addresses) = elt;
+            (new_children.into_iter().chain(vec![new_child]).collect(), new_children_addresses.into_iter().chain(new_child_addresses).collect())
+        });
+        if self.root.get_name() == old_label && condition((self.clone(), current_address.clone())) {
+            let mut addresses  = children_addresses;
+            addresses.insert(current_address);
+            (Self::new(Symbol::new(new_label, self.root.get_type()), new_children), addresses)
         } else {
-            Self::new(self.root.clone(), new_children)
+            (Self::new(self.root.clone(), new_children), children_addresses)
         }
     }
 
-    pub fn relabel_all(&self, relabelling: Vec<(String, String)>) -> Self {
-        relabelling.into_iter().fold(self.clone(), |acc, (old_label, new_label)| acc.relabel(old_label, new_label))
+    pub fn relabel_all(&self, relabelling: HashSet<(String, String)>) -> Self {
+        relabelling.into_iter().fold(
+            (self.clone(), HashSet::new()),
+            |acc, (old_label, new_label)| {
+                let (new_tree, addresses) = acc;
+                new_tree.relabel_and_get_addresses_if(old_label, new_label, Vec::new(), &|x| !addresses.contains(&x.1))
+            }
+        ).0
+    }
+
+    pub fn get_relabelling(&self, other: &Self) -> Result<HashMap<String, String>, SymbolNodeError> {
+        if self.children.len() != other.children.len() {
+            return Err(SymbolNodeError::DifferentNumberOfArguments);
+        }
+        let mut to_return = vec![(self.root.get_name(), other.root.get_name())];
+        for (i, (child, other_child)) in self.children.iter().zip(other.children.iter()).enumerate() {
+            let child_relabelling = child.get_relabelling(other_child)?;
+            for (old_label, new_label) in child_relabelling {
+                to_return.push((old_label, new_label));
+            }
+        }
+
+        if to_return.iter().map(|x| x.0.clone()).collect::<HashSet<_>>().len() != to_return.len() {
+            return Err(SymbolNodeError::RelabellingNotInjective);
+        }
+
+        Ok(to_return.into_iter().collect())
+
     }
 
     pub fn validate(&self) -> Result<(), SymbolNodeError> {
@@ -136,6 +241,20 @@ impl SymbolNode {
         return to_return;
     }
 
+    pub fn generalizes(&self, other: &Self) -> bool {
+        self.root.get_name() == other.root.get_name() && 
+        self.root.get_type().is_supertype_of(&other.root.get_type()) &&
+        self.children.len() == other.children.len() &&
+        self.children.iter().zip(other.children.iter()).all(|(x, y)| x.generalizes(y))
+    }
+
+    pub fn is_generalized_by(&self, other: &Self) -> bool {
+        self.root.get_name() == other.root.get_name() && 
+        other.root.get_type().is_supertype_of(&self.root.get_type()) &&
+        self.children.len() == other.children.len() &&
+        self.children.iter().zip(other.children.iter()).all(|(x, y)| x.is_generalized_by(y))
+    }
+
 }
 
 #[derive(Clone, Debug, Default, Hash, PartialEq, Eq)]
@@ -176,11 +295,11 @@ mod test_statement {
     #[test]
     fn test_symbol_node_initializes() {
 
-        let a_equals_b_plus_c = SymbolNode::new_object(
+        let a_equals_b_plus_c = SymbolNode::new_generic(
             "=".to_string(), 
             vec![
                 SymbolNode::leaf_object("a".to_string()),
-                SymbolNode::new_object(
+                SymbolNode::new_generic(
                     "+".to_string(),
                     vec![
                         SymbolNode::leaf_object("b".to_string()),
@@ -199,7 +318,7 @@ mod test_statement {
         // prod_{i = 1}^{n} i
         // Point: Expand 5! to 5 * 4 * 3 * 2 * 1, which is going to require a transformation like:
         // 5! => prod_{i = 1}^{5} i => 5 * 4 * 3 * 2 * 1
-        let n_factorial_definition = SymbolNode::new_object(
+        let n_factorial_definition = SymbolNode::new_generic(
             "Prod".to_string(),
             vec![
                 SymbolNode::leaf_object("i".to_string()), // i is the index variable
@@ -209,7 +328,7 @@ mod test_statement {
             ]
         );
 
-        let factorial_definition = SymbolNode::new_object(
+        let factorial_definition = SymbolNode::new_generic(
             "=".to_string(),
             vec![
                 n_factorial,
@@ -224,11 +343,11 @@ mod test_statement {
     #[test]
     fn test_symbol_nodes_relabel() {
         
-        let a_equals_b_plus_c = SymbolNode::new_object(
+        let a_equals_b_plus_c = SymbolNode::new_generic(
             "=".to_string(), 
             vec![
                 SymbolNode::leaf_object("a".to_string()),
-                SymbolNode::new_object(
+                SymbolNode::new_generic(
                     "+".to_string(),
                     vec![
                         SymbolNode::leaf_object("b".to_string()),
@@ -239,11 +358,11 @@ mod test_statement {
         );
 
         let x_equals_b_plus_c = a_equals_b_plus_c.relabel("a".to_string(), "x".to_string());
-        let expected = SymbolNode::new_object(
+        let expected = SymbolNode::new_generic(
             "=".to_string(), 
             vec![
                 SymbolNode::leaf_object("x".to_string()),
-                SymbolNode::new_object(
+                SymbolNode::new_generic(
                     "+".to_string(),
                     vec![
                         SymbolNode::leaf_object("b".to_string()),
@@ -257,11 +376,11 @@ mod test_statement {
         let x_equals_y_plus_y = x_equals_b_plus_c
             .relabel("b".to_string(), "y".to_string())
             .relabel("c".to_string(), "y".to_string());
-        let expected = SymbolNode::new_object(
+        let expected = SymbolNode::new_generic(
             "=".to_string(), 
             vec![
                 SymbolNode::leaf_object("x".to_string()),
-                SymbolNode::new_object(
+                SymbolNode::new_generic(
                     "+".to_string(),
                     vec![
                         SymbolNode::leaf_object("y".to_string()),
@@ -274,11 +393,11 @@ mod test_statement {
 
         let x_equals_x_plus_x = x_equals_y_plus_y
             .relabel("y".to_string(), "x".to_string());
-        let expected = SymbolNode::new_object(
+        let expected = SymbolNode::new_generic(
             "=".to_string(), 
             vec![
                 SymbolNode::leaf_object("x".to_string()),
-                SymbolNode::new_object(
+                SymbolNode::new_generic(
                     "+".to_string(),
                     vec![
                         SymbolNode::leaf_object("x".to_string()),
@@ -294,21 +413,42 @@ mod test_statement {
                 ("b".to_string(), "x".to_string()),
                 ("c".to_string(), "x".to_string()),
                 ("a".to_string(), "x".to_string()),
-            ]
+            ].into_iter().collect()
         );
 
         assert_eq!(x_equals_x_plus_x, also_x_equals_x_plus_x);
+
+        let a_equals_c_plus_b = a_equals_b_plus_c.relabel_all(vec![
+            ("b".to_string(), "c".to_string()),
+            ("c".to_string(), "b".to_string()),
+        ].into_iter().collect());
+
+        let expected = SymbolNode::new_generic(
+            "=".to_string(), 
+            vec![
+                SymbolNode::leaf_object("a".to_string()),
+                SymbolNode::new_generic(
+                    "+".to_string(),
+                    vec![
+                        SymbolNode::leaf_object("c".to_string()),
+                        SymbolNode::leaf_object("b".to_string())
+                    ]
+                )
+            ]
+        );
+
+        assert_eq!(a_equals_c_plus_b, expected);
 
     }
 
     #[test]
     fn test_symbol_node_identifies_conflicts() {
 
-        let a_equals_b_plus_c = SymbolNode::new_object(
+        let a_equals_b_plus_c = SymbolNode::new_generic(
             "=".to_string(), 
             vec![
                 SymbolNode::leaf_object("a".to_string()),
-                SymbolNode::new_object(
+                SymbolNode::new_generic(
                     "+".to_string(),
                     vec![
                         SymbolNode::leaf_object("b".to_string()),
@@ -319,11 +459,11 @@ mod test_statement {
         );
         assert_eq!(a_equals_b_plus_c.get_type_conflicts(), vec![].into_iter().collect());
 
-        let a_equals_b_plus_a = SymbolNode::new_object(
+        let a_equals_b_plus_a = SymbolNode::new_generic(
             "=".to_string(), 
             vec![
                 SymbolNode::leaf_object("a".to_string()),
-                SymbolNode::new_object(
+                SymbolNode::new_generic(
                     "+".to_string(),
                     vec![
                         SymbolNode::leaf_object("b".to_string()),
@@ -334,11 +474,11 @@ mod test_statement {
         );
         assert_eq!(a_equals_b_plus_a.get_type_conflicts(), vec![].into_iter().collect());
 
-        let a_equals_b_plus_a_conflicting = SymbolNode::new_object(
+        let a_equals_b_plus_a_conflicting = SymbolNode::new_generic(
             "=".to_string(), 
             vec![
                 SymbolNode::leaf_object("a".to_string()),
-                SymbolNode::new_object(
+                SymbolNode::new_generic(
                     "+".to_string(),
                     vec![
                         SymbolNode::leaf_object("b".to_string()),
@@ -374,11 +514,11 @@ mod test_statement {
                 ]
          ).get_incorrect_argument_types(), vec!["a".to_string()].into_iter().collect());
 
-        let a_equals_b_plus_c = SymbolNode::new_object(
+        let a_equals_b_plus_c = SymbolNode::new_generic(
             "=".to_string(), 
             vec![
                 SymbolNode::leaf_object("a".to_string()),
-                SymbolNode::new_object(
+                SymbolNode::new_generic(
                     "+".to_string(),
                     vec![
                         SymbolNode::leaf_object("b".to_string()),
@@ -400,7 +540,7 @@ mod test_statement {
             ),
             vec![
                 SymbolNode::leaf_object("a".to_string()),
-                SymbolNode::new_object(
+                SymbolNode::new_generic(
                     "+".to_string(),
                     vec![
                         SymbolNode::leaf_object("b".to_string()),
@@ -427,4 +567,32 @@ mod test_statement {
 
         assert_eq!(a_equals_b_plus_c_invalid_return_type.get_incorrect_argument_types(), vec!["=".to_string()].into_iter().collect());
     }
+
+    #[test]
+    fn test_generalizes_and_is_generalized_by() {
+        
+        let a_equals_b = SymbolNode::new_generic(
+            "=".to_string(), 
+            vec![
+                SymbolNode::leaf_object("a".to_string()),
+                SymbolNode::leaf_object("b".to_string())
+            ]
+        );
+
+        assert!(a_equals_b.generalizes(&a_equals_b));
+        assert!(a_equals_b.is_generalized_by(&a_equals_b));
+
+        let a_equals_b_integers = SymbolNode::new(
+            Symbol::new("=".to_string(), Type::new_generic_function(vec![Type::new_from_object("Integer".to_string()), Type::new_from_object("Integer".to_string())], Type::new_from_object("Boolean".to_string()))),
+            vec![
+                SymbolNode::leaf(Symbol::new("a".to_string(), Type::new_from_object("Integer".to_string()))),
+                SymbolNode::leaf(Symbol::new("b".to_string(), Type::new_from_object("Integer".to_string())))
+            ]
+        );
+
+        assert!(!a_equals_b_integers.generalizes(&a_equals_b));
+        assert!(a_equals_b.generalizes(&a_equals_b_integers));
+
+    }
+
 }
