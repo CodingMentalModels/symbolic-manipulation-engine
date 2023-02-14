@@ -1,6 +1,9 @@
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 
-use crate::symbol::{symbol_node::SymbolNode, transformation::Transformation};
+use crate::symbol::{symbol_node::{SymbolNode, SymbolNodeAddress}, transformation::{Transformation, TransformationError}};
+
+type StatementIndex = usize;
+type TransformationIndex = usize;
 
 #[derive(Clone, Debug, Default, PartialEq, Eq)]
 pub struct Workspace {
@@ -20,7 +23,7 @@ impl Workspace {
         self.provenance.push(Provenance::Hypothesis);
     }
 
-    pub fn delete_statement(&mut self, index: usize) -> Result<SymbolNode, WorkspaceError> {
+    pub fn delete_statement(&mut self, index: StatementIndex) -> Result<SymbolNode, WorkspaceError> {
         if self.statement_index_is_invalid(index) {
             return Err(WorkspaceError::InvalidStatementIndex);
         }
@@ -34,7 +37,7 @@ impl Workspace {
         self.transformations.push(transformation);
     }
 
-    pub fn transform_all(&mut self, transformation_index: usize, statement_index: usize) -> Result<SymbolNode, WorkspaceError> {
+    pub fn transform_all(&mut self, transformation_index: TransformationIndex, statement_index: StatementIndex, substitutions: HashMap<String, String>) -> Result<SymbolNode, WorkspaceError> {
         if self.transformation_index_is_invalid(transformation_index) {
             return Err(WorkspaceError::InvalidTransformationIndex);
         }
@@ -43,15 +46,32 @@ impl Workspace {
         }
         let transformation = self.transformations[transformation_index].clone();
         let statement = self.statements[statement_index].clone();
-        let transformed_statement = transformation.transform_all(statement, HashMap::new()).unwrap();
+        let transformed_statement = transformation.transform_all(statement, substitutions).map_err(|e| WorkspaceError::TransformationError(e))?;
 
         self.statements.push(transformed_statement.clone());
         self.provenance.push(Provenance::Derived((statement_index, transformation_index)));
-        
+
         return Ok(transformed_statement);
     }
 
-    pub fn get_provenance_lineage(&self, index: usize) -> Result<Vec<Provenance>, WorkspaceError> {
+    pub fn transform_at(&mut self, transformation_index: TransformationIndex, statement_index: StatementIndex, address: SymbolNodeAddress) -> Result<SymbolNode, WorkspaceError> {
+        if self.transformation_index_is_invalid(transformation_index) {
+            return Err(WorkspaceError::InvalidTransformationIndex);
+        }
+        if self.statement_index_is_invalid(statement_index) {
+            return Err(WorkspaceError::InvalidStatementIndex);
+        }
+        let transformation = self.transformations[transformation_index].clone();
+        let statement = self.statements[statement_index].clone();
+        let transformed_statement = transformation.transform_at(statement, address).map_err(|_| WorkspaceError::InvalidTransformationAddress)?;
+
+        self.statements.push(transformed_statement.clone());
+        self.provenance.push(Provenance::Derived((statement_index, transformation_index)));
+
+        return Ok(transformed_statement);
+    }
+
+    pub fn get_provenance_lineage(&self, index: StatementIndex) -> Result<Vec<Provenance>, WorkspaceError> {
         let mut provenance = Vec::new();
         let mut current_index = index;
         loop {
@@ -65,7 +85,7 @@ impl Workspace {
         Ok(provenance)
     }
 
-    pub fn get_provenance(&self, index: usize) -> Result<Provenance, WorkspaceError> {
+    pub fn get_provenance(&self, index: StatementIndex) -> Result<Provenance, WorkspaceError> {
         if self.statement_index_is_invalid(index) {
             return Err(WorkspaceError::InvalidStatementIndex);
         }
@@ -73,11 +93,11 @@ impl Workspace {
         Ok(self.provenance[index].clone())
     }
 
-    fn statement_index_is_invalid(&self, index: usize) -> bool {
+    fn statement_index_is_invalid(&self, index: StatementIndex) -> bool {
         index >= self.statements.len() || index >= self.provenance.len()
     }
 
-    fn transformation_index_is_invalid(&self, index: usize) -> bool {
+    fn transformation_index_is_invalid(&self, index: TransformationIndex) -> bool {
         index >= self.transformations.len()
     }
 
@@ -86,13 +106,15 @@ impl Workspace {
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum Provenance {
     Hypothesis,
-    Derived((usize, usize)),
+    Derived((TransformationIndex, StatementIndex, HashSet<SymbolNodeAddress>)),
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum WorkspaceError {
     InvalidStatementIndex,
     InvalidTransformationIndex,
+    InvalidTransformationAddress,
+    TransformationError(TransformationError),
 }
 
 #[cfg(test)]
@@ -140,5 +162,17 @@ mod test_workspace {
 
         assert_eq!(workspace.get_provenance_lineage(0), Ok(vec![Provenance::Hypothesis]));
         assert_eq!(workspace.get_provenance_lineage(1), Ok(vec![Provenance::Derived((0, 0)), Provenance::Hypothesis]));
+
+        workspace.add_transformation(Transformation::new(
+            SymbolNode::leaf_object("b".to_string()),
+            SymbolNode::leaf_object("=".to_string())
+        ));
+
+        workspace.transform_at(1, 1, vec![]);
+        assert_eq!(workspace.statements.len(), 3);
+        assert_eq!(workspace.statements, vec![SymbolNode::leaf_object("a".to_string()), SymbolNode::leaf_object("b".to_string()), SymbolNode::leaf_object("=".to_string())]);
+
+        assert_eq!(workspace.get_provenance(2), Ok(Provenance::Derived((1, 1))));
+
     }
 }
