@@ -168,16 +168,16 @@ impl SymbolNode {
 
     pub fn generalizes(&self, other: &Self) -> bool {
         self.root.get_name() == other.root.get_name() && 
-        self.root.get_type().is_allowed_to_take(&other.root.get_type()) &&
+        self.root.get_type().is_supertype_of(&other.root.get_type()) &&
         self.children.len() == other.children.len() &&
         self.children.iter().zip(other.children.iter()).all(|(x, y)| x.generalizes(y))
     }
 
-    pub fn is_a_specific_case_of(&self, other: &Self) -> bool {
+    pub fn is_generalized_by(&self, other: &Self) -> bool {
         self.root.get_name() == other.root.get_name() && 
-        other.root.get_type().is_allowed_to_take(&self.root.get_type()) &&
+        other.root.get_type().is_supertype_of(&self.root.get_type()) &&
         self.children.len() == other.children.len() &&
-        self.children.iter().zip(other.children.iter()).all(|(x, y)| x.is_a_specific_case_of(y))
+        self.children.iter().zip(other.children.iter()).all(|(x, y)| x.is_generalized_by(y))
     }
 
 }
@@ -494,7 +494,30 @@ mod test_statement {
     }
 
     #[test]
-    fn test_generalizes() {
-        todo!("Generalizes and is_specific_instance_of seem not to be working.  Start here.")
+    fn test_generalizes_and_is_generalized_by() {
+        
+        let a_equals_b = SymbolNode::new_generic(
+            "=".to_string(), 
+            vec![
+                SymbolNode::leaf_object("a".to_string()),
+                SymbolNode::leaf_object("b".to_string())
+            ]
+        );
+
+        assert!(a_equals_b.generalizes(&a_equals_b));
+        assert!(a_equals_b.is_generalized_by(&a_equals_b));
+
+        let a_equals_b_integers = SymbolNode::new(
+            Symbol::new("=".to_string(), Type::new_generic_function(vec![Type::new_from_object("Integer".to_string()), Type::new_from_object("Integer".to_string())], Type::new_from_object("Boolean".to_string()))),
+            vec![
+                SymbolNode::leaf(Symbol::new("a".to_string(), Type::new_from_object("Integer".to_string()))),
+                SymbolNode::leaf(Symbol::new("b".to_string(), Type::new_from_object("Integer".to_string())))
+            ]
+        );
+
+        assert!(!a_equals_b_integers.generalizes(&a_equals_b));
+        assert!(a_equals_b.generalizes(&a_equals_b_integers));
+
     }
+
 }
