@@ -34,18 +34,20 @@ impl Workspace {
         self.transformations.push(transformation);
     }
 
-    pub fn transform_statement(&mut self, statement_index: usize, transformation_index: usize) -> Result<SymbolNode, WorkspaceError> {
-        if self.statement_index_is_invalid(statement_index) {
-            return Err(WorkspaceError::InvalidStatementIndex);
-        }
+    pub fn transform_all(&mut self, transformation_index: usize, statement_index: usize) -> Result<SymbolNode, WorkspaceError> {
         if self.transformation_index_is_invalid(transformation_index) {
             return Err(WorkspaceError::InvalidTransformationIndex);
         }
-        let statement = self.statements[statement_index].clone();
+        if self.statement_index_is_invalid(statement_index) {
+            return Err(WorkspaceError::InvalidStatementIndex);
+        }
         let transformation = self.transformations[transformation_index].clone();
+        let statement = self.statements[statement_index].clone();
         let transformed_statement = transformation.transform_all(statement, HashMap::new()).unwrap();
+
         self.statements.push(transformed_statement.clone());
         self.provenance.push(Provenance::Derived((statement_index, transformation_index)));
+        
         return Ok(transformed_statement);
     }
 
@@ -129,7 +131,7 @@ mod test_workspace {
         workspace.add_transformation(transformation);
         assert_eq!(workspace.transformations.len(), 1);
 
-        workspace.transform_statement(0, 0);
+        workspace.transform_all(0, 0);
         assert_eq!(workspace.statements.len(), 2);
         assert_eq!(workspace.statements, vec![SymbolNode::leaf_object("a".to_string()), SymbolNode::leaf_object("b".to_string())]);
 
