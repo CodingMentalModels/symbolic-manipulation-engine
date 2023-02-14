@@ -3,6 +3,8 @@ use std::collections::{HashMap, HashSet};
 use crate::symbol::symbol_node::{Symbol, SymbolNodeError, SymbolNode};
 use crate::symbol::symbol_type::Type;
 
+use super::symbol_node::SymbolNodeAddress;
+
 #[derive(Clone, Debug, Hash, PartialEq, Eq)]
 pub struct Transformation {
     pub from: SymbolNode,
@@ -19,6 +21,20 @@ impl Transformation {
         let mut variables = self.from.get_symbols();
         variables.extend(self.to.get_symbols());
         variables.into_iter().map(|s| s.get_name()).collect()
+    }
+
+    pub fn transform_at(&self, statement: SymbolNode, address: SymbolNodeAddress) -> Result<SymbolNode, TransformationError> {
+        let substatement_to_transform = statement.get_node(address.clone()).ok_or_else(|| TransformationError::InvalidSymbolNode(SymbolNodeError::InvalidAddress))?;
+        match self.from.get_relabelling(&substatement_to_transform) {
+            Ok(substitutions) => {
+                let transformed_substatement = self.transform(substatement_to_transform, substitutions)?;
+                match statement.replace_node(address, transformed_substatement) {
+                    Ok(transformed_statement) => Ok(transformed_statement),
+                Err(e) => Err(TransformationError::InvalidSymbolNode(e))
+                }
+            },
+            Err(e) => Err(TransformationError::InvalidSymbolNode(e))
+        }
     }
 
     pub fn transform_all(&self, statement: SymbolNode, substitutions: HashMap<String, String>) -> Result<SymbolNode, TransformationError> {
@@ -53,7 +69,7 @@ impl Transformation {
 
     pub fn transform(&self, statement: SymbolNode, substitutions: HashMap<String, String>) -> Result<SymbolNode, TransformationError> {
         
-        statement.validate().map_err(|e| TransformationError::InvalidStatement(e))?;
+        statement.validate().map_err(|e| TransformationError::InvalidSymbolNode(e))?;
 
         let substituted_from = self.from.relabel_all(substitutions.clone().into_iter().collect());
         let substituted_to = self.to.relabel_all(substitutions.into_iter().collect());
@@ -70,10 +86,10 @@ impl Transformation {
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum TransformationError {
-    InvalidStatement(SymbolNodeError),
+    InvalidSymbolNode(SymbolNodeError),
     SubstitutionKeysMismatch,
     StatementDoesNotMatch,
-    SttaementTypesDoNotMatch,
+    StatementTypesDoNotMatch,
 }
 
 
@@ -176,6 +192,38 @@ mod test_transformation {
             ]
         );
         assert_eq!(transformed, Ok(expected));
+
+    }
+
+    #[test]
+    fn test_transformation_transforms_at() {
+
+        let transformation = Transformation::new(
+            SymbolNode::leaf_object("c".to_string()),
+            SymbolNode::leaf_object("d".to_string())
+        );
+        
+        let a_equals_b = SymbolNode::new_generic("=".to_string(),
+    vec![
+                SymbolNode::leaf_object("a".to_string()),
+                SymbolNode::leaf_object("b".to_string())
+            ]
+        );
+
+        let d_equals_b = SymbolNode::new_generic("=".to_string(),
+    vec![
+                SymbolNode::leaf_object("d".to_string()),
+                SymbolNode::leaf_object("b".to_string())
+            ]
+        );
+
+
+        let transformed = transformation.transform_at(
+            a_equals_b.clone(),
+            vec![0],
+        );
+
+        assert_eq!(transformed, Ok(d_equals_b));
 
     }
 }

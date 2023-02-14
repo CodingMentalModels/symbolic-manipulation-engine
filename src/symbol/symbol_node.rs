@@ -9,6 +9,9 @@ pub type SymbolNodeAddress = Vec<usize>;
 pub enum SymbolNodeError {
     IncorrectArgumentTypes(Vec<String>),
     TypeConflicts(Vec<String>),
+    DifferentNumberOfArguments,
+    RelabellingNotInjective,
+    InvalidAddress,
 }
 
 #[derive(Clone, Debug, Hash, PartialEq, Eq)]
@@ -66,6 +69,58 @@ impl SymbolNode {
         &self.root
     }
 
+    pub fn get_node(&self, address: SymbolNodeAddress) -> Option<Self> {
+        let mut current_node = self.clone();
+        for i in address {
+            if i < current_node.get_n_children() {
+                current_node = current_node.children[i].clone();
+            } else {
+                return None;
+            }
+        }
+        Some(current_node)
+    }
+
+    pub fn replace_node(&self, address: SymbolNodeAddress, new_node: SymbolNode) -> Result<Self, SymbolNodeError> {
+        let mut to_return = self.clone();
+        let mut current_node = &mut to_return;
+        for i in address {
+            if i < current_node.get_n_children() {
+                current_node = &mut current_node.children[i];
+            } else {
+                return Err(SymbolNodeError::InvalidAddress);
+            }
+        }
+        *current_node = new_node;
+
+        Ok(to_return)
+
+    }
+
+    pub fn find_where(&self, condition: &dyn Fn(Self) -> bool) -> HashSet<SymbolNodeAddress> {
+        let mut result = HashSet::new();
+        if condition(self.clone()) {
+            result.insert(Vec::new());
+        }
+        for (i, child) in self.children.iter().enumerate() {
+            let child_result = child.find_where(&condition);
+            for address in child_result {
+                let mut new_address = address.clone();
+                new_address.push(i);
+                result.insert(new_address);
+            }
+        }
+        result
+    }
+
+    pub fn find_symbol(&self, symbol: Symbol) -> HashSet<SymbolNodeAddress> {
+        self.find_where(&|node| node.root == symbol)
+    }
+
+    pub fn find_symbol_name(&self, symbol_name: String) -> HashSet<SymbolNodeAddress> {
+        self.find_where(&|node| node.root.get_name() == symbol_name)
+    }
+
     pub fn get_symbols(&self) -> HashSet<Symbol> {
         let mut result = vec![self.root.clone()];
         for child in &self.children {
@@ -117,6 +172,26 @@ impl SymbolNode {
                 new_tree.relabel_and_get_addresses_if(old_label, new_label, Vec::new(), &|x| !addresses.contains(&x.1))
             }
         ).0
+    }
+
+    pub fn get_relabelling(&self, other: &Self) -> Result<HashMap<String, String>, SymbolNodeError> {
+        if self.children.len() != other.children.len() {
+            return Err(SymbolNodeError::DifferentNumberOfArguments);
+        }
+        let mut to_return = vec![(self.root.get_name(), other.root.get_name())];
+        for (i, (child, other_child)) in self.children.iter().zip(other.children.iter()).enumerate() {
+            let child_relabelling = child.get_relabelling(other_child)?;
+            for (old_label, new_label) in child_relabelling {
+                to_return.push((old_label, new_label));
+            }
+        }
+
+        if to_return.iter().map(|x| x.0.clone()).collect::<HashSet<_>>().len() != to_return.len() {
+            return Err(SymbolNodeError::RelabellingNotInjective);
+        }
+
+        Ok(to_return.into_iter().collect())
+
     }
 
     pub fn validate(&self) -> Result<(), SymbolNodeError> {
