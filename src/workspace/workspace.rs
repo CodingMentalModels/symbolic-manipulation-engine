@@ -1,11 +1,13 @@
 use std::collections::{HashMap, HashSet};
 
+use serde::{Serialize, Deserialize};
+
 use crate::symbol::{symbol_node::{SymbolNode, SymbolNodeAddress}, transformation::{Transformation, TransformationError}};
 
 type StatementIndex = usize;
 type TransformationIndex = usize;
 
-#[derive(Clone, Debug, Default, PartialEq, Eq)]
+#[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Workspace {
     statements: Vec<SymbolNode>,
     transformations: Vec<Transformation>,
@@ -83,6 +85,10 @@ impl Workspace {
         Ok(self.provenance[index].clone())
     }
 
+    pub fn serialize(&self) -> String {
+        toml::to_string(self).unwrap()
+    }
+
     fn statement_index_is_invalid(&self, index: StatementIndex) -> bool {
         index >= self.statements.len() || index >= self.provenance.len()
     }
@@ -93,7 +99,7 @@ impl Workspace {
 
 }
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub enum Provenance {
     Hypothesis,
     Derived((TransformationIndex, StatementIndex, Vec<SymbolNodeAddress>)),

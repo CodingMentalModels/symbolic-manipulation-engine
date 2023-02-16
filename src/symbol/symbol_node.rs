@@ -1,5 +1,7 @@
 use std::collections::{HashMap, HashSet};
 
+use serde::{Serialize, Deserialize};
+
 use crate::symbol::symbol_type::Type;
 
 pub type SymbolName = String;
@@ -14,7 +16,7 @@ pub enum SymbolNodeError {
     InvalidAddress,
 }
 
-#[derive(Clone, Debug, Hash, PartialEq, Eq)]
+#[derive(Clone, Debug, Hash, PartialEq, Eq, Serialize, Deserialize)]
 pub struct SymbolNode {
     root: Symbol,
     children: Vec<SymbolNode>,
@@ -257,7 +259,7 @@ impl SymbolNode {
 
 }
 
-#[derive(Clone, Debug, Default, Hash, PartialEq, Eq)]
+#[derive(Clone, Debug, Default, Hash, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Symbol {
     name: SymbolName,
     symbol_type: Type,

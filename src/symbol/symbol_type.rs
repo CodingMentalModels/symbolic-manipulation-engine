@@ -1,7 +1,9 @@
+use serde::{Serialize, Deserialize};
+
 
 pub type TypeName = String;
 
-#[derive(Clone, Debug, Hash, PartialEq, Eq)]
+#[derive(Clone, Debug, Hash, PartialEq, Eq, Serialize, Deserialize)]
 pub enum Type {
     Object,
     Generic(Vec<Type>, Box<Type>),

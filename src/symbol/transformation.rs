@@ -1,11 +1,13 @@
 use std::collections::{HashMap, HashSet};
 
+use serde::{Serialize, Deserialize};
+
 use crate::symbol::symbol_node::{Symbol, SymbolNodeError, SymbolNode};
 use crate::symbol::symbol_type::Type;
 
 use super::symbol_node::SymbolNodeAddress;
 
-#[derive(Clone, Debug, Hash, PartialEq, Eq)]
+#[derive(Clone, Debug, Hash, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Transformation {
     pub from: SymbolNode,
     pub to: SymbolNode,
