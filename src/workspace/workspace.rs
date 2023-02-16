@@ -23,16 +23,6 @@ impl Workspace {
         self.provenance.push(Provenance::Hypothesis);
     }
 
-    pub fn delete_statement(&mut self, index: StatementIndex) -> Result<SymbolNode, WorkspaceError> {
-        if self.statement_index_is_invalid(index) {
-            return Err(WorkspaceError::InvalidStatementIndex);
-        }
-        let to_return = self.statements.remove(index);
-        let _provenance = self.provenance.remove(index);
-
-        return Ok(to_return);
-    }
-
     pub fn add_transformation(&mut self, transformation: Transformation) {
         self.transformations.push(transformation);
     }
@@ -133,10 +123,6 @@ mod test_workspace {
         workspace.add_statement(statement);
 
         assert_eq!(workspace.statements.len(), 2);
-
-        workspace.delete_statement(0);
-        assert_eq!(workspace.statements.len(), 1);
-        assert_eq!(workspace.statements, vec![SymbolNode::leaf_object("b".to_string())]);
     }
 
     #[test]
