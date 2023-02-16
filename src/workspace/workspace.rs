@@ -175,4 +175,4 @@ mod test_workspace {
         assert_eq!(workspace.get_provenance(2), Ok(Provenance::Derived((1, 1, vec![vec![]]))));
 
     }
-    }
+}
