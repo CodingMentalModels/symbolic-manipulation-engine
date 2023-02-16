@@ -37,22 +37,46 @@ impl Transformation {
         }
     }
 
-    pub fn transform_all(&self, statement: SymbolNode, substitutions: HashMap<String, String>) -> Result<SymbolNode, TransformationError> {
+    pub fn transform_all(&self, statement: SymbolNode, substitutions: HashMap<String, String>) -> Result<(SymbolNode, Vec<SymbolNodeAddress>), TransformationError> {
+        self.transform_all_from_address(statement, substitutions, Vec::new())
+    }
 
-        let transformed_children = statement.get_children().iter().map(
-            |c| self.transform_all(c.clone(), substitutions.clone()))
-            .collect::<Result<Vec<SymbolNode>, TransformationError>>()?;
+    pub fn transform_all_from_address(&self, statement: SymbolNode, substitutions: HashMap<String, String>, address: SymbolNodeAddress) -> Result<(SymbolNode, Vec<SymbolNodeAddress>), TransformationError> {
+
+        let children_transformation_result = statement.get_children().iter().enumerate().map(
+            |(i, c)| {
+                let mut child_address = address.clone();
+                child_address.push(i);
+                self.transform_all_from_address(c.clone(), substitutions.clone(), child_address)
+            }
+        ).collect::<Result<Vec<(SymbolNode, Vec<SymbolNodeAddress>)>, TransformationError>>()?;
+        let (transformed_children, transformed_children_addresses) = children_transformation_result.into_iter().unzip::<_, _, Vec<_>, Vec<_>>();
+        let transformed_children_addresses: Vec<SymbolNodeAddress> = transformed_children_addresses.into_iter().flatten().collect();
+
         let new_statement = SymbolNode::new(statement.get_symbol().clone(), transformed_children);
 
-        self.try_transform(new_statement, substitutions)
+        match self.try_transform(new_statement, substitutions) {
+            Ok((transformed, true)) => {
+                let children_addresses: Vec<SymbolNodeAddress> = transformed_children_addresses.into_iter().map(|mut a| {
+                    let mut new_head = address.clone();
+                    new_head.append(&mut a);
+                    new_head
+                }).collect();
+                let mut addresses = vec![address];
+                addresses.extend(children_addresses.clone());
+                Ok((transformed, addresses))
+            },
+            Ok((transformed, false)) => Ok((transformed, transformed_children_addresses)),
+            Err(e) => Err(e)
+        }
 
     }
 
-    pub fn try_transform(&self, statement: SymbolNode, substitutions: HashMap<String, String>) -> Result<SymbolNode, TransformationError> {
+    pub fn try_transform(&self, statement: SymbolNode, substitutions: HashMap<String, String>) -> Result<(SymbolNode, bool), TransformationError> {
         
         match self.transform(statement.clone(), substitutions) {
-            Ok(transformed) => Ok(transformed),
-            Err(TransformationError::StatementDoesNotMatch) => Ok(statement),
+            Ok(transformed) => Ok((transformed, true)),
+            Err(TransformationError::StatementDoesNotMatch) => Ok((statement, false)),
             Err(e) => Err(e)
         }
     }
@@ -176,7 +200,7 @@ mod test_transformation {
             ]
         );
 
-        let transformed = commutativity.transform_all(statement.clone(), vec![("a".to_string(), "a".to_string()), ("b".to_string(), "b".to_string()), ("c".to_string(), "c".to_string()), ("=".to_string(), "=".to_string())].into_iter().collect());
+        let (transformed, addresses) = commutativity.transform_all(statement.clone(), vec![("a".to_string(), "a".to_string()), ("b".to_string(), "b".to_string()), ("c".to_string(), "c".to_string()), ("=".to_string(), "=".to_string())].into_iter().collect()).unwrap();
 
         let expected = SymbolNode::new_generic(
             "=".to_string(),
@@ -191,7 +215,8 @@ mod test_transformation {
                 SymbolNode::leaf_object("c".to_string())
             ]
         );
-        assert_eq!(transformed, Ok(expected));
+        assert_eq!(transformed, expected);
+        assert_eq!(addresses, vec![vec![0]]);
 
     }
 

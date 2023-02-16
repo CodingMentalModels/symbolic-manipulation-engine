@@ -85,6 +85,16 @@ Our type system should:
 - `Transformation`s are rules for mapping one or more `Statement`s to a new `Statement`.  
 - `Context`s are groups of saved, allowable `Transformation`s which can be imported and used, e.g. one might have a `Basic Algebra` `Context`, which can perform algebraic manipulations.
 
+### Workspaces
+
+A `Workspace` is a scope for doing transformations, consisting of allowed transformations, statements (whether hypothesized or results of transformations), and their provenances.  
+
+For example, suppose the user loads the `Context` for arithmetic, and then hypothesizes the statement $2 + 2$.  Then within the `Workspace` we can transform it using some arithmetic transformation to $2 + 2 + 1 - 1$ and the `Workspace` knows that this latter statement is derived from the former as well as a transformation ($x \implies x + y - y$).
+
+Provenances should contain enough information to roll back statements, find all parents, find all children, etc.  
+
+
+
 ### Command Line Interface
 
 In order to interact with the engine, we'll need an interface.  Let's start with a CLI, which allows:

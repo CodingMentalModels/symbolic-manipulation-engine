@@ -46,10 +46,10 @@ impl Workspace {
         }
         let transformation = self.transformations[transformation_index].clone();
         let statement = self.statements[statement_index].clone();
-        let transformed_statement = transformation.transform_all(statement, substitutions).map_err(|e| WorkspaceError::TransformationError(e))?;
+        let (transformed_statement, transformed_addresses) = transformation.transform_all(statement, substitutions).map_err(|e| WorkspaceError::TransformationError(e))?;
 
         self.statements.push(transformed_statement.clone());
-        self.provenance.push(Provenance::Derived((statement_index, transformation_index)));
+        self.provenance.push(Provenance::Derived((statement_index, transformation_index, transformed_addresses)));
 
         return Ok(transformed_statement);
     }
@@ -63,10 +63,10 @@ impl Workspace {
         }
         let transformation = self.transformations[transformation_index].clone();
         let statement = self.statements[statement_index].clone();
-        let transformed_statement = transformation.transform_at(statement, address).map_err(|_| WorkspaceError::InvalidTransformationAddress)?;
+        let transformed_statement = transformation.transform_at(statement, address.clone()).map_err(|_| WorkspaceError::InvalidTransformationAddress)?;
 
         self.statements.push(transformed_statement.clone());
-        self.provenance.push(Provenance::Derived((statement_index, transformation_index)));
+        self.provenance.push(Provenance::Derived((statement_index, transformation_index, vec![address])));
 
         return Ok(transformed_statement);
     }
@@ -79,7 +79,7 @@ impl Workspace {
             provenance.push(current_provenance.clone());
             match current_provenance {
                 Provenance::Hypothesis => break,
-                Provenance::Derived((parent_index, _)) => current_index = parent_index,
+                Provenance::Derived((parent_index, _, _)) => current_index = parent_index,
             }
         }
         Ok(provenance)
@@ -106,7 +106,7 @@ impl Workspace {
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum Provenance {
     Hypothesis,
-    Derived((TransformationIndex, StatementIndex, HashSet<SymbolNodeAddress>)),
+    Derived((TransformationIndex, StatementIndex, Vec<SymbolNodeAddress>)),
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -153,15 +153,15 @@ mod test_workspace {
         workspace.add_transformation(transformation);
         assert_eq!(workspace.transformations.len(), 1);
 
-        workspace.transform_all(0, 0);
+        workspace.transform_all(0, 0, HashMap::new());
         assert_eq!(workspace.statements.len(), 2);
         assert_eq!(workspace.statements, vec![SymbolNode::leaf_object("a".to_string()), SymbolNode::leaf_object("b".to_string())]);
 
         assert_eq!(workspace.get_provenance(0), Ok(Provenance::Hypothesis));
-        assert_eq!(workspace.get_provenance(1), Ok(Provenance::Derived((0, 0))));
+        assert_eq!(workspace.get_provenance(1), Ok(Provenance::Derived((0, 0, vec![vec![]]))));
 
         assert_eq!(workspace.get_provenance_lineage(0), Ok(vec![Provenance::Hypothesis]));
-        assert_eq!(workspace.get_provenance_lineage(1), Ok(vec![Provenance::Derived((0, 0)), Provenance::Hypothesis]));
+        assert_eq!(workspace.get_provenance_lineage(1), Ok(vec![Provenance::Derived((0, 0, vec![vec![]])), Provenance::Hypothesis]));
 
         workspace.add_transformation(Transformation::new(
             SymbolNode::leaf_object("b".to_string()),
@@ -172,7 +172,7 @@ mod test_workspace {
         assert_eq!(workspace.statements.len(), 3);
         assert_eq!(workspace.statements, vec![SymbolNode::leaf_object("a".to_string()), SymbolNode::leaf_object("b".to_string()), SymbolNode::leaf_object("=".to_string())]);
 
-        assert_eq!(workspace.get_provenance(2), Ok(Provenance::Derived((1, 1))));
+        assert_eq!(workspace.get_provenance(2), Ok(Provenance::Derived((1, 1, vec![vec![]]))));
 
     }
-}
+    }
