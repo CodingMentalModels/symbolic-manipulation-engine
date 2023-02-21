@@ -1,10 +1,12 @@
 mod symbol;
 mod workspace;
+mod cli;
 
 use std::{env::current_dir};
 use clap::{arg, Command, Arg, Subcommand};
 
-use crate::workspace::{workspace::Workspace, filesystem::FileSystem};
+use crate::workspace::{workspace::Workspace};
+use crate::cli::{filesystem::FileSystem};
 
 const STATE_DIRECTORY_RELATIVE_PATH: &str = ".sme";
 
