@@ -31,6 +31,9 @@ fn main() {
                         .action(ArgAction::SetTrue)
                         .help("Forces the removal of the workspace")
                 )
+        ).subcommand(
+            Command::new("ls")
+                .about("Lists the workspaces")
         ).get_matches();
 
         let current_directory = match current_dir() {
@@ -50,6 +53,9 @@ fn main() {
             },
             Some(("rmws", sub_matches)) => {
                 cli.rmws(sub_matches)
+            },
+            Some(("ls", _sub_matches)) => {
+                cli.ls()
             },
             _ => {
                 Err("No subcommand was used".to_string())

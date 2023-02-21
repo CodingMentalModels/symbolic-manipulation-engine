@@ -56,6 +56,29 @@ impl Cli {
 
     }
 
+    pub fn ls(&self) -> Result<String, String> {
+        if !self.filesystem.path_exists(STATE_DIRECTORY_RELATIVE_PATH) {
+            return Err("No workspace exists in this directory".to_string());
+        }
+
+        let workspace = match self.filesystem.read_file(STATE_DIRECTORY_RELATIVE_PATH, "workspace.toml") {
+            Ok(contents) => {
+                match Workspace::deserialize(&contents) {
+                    Ok(workspace) => workspace,
+                    Err(e) => {
+                        return Err(format!("Couldn't deserialize workspace.toml: {}", e));
+                    }
+                }
+            },
+            Err(e) => {
+                return Err("Couldn't read workspace.toml".to_string());
+            }
+        };
+
+        return Ok(workspace.to_string());
+
+    }
+
 }
 
 #[cfg(test)]

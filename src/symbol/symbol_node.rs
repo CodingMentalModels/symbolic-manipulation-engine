@@ -123,6 +123,17 @@ impl SymbolNode {
         self.find_where(&|node| node.root.get_name() == symbol_name)
     }
 
+    pub fn to_string(&self) -> String {
+        if self.children.len() == 0 {
+            self.root.to_string()
+        } else {
+            let mut result = format!("{}(", self.root.to_string());
+            let arguments = self.children.iter().map(|x| x.to_string()).collect::<Vec<_>>().join(",");
+            result = format!("{}{})", result, arguments);
+            result
+        }
+    }
+
     pub fn get_symbols(&self) -> HashSet<Symbol> {
         let mut result = vec![self.root.clone()];
         for child in &self.children {
@@ -284,6 +295,10 @@ impl Symbol {
     
         pub fn get_type(&self) -> Type {
             self.symbol_type.clone()
+        }
+
+        pub fn to_string(&self) -> String {
+            format!("{}: {}", self.name, self.symbol_type.to_string())
         }
     
 }

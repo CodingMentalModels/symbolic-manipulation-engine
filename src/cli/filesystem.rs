@@ -57,6 +57,15 @@ impl FileSystem {
         fs::write(path, contents).is_ok()
     }
 
+    pub fn read_file(&self, path: &str, filename: &str) -> Result<String, String> {
+        let path = self.root_directory.join(path);
+        if !path.exists() {
+            return Err("Path doesn't exist".to_string());
+        }
+        let path = path.join(filename);
+        fs::read_to_string(path).map_err(|_| "Couldn't read file".to_string())
+    }
+
 }
 
 #[cfg(test)]

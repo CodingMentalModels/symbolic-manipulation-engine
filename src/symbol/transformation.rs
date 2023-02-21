@@ -19,6 +19,10 @@ impl Transformation {
         Transformation { from, to }
     }
 
+    pub fn to_string(&self) -> String {
+        format!("{} -> {}", self.from.to_string(), self.to.to_string())
+    }
+
     pub fn get_variables(&self) -> HashSet<String> {
         let mut variables = self.from.get_symbols();
         variables.extend(self.to.get_symbols());
