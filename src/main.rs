@@ -1,14 +1,15 @@
 mod symbol;
 mod workspace;
 mod cli;
+mod config;
 
 use std::{env::current_dir};
 use clap::{arg, Command, Arg, Subcommand};
+use config::{STATE_DIRECTORY_RELATIVE_PATH};
+use cli::cli::Cli;
 
 use crate::workspace::{workspace::Workspace};
 use crate::cli::{filesystem::FileSystem};
-
-const STATE_DIRECTORY_RELATIVE_PATH: &str = ".sme";
 
 fn main() {
     let matches = Command::new("Symbolic Manipulation Engine")
@@ -22,42 +23,29 @@ fn main() {
                 .about("Initializes a new workspace")
         ).get_matches();
 
-        match matches.subcommand() {
-            Some(("init", _sub_matches)) => {
-                let current_directory = match current_dir() {
-                    Ok(path) => path,
-                    Err(e) => {
-                        println!("Couldn't get current directory: {}", e);
-                        return;
-                    },
-                };
-                let file_system = FileSystem::new(current_directory);
-                if file_system.path_exists(STATE_DIRECTORY_RELATIVE_PATH) {
-                    println!("A workspace already exists in this directory");
-                    return;
-                }
-                
-                match file_system.create_directory(STATE_DIRECTORY_RELATIVE_PATH) {
-                    true => println!("Created directory {}", STATE_DIRECTORY_RELATIVE_PATH),
-                    false => {
-                        println!("Couldn't create directory {}", STATE_DIRECTORY_RELATIVE_PATH);
-                        return;
-                    }
-                }
+        let current_directory = match current_dir() {
+            Ok(path) => path,
+            Err(e) => {
+                println!("Couldn't get current directory: {}", e);
+                return;
+            },
+        };
 
-                let workspace = Workspace::new();
-                match file_system.write_file(STATE_DIRECTORY_RELATIVE_PATH, "workspace.toml", workspace.serialize()) {
-                    true => println!("Created workspace.toml"),
-                    false => {
-                        println!("Couldn't create workspace.toml");
-                        return;
-                    }
-                }
-                println!("Initialized new workspace in {}", file_system.get_root_directory_path());
+        let filesystem = FileSystem::new(current_directory);
+        let cli = Cli::new(FileSystem::new(current_dir().unwrap()));
+
+        let result = match matches.subcommand() {
+            Some(("init", _sub_matches)) => {
+                cli.init()
             },
             _ => {
-                println!("No subcommand was used");
+                Err("No subcommand was used".to_string())
             }
+        };
+
+        match result {
+            Ok(message) => println!("{}", message),
+            Err(e) => println!("{}", e),
         }
 
 
