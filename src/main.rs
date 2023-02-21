@@ -32,7 +32,7 @@ fn main() {
         };
 
         let filesystem = FileSystem::new(current_directory);
-        let cli = Cli::new(FileSystem::new(current_dir().unwrap()));
+        let cli = Cli::new(filesystem);
 
         let result = match matches.subcommand() {
             Some(("init", _sub_matches)) => {
