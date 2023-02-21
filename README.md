@@ -98,6 +98,9 @@ Provenances should contain enough information to roll back statements, find all 
 ### Command Line Interface
 
 In order to interact with the engine, we'll need an interface.  Let's start with a CLI, which allows:
+- Initializing Workspaces
+    - Under the hood, this creates a directory and a hidden directory, `.symbol`, which maintains state.  
+    - `./.symbol/workspace.toml` contains a serialized version of the `Workspace`.  
 - Defining new valid transformations
 - Defining new contexts
 - Importing contexts

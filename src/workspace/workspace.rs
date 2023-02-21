@@ -1,11 +1,13 @@
 use std::collections::{HashMap, HashSet};
 
+use serde::{Serialize, Deserialize};
+
 use crate::symbol::{symbol_node::{SymbolNode, SymbolNodeAddress}, transformation::{Transformation, TransformationError}};
 
 type StatementIndex = usize;
 type TransformationIndex = usize;
 
-#[derive(Clone, Debug, Default, PartialEq, Eq)]
+#[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Workspace {
     statements: Vec<SymbolNode>,
     transformations: Vec<Transformation>,
@@ -83,6 +85,35 @@ impl Workspace {
         Ok(self.provenance[index].clone())
     }
 
+    pub fn to_string(&self) -> String {
+        let mut to_return = Vec::new();
+        let transformation_header = "Transformations:".to_string();
+        to_return.push(transformation_header);
+
+        self.transformations.iter().enumerate().for_each(|(index, transformation)| {
+            to_return.push(format!("{}: {}", index, transformation.to_string()));
+        });
+        to_return.push("".to_string());
+
+        let statement_header = "Statements:".to_string();
+        to_return.push(statement_header);
+
+        self.statements.iter().enumerate().for_each(|(index, statement)| {
+            to_return.push(format!("{}: {}", index, statement.to_string()));
+        });
+
+        return to_return.join("\n");
+        
+    }
+
+    pub fn serialize(&self) -> String {
+        toml::to_string(self).unwrap()
+    }
+
+    pub fn deserialize(serialized: &str) -> Result<Workspace, toml::de::Error> {
+        toml::from_str(serialized)
+    }
+
     fn statement_index_is_invalid(&self, index: StatementIndex) -> bool {
         index >= self.statements.len() || index >= self.provenance.len()
     }
@@ -93,7 +124,7 @@ impl Workspace {
 
 }
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub enum Provenance {
     Hypothesis,
     Derived((TransformationIndex, StatementIndex, Vec<SymbolNodeAddress>)),

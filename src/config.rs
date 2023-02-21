@@ -1,0 +1,1 @@
+pub const STATE_DIRECTORY_RELATIVE_PATH: &str = ".sme";

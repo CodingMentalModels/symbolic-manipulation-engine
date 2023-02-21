@@ -1,11 +1,13 @@
 use std::collections::{HashMap, HashSet};
 
+use serde::{Serialize, Deserialize};
+
 use crate::symbol::symbol_node::{Symbol, SymbolNodeError, SymbolNode};
 use crate::symbol::symbol_type::Type;
 
 use super::symbol_node::SymbolNodeAddress;
 
-#[derive(Clone, Debug, Hash, PartialEq, Eq)]
+#[derive(Clone, Debug, Hash, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Transformation {
     pub from: SymbolNode,
     pub to: SymbolNode,
@@ -15,6 +17,10 @@ impl Transformation {
 
     pub fn new(from: SymbolNode, to: SymbolNode) -> Transformation {
         Transformation { from, to }
+    }
+
+    pub fn to_string(&self) -> String {
+        format!("{} -> {}", self.from.to_string(), self.to.to_string())
     }
 
     pub fn get_variables(&self) -> HashSet<String> {
