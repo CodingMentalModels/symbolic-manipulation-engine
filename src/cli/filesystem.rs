@@ -40,6 +40,14 @@ impl FileSystem {
         fs::create_dir(path).is_ok()
     }
 
+    pub fn remove_directory(&self, path: &str) -> bool {
+        let path = self.root_directory.join(path);
+        if !path.exists() {
+            return false;
+        }
+        fs::remove_dir_all(path).is_ok()
+    }
+
     pub fn write_file(&self, path: &str, filename: &str, contents: String) -> bool {
         let path = self.root_directory.join(path);
         if !path.exists() {

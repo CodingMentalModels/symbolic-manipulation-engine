@@ -4,7 +4,7 @@ mod cli;
 mod config;
 
 use std::{env::current_dir};
-use clap::{arg, Command, Arg, Subcommand};
+use clap::{arg, Command, Arg, Subcommand, ArgAction};
 use config::{STATE_DIRECTORY_RELATIVE_PATH};
 use cli::cli::Cli;
 
@@ -21,6 +21,16 @@ fn main() {
         .subcommand(
             Command::new("init")
                 .about("Initializes a new workspace")
+        ).subcommand(
+            Command::new("rmws")
+                .about("Removes the workspace")
+                .arg(
+                    Arg::new("force")
+                        .short('f')
+                        .long("force")
+                        .action(ArgAction::SetTrue)
+                        .help("Forces the removal of the workspace")
+                )
         ).get_matches();
 
         let current_directory = match current_dir() {
@@ -37,6 +47,9 @@ fn main() {
         let result = match matches.subcommand() {
             Some(("init", _sub_matches)) => {
                 cli.init()
+            },
+            Some(("rmws", sub_matches)) => {
+                cli.rmws(sub_matches)
             },
             _ => {
                 Err("No subcommand was used".to_string())

@@ -1,3 +1,5 @@
+use clap::ArgMatches;
+
 use crate::{cli::filesystem::FileSystem, config::STATE_DIRECTORY_RELATIVE_PATH, workspace::workspace::Workspace};
 
 pub struct Cli {
@@ -32,6 +34,26 @@ impl Cli {
             }
         }
         return Ok(format!("Initialized new workspace in {}", self.filesystem.get_root_directory_path()));
+    }
+
+    pub fn rmws(&self, sub_matches: &ArgMatches) -> Result<String, String> {
+        if !self.filesystem.path_exists(STATE_DIRECTORY_RELATIVE_PATH) {
+            return Err("No workspace exists in this directory".to_string());
+        }
+
+        if !sub_matches.get_flag("force") {
+            return Err("Use the --force flag to remove the workspace".to_string());
+        }
+
+        match self.filesystem.remove_directory(STATE_DIRECTORY_RELATIVE_PATH) {
+            true => {
+                return Ok(format!("Removed workspace in {}", self.filesystem.get_root_directory_path()));
+            },
+            false => {
+                return Err(format!("Couldn't remove directory {}", STATE_DIRECTORY_RELATIVE_PATH));
+            }
+        };
+
     }
 
 }
