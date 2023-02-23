@@ -122,7 +122,6 @@ This means that the parsing process should look like:
 - Given the interpretations, try to parse the output and kick out helpful errors where that's not possible.
 - Allow parsing hints to disambiguate, e.g. it should always be possible to force a certain set of characters to be tokenized into one or force certain types by providing flags to the command.
 
-
 ### Pretty Printing
 
 - `Symbol`s, `Statement`s, and `Transformations` can be given LaTeX representations, which can then be pretty printed.  

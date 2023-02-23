@@ -2,6 +2,7 @@ mod symbol;
 mod workspace;
 mod cli;
 mod config;
+mod parsing;
 
 use std::{env::current_dir};
 use clap::{arg, Command, Arg, Subcommand, ArgAction};
