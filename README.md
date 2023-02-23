@@ -123,11 +123,6 @@ This means that the parsing process should look like:
 - Allow parsing hints to disambiguate, e.g. it should always be possible to force a certain set of characters to be tokenized into one or force certain types by providing flags to the command.
 
 
-### Database
-
-- Stores and retreives `Context`s
-- Stores and retreives saved work
-
 ### Pretty Printing
 
 - `Symbol`s, `Statement`s, and `Transformations` can be given LaTeX representations, which can then be pretty printed.  
