@@ -58,7 +58,7 @@ impl Tokenizer {
 
 }
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, Hash, PartialEq, Eq)]
 pub enum Token {
     LeftParen,
     RightParen,
@@ -123,20 +123,20 @@ mod test_tokenizer {
 
         let mut tokenizer = Tokenizer::new_with_tokens(vec!["=".to_string(), "+".to_string(), "-".to_string(), "*".to_string(), "/".to_string()]);
 
-        // assert_eq!(
-        //     tokenizer.tokenize("2 + 2 = 4"),
-        //     vec![
-        //         Token::Object("2".to_string()),
-        //         Token::Whitespace,
-        //         Token::Custom("+".to_string()),
-        //         Token::Whitespace,
-        //         Token::Object("2".to_string()),
-        //         Token::Whitespace,
-        //         Token::Custom("=".to_string()),
-        //         Token::Whitespace,
-        //         Token::Object("4".to_string()),
-        //     ]
-        // );
+        assert_eq!(
+            tokenizer.tokenize("2 + 2 = 4"),
+            vec![
+                Token::Object("2".to_string()),
+                Token::Whitespace,
+                Token::Custom("+".to_string()),
+                Token::Whitespace,
+                Token::Object("2".to_string()),
+                Token::Whitespace,
+                Token::Custom("=".to_string()),
+                Token::Whitespace,
+                Token::Object("4".to_string()),
+            ]
+        );
 
         assert_eq!(
             tokenizer.tokenize("2+2=4"),
