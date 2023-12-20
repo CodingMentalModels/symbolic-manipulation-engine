@@ -1,4 +1,4 @@
-
+use std::collections::VecDeque;
 
 #[derive(Debug, Default, PartialEq, Eq)]
 pub struct Tokenizer {
@@ -6,28 +6,29 @@ pub struct Tokenizer {
 }
 
 impl Tokenizer {
-
     pub fn new_with_tokens(custom_tokens: Vec<String>) -> Tokenizer {
-        Tokenizer {
-            custom_tokens,
-        }
+        Tokenizer { custom_tokens }
     }
 
-    pub fn tokenize(&self, s: &str) -> Vec<Token> {
-        let mut tokens = Vec::new();
-        let custom_indices = self.custom_tokens.iter().map(|token| s.match_indices(token)).flatten()
+    pub fn tokenize(&self, s: &str) -> TokenStack {
+        let mut tokens = VecDeque::new();
+        let custom_indices = self
+            .custom_tokens
+            .iter()
+            .map(|token| s.match_indices(token))
+            .flatten()
             .map(|(i, _)| i)
             .collect::<Vec<_>>();
         let mut chars = s.chars().peekable();
         let mut i = 0;
         while let Some(c) = chars.next() {
             match c {
-                '(' => tokens.push(Token::LeftParen),
-                ')' => tokens.push(Token::RightParen),
-                ',' => tokens.push(Token::Comma),
+                '(' => tokens.push_back(Token::LeftParen),
+                ')' => tokens.push_back(Token::RightParen),
+                ',' => tokens.push_back(Token::Comma),
                 _ => {
                     if c.is_whitespace() {
-                        tokens.push(Token::Whitespace);
+                        tokens.push_back(Token::Whitespace);
                         continue;
                     }
                     let mut token = String::new();
@@ -35,11 +36,16 @@ impl Tokenizer {
                     let mut custom_token_found = false;
                     while let Some(&c) = chars.peek() {
                         if self.custom_tokens.contains(&token) {
-                            tokens.push(Token::Custom(token.clone()));
+                            tokens.push_back(Token::Custom(token.clone()));
                             custom_token_found = true;
                             break;
                         }
-                        if c == '(' || c == ')' || c == ',' || c.is_whitespace() || custom_indices.contains(&(i + 1)) {
+                        if c == '('
+                            || c == ')'
+                            || c == ','
+                            || c.is_whitespace()
+                            || custom_indices.contains(&(i + 1))
+                        {
                             break;
                         }
                         token.push(c);
@@ -47,17 +53,68 @@ impl Tokenizer {
                         i += 1;
                     }
                     if !custom_token_found {
-                        tokens.push(Token::Object(token));
+                        tokens.push_back(Token::Object(token));
                     }
                 }
             }
             i += 1;
         }
-        tokens
+        TokenStack::new(tokens)
     }
-
 }
 
+#[derive(Debug, Default, PartialEq, Eq)]
+pub struct TokenStack(VecDeque<Token>);
+
+impl TokenStack {
+    pub fn new(tokens: VecDeque<Token>) -> Self {
+        Self(tokens)
+    }
+
+    pub fn as_vector(&self) -> Vec<Token> {
+        self.0.clone().into_iter().collect()
+    }
+
+    pub fn remove_whitespace(&mut self) {
+        self.0 = self
+            .0
+            .clone()
+            .into_iter()
+            .filter(|t| t != &Token::Whitespace)
+            .collect();
+    }
+
+    pub fn peek(&self) -> Option<Token> {
+        if self.len() == 0 {
+            return None;
+        }
+        Some(self.0[0].clone())
+    }
+
+    pub fn pop(&mut self) -> Option<Token> {
+        self.0.pop_front()
+    }
+
+    pub fn pop_and_assert(&mut self, expected: Token) -> bool {
+        let actual = self.pop();
+        actual == Some(expected)
+    }
+
+    pub fn pop_and_assert_or_error(
+        &mut self,
+        expected: Token,
+        message: String,
+    ) -> Result<(), String> {
+        if !self.pop_and_assert(expected) {
+            return Err(message);
+        }
+        Ok(())
+    }
+
+    pub fn len(&self) -> usize {
+        self.0.len()
+    }
+}
 #[derive(Clone, Debug, Hash, PartialEq, Eq)]
 pub enum Token {
     LeftParen,
@@ -69,7 +126,16 @@ pub enum Token {
 }
 
 impl Token {
-
+    pub fn to_string(&self) -> String {
+        match self {
+            Self::LeftParen => "(".to_string(),
+            Self::RightParen => ")".to_string(),
+            Self::Comma => ",".to_string(),
+            Self::Whitespace => " ".to_string(),
+            Self::Object(s) => s.clone(),
+            Self::Custom(s) => s.clone(),
+        }
+    }
 }
 
 #[cfg(test)]
@@ -78,20 +144,32 @@ mod test_tokenizer {
 
     #[test]
     fn test_tokenizer_tokenizes() {
-        
         let mut tokenizer = Tokenizer::default();
 
-        assert_eq!(tokenizer.tokenize("a"), vec![Token::Object("a".to_string())]);
         assert_eq!(
-            tokenizer.tokenize("f(a)"),
-            vec![Token::Object("f".to_string()), Token::LeftParen, Token::Object("a".to_string()), Token::RightParen]
+            tokenizer.tokenize("a").as_vector(),
+            vec![Token::Object("a".to_string())]
         );
         assert_eq!(
-            tokenizer.tokenize("func(ab_c)"),
-            vec![Token::Object("func".to_string()), Token::LeftParen, Token::Object("ab_c".to_string()), Token::RightParen]
+            tokenizer.tokenize("f(a)").as_vector(),
+            vec![
+                Token::Object("f".to_string()),
+                Token::LeftParen,
+                Token::Object("a".to_string()),
+                Token::RightParen
+            ]
         );
         assert_eq!(
-            tokenizer.tokenize("func(ab,c)"),
+            tokenizer.tokenize("func(ab_c)").as_vector(),
+            vec![
+                Token::Object("func".to_string()),
+                Token::LeftParen,
+                Token::Object("ab_c".to_string()),
+                Token::RightParen
+            ]
+        );
+        assert_eq!(
+            tokenizer.tokenize("func(ab,c)").as_vector(),
             vec![
                 Token::Object("func".to_string()),
                 Token::LeftParen,
@@ -102,7 +180,7 @@ mod test_tokenizer {
             ]
         );
         assert_eq!(
-            tokenizer.tokenize("2 + 2 = 4"),
+            tokenizer.tokenize("2 + 2 = 4").as_vector(),
             vec![
                 Token::Object("2".to_string()),
                 Token::Whitespace,
@@ -115,16 +193,20 @@ mod test_tokenizer {
                 Token::Object("4".to_string()),
             ]
         );
-
     }
 
     #[test]
     fn test_tokenizer_tokenizes_custom_tokens() {
-
-        let mut tokenizer = Tokenizer::new_with_tokens(vec!["=".to_string(), "+".to_string(), "-".to_string(), "*".to_string(), "/".to_string()]);
+        let mut tokenizer = Tokenizer::new_with_tokens(vec![
+            "=".to_string(),
+            "+".to_string(),
+            "-".to_string(),
+            "*".to_string(),
+            "/".to_string(),
+        ]);
 
         assert_eq!(
-            tokenizer.tokenize("2 + 2 = 4"),
+            tokenizer.tokenize("2 + 2 = 4").as_vector(),
             vec![
                 Token::Object("2".to_string()),
                 Token::Whitespace,
@@ -139,7 +221,7 @@ mod test_tokenizer {
         );
 
         assert_eq!(
-            tokenizer.tokenize("2+2=4"),
+            tokenizer.tokenize("2+2=4").as_vector(),
             vec![
                 Token::Object("2".to_string()),
                 Token::Custom("+".to_string()),
@@ -148,6 +230,6 @@ mod test_tokenizer {
                 Token::Object("4".to_string()),
             ]
         );
-        
     }
 }
+
