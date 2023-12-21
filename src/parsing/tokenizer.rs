@@ -1,5 +1,7 @@
 use std::collections::VecDeque;
 
+use super::parser::ParserError;
+
 #[derive(Debug, Default, PartialEq, Eq)]
 pub struct Tokenizer {
     custom_tokens: Vec<String>,
@@ -100,15 +102,17 @@ impl TokenStack {
         actual == Some(expected)
     }
 
-    pub fn pop_and_assert_or_error(
-        &mut self,
-        expected: Token,
-        message: String,
-    ) -> Result<(), String> {
-        if !self.pop_and_assert(expected) {
-            return Err(message);
+    pub fn pop_and_assert_or_error(&mut self, expected: Token) -> Result<(), ParserError> {
+        match self.pop() {
+            None => Err(ParserError::NoTokensRemainingToInterpret),
+            Some(actual) => {
+                if actual != expected {
+                    Err(ParserError::ExpectedButFound(expected, actual))
+                } else {
+                    Ok(())
+                }
+            }
         }
-        Ok(())
     }
 
     pub fn len(&self) -> usize {
@@ -236,4 +240,3 @@ mod test_tokenizer {
         );
     }
 }
-

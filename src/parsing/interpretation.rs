@@ -1,12 +1,15 @@
 use std::{collections::VecDeque, unimplemented};
 
-use crate::symbol::{
-    symbol_node::{Symbol, SymbolNode},
-    symbol_type::Type,
+use crate::{
+    parsing::parser::ParserError,
+    symbol::{
+        symbol_node::{Symbol, SymbolNode},
+        symbol_type::Type,
+    },
 };
 
 use super::{
-    parser::Parser,
+    parser::{Parser, ParserResult},
     tokenizer::{Token, TokenStack},
 };
 
@@ -63,40 +66,33 @@ impl Interpretation {
         parser: &Parser,
         so_far: Option<SymbolNode>,
         tokens: &mut TokenStack,
-    ) -> Result<SymbolNode, String> {
+    ) -> ParserResult {
         println!("Interpreting: {:?}", tokens);
         match self.expression_type {
             ExpressionType::Singleton => {
                 let token = tokens
                     .pop()
-                    .ok_or("Ran out of tokens while interpreting prefix expression.".to_string())?;
+                    .ok_or(ParserError::NoTokensRemainingToInterpret)?;
                 let symbol = Symbol::new(token.to_string(), self.output_type.clone());
                 return Ok(SymbolNode::new(symbol, vec![]));
             }
             ExpressionType::Functional => {
-                let function_token = tokens.pop().ok_or(
-                    "Ran out of tokens while interpreting functional expression.".to_string(),
-                )?;
+                let function_token = tokens
+                    .pop()
+                    .ok_or(ParserError::NoTokensRemainingToInterpret)?;
                 let function = Symbol::new(function_token.to_string(), self.output_type.clone());
-                tokens.pop_and_assert_or_error(
-                    Token::LeftParen,
-                    "Expected left parenthesis while interpreting functional expression."
-                        .to_string(),
-                )?;
+                tokens.pop_and_assert_or_error(Token::LeftParen)?;
                 let mut children = Vec::new();
                 loop {
                     children.push(parser.parse(tokens)?);
-                    let delimiter = tokens.pop().ok_or(
-                        "Missing delimiter while interpreting functional expression.".to_string(),
-                    )?;
+                    let delimiter = tokens
+                        .pop()
+                        .ok_or(ParserError::NoTokensRemainingToInterpret)?;
                     if delimiter == Token::RightParen {
                         break;
                     }
                     if delimiter != Token::Comma {
-                        return Err(
-                            "Invalid delimiter while interpreting functional expression."
-                                .to_string(),
-                        );
+                        return Err(ParserError::ExpectedButFound(Token::Comma, delimiter));
                     }
                 }
                 let to_return = SymbolNode::new(function, children);
@@ -105,7 +101,7 @@ impl Interpretation {
             ExpressionType::Prefix => {
                 let token = tokens
                     .pop()
-                    .ok_or("Ran out of tokens while interpreting prefix expression.".to_string())?;
+                    .ok_or(ParserError::NoTokensRemainingToInterpret)?;
                 let prefix = Symbol::new(token.to_string(), self.output_type.clone());
                 let children = if tokens.is_empty() {
                     vec![]

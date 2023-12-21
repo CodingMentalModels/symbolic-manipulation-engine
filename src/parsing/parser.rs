@@ -5,6 +5,8 @@ use crate::symbol::symbol_type::Type;
 
 use super::tokenizer::TokenStack;
 
+pub type ParserResult = Result<SymbolNode, ParserError>;
+
 #[derive(Debug, PartialEq, Eq)]
 pub struct Parser {
     interpretations: Vec<Interpretation>,
@@ -15,7 +17,7 @@ impl Parser {
         Parser { interpretations }
     }
 
-    pub fn parse(&self, tokens: &mut TokenStack) -> Result<SymbolNode, String> {
+    pub fn parse(&self, tokens: &mut TokenStack) -> ParserResult {
         tokens.remove_whitespace();
 
         let mut left_arg = Some(self.parse_next(None, tokens)?);
@@ -25,30 +27,25 @@ impl Parser {
                 Ok(node) => {
                     left_arg = Some(node);
                 }
-                Err(_e) => {
+                Err(ParserError::NoTokensRemainingToInterpret) => {
                     return Ok(left_arg.unwrap());
+                }
+                Err(e) => {
+                    return Err(e);
                 }
             }
         }
         return Ok(left_arg.unwrap());
     }
 
-    pub fn parse_next(
-        &self,
-        so_far: Option<SymbolNode>,
-        tokens: &mut TokenStack,
-    ) -> Result<SymbolNode, String> {
+    pub fn parse_next(&self, so_far: Option<SymbolNode>, tokens: &mut TokenStack) -> ParserResult {
         self.interpret(so_far, tokens)
     }
 
-    pub fn interpret(
-        &self,
-        so_far: Option<SymbolNode>,
-        tokens: &mut TokenStack,
-    ) -> Result<SymbolNode, String> {
+    pub fn interpret(&self, so_far: Option<SymbolNode>, tokens: &mut TokenStack) -> ParserResult {
         let token = tokens
             .peek()
-            .ok_or("Tried to interpret token but no tokens remained.".to_string())?;
+            .ok_or(ParserError::NoTokensRemainingToInterpret)?;
         let object_interpretation = Interpretation::new(
             InterpretationCondition::IsObject,
             ExpressionType::Singleton,
@@ -63,13 +60,19 @@ impl Parser {
             }
         }
 
-        return Err(format!("No valid interpretation for {:?}", token).to_string());
+        return Err(ParserError::NoValidInterpretation(token));
     }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum ParserError {
+    NoValidInterpretation(Token),
+    NoTokensRemainingToInterpret,
+    ExpectedButFound(Token, Token),
 }
 
 #[cfg(test)]
 mod test_parser {
-    use std::boxed;
 
     use super::*;
 
