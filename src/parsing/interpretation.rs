@@ -38,6 +38,15 @@ impl Interpretation {
         }
     }
 
+    pub fn any_object() -> Self {
+        Interpretation::new(
+            InterpretationCondition::IsObject,
+            ExpressionType::Singleton,
+            0,
+            Type::Object,
+        )
+    }
+
     pub fn satisfies_condition(&self, so_far: &Option<SymbolNode>, token: &Token) -> bool {
         let is_ok_expression_type = match self.expression_type {
             ExpressionType::Singleton
@@ -68,19 +77,16 @@ impl Interpretation {
         tokens: &mut TokenStack,
     ) -> ParserResult {
         println!("Interpreting: {:?}", tokens);
+        let token = tokens
+            .pop()
+            .ok_or(ParserError::NoTokensRemainingToInterpret)?;
         match self.expression_type {
             ExpressionType::Singleton => {
-                let token = tokens
-                    .pop()
-                    .ok_or(ParserError::NoTokensRemainingToInterpret)?;
                 let symbol = Symbol::new(token.to_string(), self.output_type.clone());
                 return Ok(SymbolNode::new(symbol, vec![]));
             }
             ExpressionType::Functional => {
-                let function_token = tokens
-                    .pop()
-                    .ok_or(ParserError::NoTokensRemainingToInterpret)?;
-                let function = Symbol::new(function_token.to_string(), self.output_type.clone());
+                let function = Symbol::new(token.to_string(), self.output_type.clone());
                 tokens.pop_and_assert_or_error(Token::LeftParen)?;
                 let mut children = Vec::new();
                 loop {
@@ -99,9 +105,6 @@ impl Interpretation {
                 return Ok(to_return);
             }
             ExpressionType::Prefix => {
-                let token = tokens
-                    .pop()
-                    .ok_or(ParserError::NoTokensRemainingToInterpret)?;
                 let prefix = Symbol::new(token.to_string(), self.output_type.clone());
                 let children = if tokens.is_empty() {
                     vec![]
@@ -110,6 +113,16 @@ impl Interpretation {
                 };
                 return Ok(SymbolNode::new(prefix, children));
             }
+            ExpressionType::Infix => match so_far {
+                None => {
+                    return Err(ParserError::ExpectedLeftArgument);
+                }
+                Some(left) => {
+                    let right = parser.parse(tokens)?;
+                    let operator = SymbolNode::new_generic(token.to_string(), vec![left, right]);
+                    return Ok(operator);
+                }
+            },
             _ => {
                 unimplemented!()
             }

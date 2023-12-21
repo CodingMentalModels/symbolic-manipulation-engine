@@ -17,6 +17,18 @@ impl Parser {
         Parser { interpretations }
     }
 
+    pub fn argument_parser() -> Self {
+        Self::new(vec![
+            Interpretation::new(
+                InterpretationCondition::Matches(Token::Comma),
+                ExpressionType::Infix,
+                0,
+                Type::Object,
+            ),
+            Interpretation::any_object(),
+        ])
+    }
+
     pub fn parse(&self, tokens: &mut TokenStack) -> ParserResult {
         tokens.remove_whitespace();
 
@@ -46,14 +58,8 @@ impl Parser {
         let token = tokens
             .peek()
             .ok_or(ParserError::NoTokensRemainingToInterpret)?;
-        let object_interpretation = Interpretation::new(
-            InterpretationCondition::IsObject,
-            ExpressionType::Singleton,
-            0,
-            Type::Object,
-        );
         let mut interpretations = self.interpretations.clone();
-        interpretations.push(object_interpretation);
+        interpretations.push(Interpretation::any_object());
         for interpretation in interpretations.iter() {
             if interpretation.satisfies_condition(&so_far, &token) {
                 return interpretation.interpret(self, so_far, tokens);
@@ -69,6 +75,7 @@ pub enum ParserError {
     NoValidInterpretation(Token),
     NoTokensRemainingToInterpret,
     ExpectedButFound(Token, Token),
+    ExpectedLeftArgument,
 }
 
 #[cfg(test)]
@@ -166,6 +173,37 @@ mod test_parser {
         )
     }
 
+    #[test]
+    fn test_parser_parses_arguments() {
+        let mut tokens = Tokenizer::new_with_tokens(vec![]).tokenize("x, y, z");
+
+        let parser = Parser::argument_parser();
+
+        let parsed = parser.parse(&mut tokens);
+
+        assert_eq!(
+            parsed,
+            Ok(SymbolNode::new(
+                Symbol::new(
+                    ",".to_string(),
+                    Type::new_generic_function_with_arguments(2)
+                ),
+                vec![
+                    SymbolNode::leaf_object("x".to_string()),
+                    SymbolNode::new(
+                        Symbol::new(
+                            ",".to_string(),
+                            Type::new_generic_function_with_arguments(2)
+                        ),
+                        vec![
+                            SymbolNode::leaf_object("y".to_string()),
+                            SymbolNode::leaf_object("z".to_string()),
+                        ]
+                    )
+                ]
+            ))
+        )
+    }
     #[test]
     fn test_parser_simple() {
         let mut tokens = Tokenizer::new_with_tokens(vec![]).tokenize("x");
