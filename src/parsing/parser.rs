@@ -14,11 +14,16 @@ pub struct Parser {
 
 impl Parser {
     pub fn new(interpretations: Vec<Interpretation>) -> Self {
+        let argument_parser = Self::argument_parser();
+        argument_parser.combine(Self::new_raw(interpretations))
+    }
+
+    pub fn new_raw(interpretations: Vec<Interpretation>) -> Self {
         Parser { interpretations }
     }
 
     pub fn argument_parser() -> Self {
-        Self::new(vec![
+        Self::new_raw(vec![
             Interpretation::new(
                 InterpretationCondition::Matches(Token::Comma),
                 ExpressionType::Infix,
@@ -27,6 +32,12 @@ impl Parser {
             ),
             Interpretation::any_object(),
         ])
+    }
+
+    pub fn combine(self, other: Self) -> Self {
+        let mut new_interpretations = self.interpretations;
+        new_interpretations.extend(other.interpretations);
+        Self::new_raw(new_interpretations)
     }
 
     pub fn parse(&self, tokens: &mut TokenStack) -> ParserResult {
@@ -58,9 +69,7 @@ impl Parser {
         let token = tokens
             .peek()
             .ok_or(ParserError::NoTokensRemainingToInterpret)?;
-        let mut interpretations = self.interpretations.clone();
-        interpretations.push(Interpretation::any_object());
-        for interpretation in interpretations.iter() {
+        for interpretation in self.interpretations.iter() {
             if interpretation.satisfies_condition(&so_far, &token) {
                 return interpretation.interpret(self, so_far, tokens);
             }
