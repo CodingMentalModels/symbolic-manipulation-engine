@@ -29,8 +29,8 @@ impl Parser {
         tokens: &mut TokenStack,
     ) -> Result<SymbolNode, String> {
         let token = tokens
-            .pop()
-            .ok_or("Tried to parse_next but no tokens remained.".to_string())?;
+            .peek()
+            .ok_or("Tried to parse next but no tokens remained.".to_string())?;
         self.interpret(so_far, tokens)
     }
 
@@ -42,12 +42,21 @@ impl Parser {
         let token = tokens
             .peek()
             .ok_or("Tried to interpret token but no tokens remained.".to_string())?;
-        for interpretation in self.interpretations.iter() {
+        let object_interpretation = Interpretation::new(
+            InterpretationCondition::IsObject,
+            ExpressionType::Singleton,
+            0,
+            Type::Object,
+        );
+        let mut interpretations = self.interpretations.clone();
+        interpretations.push(object_interpretation);
+        for interpretation in interpretations.iter() {
             if interpretation.satisfies_condition(&so_far, &token) {
                 return interpretation.interpret(self, so_far, tokens);
             }
         }
-        return Err("No valid interpretation.".to_string());
+
+        return Err(format!("No valid interpretation for {:?}", token).to_string());
     }
 }
 
@@ -115,5 +124,47 @@ mod test_parser {
                 ]
             ))
         )
+    }
+
+    #[test]
+    fn test_parser_parses_functional() {
+        let mut tokens = Tokenizer::new_with_tokens(vec![]).tokenize("f(x, y, z)");
+
+        let f_interpretation = Interpretation::new(
+            InterpretationCondition::Matches(Token::Object("f".to_string())),
+            ExpressionType::Functional,
+            0,
+            Type::new_generic_function_with_arguments(3),
+        );
+        let parser = Parser::new(vec![f_interpretation]);
+
+        let parsed = parser.parse(&mut tokens);
+
+        assert_eq!(
+            parsed,
+            Ok(SymbolNode::new(
+                Symbol::new(
+                    "f".to_string(),
+                    Type::new_generic_function_with_arguments(3)
+                ),
+                vec![
+                    SymbolNode::leaf_object("x".to_string()),
+                    SymbolNode::leaf_object("y".to_string()),
+                    SymbolNode::leaf_object("z".to_string()),
+                ]
+            ))
+        )
+    }
+
+    #[test]
+    fn test_parser_simple() {
+        let mut tokens = Tokenizer::new_with_tokens(vec![]).tokenize("x");
+        assert_eq!(tokens.len(), 1);
+
+        let parser = Parser::new(vec![]);
+
+        let parsed = parser.parse(&mut tokens);
+
+        assert_eq!(parsed, Ok(SymbolNode::leaf_object("x".to_string())));
     }
 }
