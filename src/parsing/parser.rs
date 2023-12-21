@@ -18,9 +18,19 @@ impl Parser {
     pub fn parse(&self, tokens: &mut TokenStack) -> Result<SymbolNode, String> {
         tokens.remove_whitespace();
 
-        let left_arg = None;
+        let mut left_arg = Some(self.parse_next(None, tokens)?);
 
-        self.parse_next(left_arg, tokens)
+        while let Some(_token) = tokens.peek() {
+            match self.parse_next(left_arg.clone(), tokens) {
+                Ok(node) => {
+                    left_arg = Some(node);
+                }
+                Err(_e) => {
+                    return Ok(left_arg.unwrap());
+                }
+            }
+        }
+        return Ok(left_arg.unwrap());
     }
 
     pub fn parse_next(
@@ -28,9 +38,6 @@ impl Parser {
         so_far: Option<SymbolNode>,
         tokens: &mut TokenStack,
     ) -> Result<SymbolNode, String> {
-        let token = tokens
-            .peek()
-            .ok_or("Tried to parse next but no tokens remained.".to_string())?;
         self.interpret(so_far, tokens)
     }
 
