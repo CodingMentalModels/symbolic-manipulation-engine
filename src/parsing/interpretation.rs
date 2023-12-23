@@ -13,7 +13,7 @@ use super::{
     tokenizer::{Token, TokenStack},
 };
 
-type ExpressionPrecidence = u8;
+pub type ExpressionPrecidence = u8;
 
 #[derive(Clone, Debug, Hash, PartialEq, Eq)]
 pub struct Interpretation {

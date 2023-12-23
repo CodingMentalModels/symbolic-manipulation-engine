@@ -3,6 +3,7 @@ use crate::parsing::tokenizer::{Token, Tokenizer};
 use crate::symbol::symbol_node::{Symbol, SymbolNode};
 use crate::symbol::symbol_type::Type;
 
+use super::interpretation::ExpressionPrecidence;
 use super::tokenizer::TokenStack;
 
 pub type ParserResult = Result<SymbolNode, ParserError>;
@@ -51,20 +52,27 @@ impl Parser {
     }
 
     pub fn parse_next(&self, so_far: Option<SymbolNode>, tokens: &mut TokenStack) -> ParserResult {
-        self.interpret(so_far, tokens)
-    }
-
-    pub fn interpret(&self, so_far: Option<SymbolNode>, tokens: &mut TokenStack) -> ParserResult {
         let token = tokens
             .peek()
             .ok_or(ParserError::NoTokensRemainingToInterpret)?;
+        let interpretation = self
+            .get_interpretation(&so_far, &token)
+            .ok_or(ParserError::NoValidInterpretation(token))?;
+        return interpretation.interpret(self, so_far, tokens);
+    }
+
+    pub fn get_interpretation(
+        &self,
+        so_far: &Option<SymbolNode>,
+        token: &Token,
+    ) -> Option<Interpretation> {
         for interpretation in self.interpretations.iter() {
-            if interpretation.satisfies_condition(&so_far, &token) {
-                return interpretation.interpret(self, so_far, tokens);
+            if interpretation.satisfies_condition(so_far, token) {
+                return Some(interpretation.clone());
             }
         }
 
-        return Err(ParserError::NoValidInterpretation(token));
+        return None;
     }
 }
 
