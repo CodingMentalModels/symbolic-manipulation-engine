@@ -13,25 +13,13 @@ pub struct Parser {
 }
 
 impl Parser {
-    pub fn new(interpretations: Vec<Interpretation>) -> Self {
-        let argument_parser = Self::argument_parser();
-        argument_parser.combine(Self::new_raw(interpretations))
+    pub fn new(mut interpretations: Vec<Interpretation>) -> Self {
+        interpretations.push(Interpretation::any_object());
+        Self::new_raw(interpretations)
     }
 
     pub fn new_raw(interpretations: Vec<Interpretation>) -> Self {
         Parser { interpretations }
-    }
-
-    pub fn argument_parser() -> Self {
-        Self::new_raw(vec![
-            Interpretation::new(
-                InterpretationCondition::Matches(Token::Comma),
-                ExpressionType::Infix,
-                0,
-                Type::Object,
-            ),
-            Interpretation::any_object(),
-        ])
     }
 
     pub fn combine(self, other: Self) -> Self {
@@ -50,7 +38,8 @@ impl Parser {
                 Ok(node) => {
                     left_arg = Some(node);
                 }
-                Err(ParserError::NoTokensRemainingToInterpret) => {
+                Err(ParserError::NoTokensRemainingToInterpret)
+                | Err(ParserError::NoValidInterpretation(_)) => {
                     return Ok(left_arg.unwrap());
                 }
                 Err(e) => {
@@ -100,7 +89,7 @@ mod test_parser {
         let boxed_integer = Box::new(integer_type.clone());
 
         let plus_interpretation = Interpretation::new(
-            InterpretationCondition::Matches(Token::Object("+".to_string())),
+            InterpretationCondition::Matches(Token::Custom("+".to_string())),
             ExpressionType::Infix,
             0,
             Type::Generic(
@@ -109,7 +98,7 @@ mod test_parser {
             ),
         );
         let equals_interpretation = Interpretation::new(
-            InterpretationCondition::Matches(Token::Object("=".to_string())),
+            InterpretationCondition::Matches(Token::Custom("=".to_string())),
             ExpressionType::Infix,
             1,
             Type::Generic(
@@ -153,6 +142,35 @@ mod test_parser {
     }
 
     #[test]
+    fn test_parser_parses_p_implies_q() {
+        let mut tokens = Tokenizer::new_with_tokens(vec!["=>".to_string()]).tokenize("p=>q");
+
+        let implies_interpretation = Interpretation::new(
+            InterpretationCondition::Matches(Token::Custom("=>".to_string())),
+            ExpressionType::Infix,
+            0,
+            Type::new_generic_function_with_arguments(2),
+        );
+
+        let mut parser = Parser::new(vec![implies_interpretation]);
+
+        let parsed = parser.parse(&mut tokens);
+
+        assert_eq!(
+            parsed,
+            Ok(SymbolNode::new(
+                Symbol::new(
+                    "=>".to_string(),
+                    Type::new_generic_function_with_arguments(2)
+                ),
+                vec![
+                    SymbolNode::leaf_object("p".to_string()),
+                    SymbolNode::leaf_object("q".to_string()),
+                ]
+            ))
+        )
+    }
+    #[test]
     fn test_parser_parses_functional() {
         let mut tokens = Tokenizer::new_with_tokens(vec![]).tokenize("f(x, y, z)");
 
@@ -182,37 +200,6 @@ mod test_parser {
         )
     }
 
-    #[test]
-    fn test_parser_parses_arguments() {
-        let mut tokens = Tokenizer::new_with_tokens(vec![]).tokenize("x, y, z");
-
-        let parser = Parser::argument_parser();
-
-        let parsed = parser.parse(&mut tokens);
-
-        assert_eq!(
-            parsed,
-            Ok(SymbolNode::new(
-                Symbol::new(
-                    ",".to_string(),
-                    Type::new_generic_function_with_arguments(2)
-                ),
-                vec![
-                    SymbolNode::leaf_object("x".to_string()),
-                    SymbolNode::new(
-                        Symbol::new(
-                            ",".to_string(),
-                            Type::new_generic_function_with_arguments(2)
-                        ),
-                        vec![
-                            SymbolNode::leaf_object("y".to_string()),
-                            SymbolNode::leaf_object("z".to_string()),
-                        ]
-                    )
-                ]
-            ))
-        )
-    }
     #[test]
     fn test_parser_simple() {
         let mut tokens = Tokenizer::new_with_tokens(vec![]).tokenize("x");

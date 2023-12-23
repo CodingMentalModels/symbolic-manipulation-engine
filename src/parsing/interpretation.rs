@@ -76,7 +76,7 @@ impl Interpretation {
         so_far: Option<SymbolNode>,
         tokens: &mut TokenStack,
     ) -> ParserResult {
-        println!("Interpreting: {:?}", tokens);
+        println!("Interpreting: {:?} ({:?})", tokens, self.expression_type);
         let token = tokens
             .pop()
             .ok_or(ParserError::NoTokensRemainingToInterpret)?;
