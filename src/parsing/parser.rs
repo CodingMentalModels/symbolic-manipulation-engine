@@ -123,26 +123,20 @@ mod test_parser {
     fn test_parser_parses() {
         let mut tokens = Tokenizer::new_with_tokens(vec!["+".to_string(), "=".to_string()])
             .tokenize("2 + 2 = 4");
-        let integer_type = Type::new_from_object("Integer".to_string());
+        let integer_type = Type::new("Integer".to_string());
         let boxed_integer = Box::new(integer_type.clone());
 
         let plus_interpretation = Interpretation::new(
             InterpretationCondition::Matches(Token::Custom("+".to_string())),
             ExpressionType::Infix,
             0,
-            Type::Generic(
-                vec![integer_type.clone(), integer_type.clone()],
-                boxed_integer.clone(),
-            ),
+            Type::NamedType("Plus".to_string()),
         );
         let equals_interpretation = Interpretation::new(
             InterpretationCondition::Matches(Token::Custom("=".to_string())),
             ExpressionType::Infix,
             1,
-            Type::Generic(
-                vec![integer_type.clone(), integer_type.clone()],
-                boxed_integer.clone(),
-            ),
+            Type::NamedType("Equals".to_string()),
         );
 
         let mut parser = Parser::new(vec![plus_interpretation, equals_interpretation]);
@@ -152,22 +146,10 @@ mod test_parser {
         assert_eq!(
             parsed,
             Ok(SymbolNode::new(
-                Symbol::new(
-                    "=".to_string(),
-                    Type::Generic(
-                        vec![integer_type.clone(), integer_type.clone()],
-                        boxed_integer.clone()
-                    )
-                ),
+                Symbol::new("=".to_string(), "=".into(),),
                 vec![
                     SymbolNode::new(
-                        Symbol::new(
-                            "+".to_string(),
-                            Type::Generic(
-                                vec![integer_type.clone(), integer_type.clone()],
-                                boxed_integer.clone()
-                            )
-                        ),
+                        Symbol::new("+".to_string(), "+".into(),),
                         vec![
                             SymbolNode::leaf_object("2".to_string()),
                             SymbolNode::leaf_object("2".to_string())
@@ -187,7 +169,7 @@ mod test_parser {
             InterpretationCondition::Matches(Token::Custom("=>".to_string())),
             ExpressionType::Infix,
             0,
-            Type::new_generic_function_with_arguments(2),
+            "=>".into(),
         );
 
         let mut parser = Parser::new(vec![implies_interpretation]);
@@ -197,10 +179,7 @@ mod test_parser {
         assert_eq!(
             parsed,
             Ok(SymbolNode::new(
-                Symbol::new(
-                    "=>".to_string(),
-                    Type::new_generic_function_with_arguments(2)
-                ),
+                Symbol::new("=>".to_string(), "=>".into(),),
                 vec![
                     SymbolNode::leaf_object("p".to_string()),
                     SymbolNode::leaf_object("q".to_string()),
@@ -217,7 +196,7 @@ mod test_parser {
             InterpretationCondition::Matches(Token::Object("f".to_string())),
             ExpressionType::Functional,
             0,
-            Type::new_generic_function_with_arguments(3),
+            "Function".into(),
         );
         let parser = Parser::new(vec![f_interpretation]);
 
@@ -226,10 +205,7 @@ mod test_parser {
         assert_eq!(
             parsed,
             Ok(SymbolNode::new(
-                Symbol::new(
-                    "f".to_string(),
-                    Type::new_generic_function_with_arguments(3)
-                ),
+                Symbol::new("f".to_string(), "Function".into(),),
                 vec![
                     SymbolNode::leaf_object("x".to_string()),
                     SymbolNode::leaf_object("y".to_string()),

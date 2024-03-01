@@ -170,7 +170,7 @@ mod test_interpretation {
             InterpretationCondition::Matches(Token::Object("f".to_string())),
             ExpressionType::Functional,
             0,
-            Type::new_generic_function_with_arguments(3),
+            "Function".into(),
         );
 
         assert!(f_interpretation.satisfies_condition(&None, &Token::Object("f".to_string())));
