@@ -322,34 +322,6 @@ impl SymbolNode {
 
         return to_return;
     }
-
-    pub fn generalizes(&self, other: &Self) -> bool {
-        self.root.get_name() == other.root.get_name()
-            && self
-                .root
-                .get_evaluates_to_type()
-                .is_supertype_of(&other.root.get_evaluates_to_type())
-            && self.children.len() == other.children.len()
-            && self
-                .children
-                .iter()
-                .zip(other.children.iter())
-                .all(|(x, y)| x.generalizes(y))
-    }
-
-    pub fn is_generalized_by(&self, other: &Self) -> bool {
-        self.root.get_name() == other.root.get_name()
-            && other
-                .root
-                .get_evaluates_to_type()
-                .is_supertype_of(&self.root.get_evaluates_to_type())
-            && self.children.len() == other.children.len()
-            && self
-                .children
-                .iter()
-                .zip(other.children.iter())
-                .all(|(x, y)| x.is_generalized_by(y))
-    }
 }
 
 #[derive(Clone, Debug, Default, Hash, PartialEq, Eq, Serialize, Deserialize)]
@@ -401,12 +373,12 @@ mod test_statement {
 
     #[test]
     fn test_symbol_node_initializes() {
-        let a_equals_b_plus_c = SymbolNode::new_generic(
-            "=".to_string(),
+        let a_equals_b_plus_c = SymbolNode::new(
+            "=".into(),
             vec![
                 SymbolNode::leaf_object("a".to_string()),
-                SymbolNode::new_generic(
-                    "+".to_string(),
+                SymbolNode::new(
+                    "+".into(),
                     vec![
                         SymbolNode::leaf_object("b".to_string()),
                         SymbolNode::leaf_object("c".to_string()),
@@ -425,8 +397,8 @@ mod test_statement {
         // prod_{i = 1}^{n} i
         // Point: Expand 5! to 5 * 4 * 3 * 2 * 1, which is going to require a transformation like:
         // 5! => prod_{i = 1}^{5} i => 5 * 4 * 3 * 2 * 1
-        let n_factorial_definition = SymbolNode::new_generic(
-            "Prod".to_string(),
+        let n_factorial_definition = SymbolNode::new(
+            "Prod".into(),
             vec![
                 SymbolNode::leaf_object("i".to_string()), // i is the index variable
                 SymbolNode::leaf_object("1".to_string()), // 1 is the lower bound
@@ -436,7 +408,7 @@ mod test_statement {
         );
 
         let factorial_definition =
-            SymbolNode::new_generic("=".to_string(), vec![n_factorial, n_factorial_definition]);
+            SymbolNode::new("=".into(), vec![n_factorial, n_factorial_definition]);
 
         assert_eq!(factorial_definition.get_depth(), 3);
     }
@@ -553,36 +525,5 @@ mod test_statement {
     #[test]
     fn test_symbol_nodes_detect_conflicting_types() {
         unimplemented!()
-    }
-
-    #[test]
-    fn test_generalizes_and_is_generalized_by() {
-        let a_equals_b = SymbolNode::new(
-            "=".into(),
-            vec![
-                SymbolNode::leaf_object("a".to_string()),
-                SymbolNode::leaf_object("b".to_string()),
-            ],
-        );
-
-        assert!(a_equals_b.generalizes(&a_equals_b));
-        assert!(a_equals_b.is_generalized_by(&a_equals_b));
-
-        let a_equals_b_integers = SymbolNode::new(
-            Symbol::new("=".to_string(), Type::new("Boolean".to_string())),
-            vec![
-                SymbolNode::leaf(Symbol::new(
-                    "a".to_string(),
-                    Type::new("Integer".to_string()),
-                )),
-                SymbolNode::leaf(Symbol::new(
-                    "b".to_string(),
-                    Type::new("Integer".to_string()),
-                )),
-            ],
-        );
-
-        assert!(!a_equals_b_integers.generalizes(&a_equals_b));
-        assert!(a_equals_b.generalizes(&a_equals_b_integers));
     }
 }

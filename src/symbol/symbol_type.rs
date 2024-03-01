@@ -68,6 +68,24 @@ impl TypeHierarchy {
         }
     }
 
+    pub fn generalizes(&self, left: &SymbolNode, right: &SymbolNode) -> bool {
+        left.root.get_name() == right.root.get_name()
+            && self.is_supertype_of(
+                &left.root.get_evaluates_to_type(),
+                &right.root.get_evaluates_to_type(),
+            )
+            && left.children.len() == right.children.len()
+            && left
+                .children
+                .iter()
+                .zip(right.children.iter())
+                .all(|(x, y)| x.generalizes(y))
+    }
+
+    pub fn is_generalized_by(left: &SymbolNode, right: &SymbolNode) -> bool {
+        self.generalizes(right, left)
+    }
+
     pub fn is_subtype_of(&self, child: &Type, parent: &Type) -> bool {
         let mut current = child;
         while let Some(node) = self.nodes.get(current) {
@@ -165,6 +183,36 @@ mod test_type {
         assert_eq!(quaternion.to_string(), "Quaternion");
     }
 
+    #[test]
+    fn test_generalizes_and_is_generalized_by() {
+        let a_equals_b = SymbolNode::new(
+            "=".into(),
+            vec![
+                SymbolNode::leaf_object("a".to_string()),
+                SymbolNode::leaf_object("b".to_string()),
+            ],
+        );
+
+        assert!(a_equals_b.generalizes(&a_equals_b));
+        assert!(a_equals_b.is_generalized_by(&a_equals_b));
+
+        let a_equals_b_integers = SymbolNode::new(
+            Symbol::new("=".to_string(), Type::new("Boolean".to_string())),
+            vec![
+                SymbolNode::leaf(Symbol::new(
+                    "a".to_string(),
+                    Type::new("Integer".to_string()),
+                )),
+                SymbolNode::leaf(Symbol::new(
+                    "b".to_string(),
+                    Type::new("Integer".to_string()),
+                )),
+            ],
+        );
+
+        assert!(!a_equals_b_integers.generalizes(&a_equals_b));
+        assert!(a_equals_b.generalizes(&a_equals_b_integers));
+    }
     #[test]
     fn test_type_hierarchy_is_supertype_of() {
         let quaternion = Type::new("Quaternion".to_string());
