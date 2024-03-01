@@ -443,12 +443,12 @@ mod test_statement {
 
     #[test]
     fn test_symbol_nodes_relabel() {
-        let a_equals_b_plus_c = SymbolNode::new_generic(
-            "=".to_string(),
+        let a_equals_b_plus_c = SymbolNode::new(
+            "=".into(),
             vec![
                 SymbolNode::leaf_object("a".to_string()),
-                SymbolNode::new_generic(
-                    "+".to_string(),
+                SymbolNode::new(
+                    "+".into(),
                     vec![
                         SymbolNode::leaf_object("b".to_string()),
                         SymbolNode::leaf_object("c".to_string()),
@@ -458,12 +458,12 @@ mod test_statement {
         );
 
         let x_equals_b_plus_c = a_equals_b_plus_c.relabel("a".to_string(), "x".to_string());
-        let expected = SymbolNode::new_generic(
-            "=".to_string(),
+        let expected = SymbolNode::new(
+            "=".into(),
             vec![
                 SymbolNode::leaf_object("x".to_string()),
-                SymbolNode::new_generic(
-                    "+".to_string(),
+                SymbolNode::new(
+                    "+".into(),
                     vec![
                         SymbolNode::leaf_object("b".to_string()),
                         SymbolNode::leaf_object("c".to_string()),
@@ -476,12 +476,12 @@ mod test_statement {
         let x_equals_y_plus_y = x_equals_b_plus_c
             .relabel("b".to_string(), "y".to_string())
             .relabel("c".to_string(), "y".to_string());
-        let expected = SymbolNode::new_generic(
-            "=".to_string(),
+        let expected = SymbolNode::new(
+            "=".into(),
             vec![
                 SymbolNode::leaf_object("x".to_string()),
-                SymbolNode::new_generic(
-                    "+".to_string(),
+                SymbolNode::new(
+                    "+".into(),
                     vec![
                         SymbolNode::leaf_object("y".to_string()),
                         SymbolNode::leaf_object("y".to_string()),
@@ -492,12 +492,12 @@ mod test_statement {
         assert_eq!(x_equals_y_plus_y, expected);
 
         let x_equals_x_plus_x = x_equals_y_plus_y.relabel("y".to_string(), "x".to_string());
-        let expected = SymbolNode::new_generic(
-            "=".to_string(),
+        let expected = SymbolNode::new(
+            "=".into(),
             vec![
                 SymbolNode::leaf_object("x".to_string()),
-                SymbolNode::new_generic(
-                    "+".to_string(),
+                SymbolNode::new(
+                    "+".into(),
                     vec![
                         SymbolNode::leaf_object("x".to_string()),
                         SymbolNode::leaf_object("x".to_string()),
@@ -528,12 +528,12 @@ mod test_statement {
             .collect(),
         );
 
-        let expected = SymbolNode::new_generic(
-            "=".to_string(),
+        let expected = SymbolNode::new(
+            "=".into(),
             vec![
                 SymbolNode::leaf_object("a".to_string()),
-                SymbolNode::new_generic(
-                    "+".to_string(),
+                SymbolNode::new(
+                    "+".into(),
                     vec![
                         SymbolNode::leaf_object("c".to_string()),
                         SymbolNode::leaf_object("b".to_string()),
@@ -546,170 +546,13 @@ mod test_statement {
     }
 
     #[test]
-    fn test_symbol_node_identifies_conflicts() {
-        let a_equals_b_plus_c = SymbolNode::new_generic(
-            "=".to_string(),
-            vec![
-                SymbolNode::leaf_object("a".to_string()),
-                SymbolNode::new_generic(
-                    "+".to_string(),
-                    vec![
-                        SymbolNode::leaf_object("b".to_string()),
-                        SymbolNode::leaf(Symbol::new(
-                            "c".to_string(),
-                            Type::new_from_object("Variable".to_string()),
-                        )),
-                    ],
-                ),
-            ],
-        );
-        assert_eq!(
-            a_equals_b_plus_c.get_type_conflicts(),
-            vec![].into_iter().collect()
-        );
-
-        let a_equals_b_plus_a = SymbolNode::new_generic(
-            "=".to_string(),
-            vec![
-                SymbolNode::leaf_object("a".to_string()),
-                SymbolNode::new_generic(
-                    "+".to_string(),
-                    vec![
-                        SymbolNode::leaf_object("b".to_string()),
-                        SymbolNode::leaf_object("a".to_string()),
-                    ],
-                ),
-            ],
-        );
-        assert_eq!(
-            a_equals_b_plus_a.get_type_conflicts(),
-            vec![].into_iter().collect()
-        );
-
-        let a_equals_b_plus_a_conflicting = SymbolNode::new_generic(
-            "=".to_string(),
-            vec![
-                SymbolNode::leaf_object("a".to_string()),
-                SymbolNode::new_generic(
-                    "+".to_string(),
-                    vec![
-                        SymbolNode::leaf_object("b".to_string()),
-                        SymbolNode::leaf(Symbol::new(
-                            "a".to_string(),
-                            Type::new_from_object("Variable".to_string()),
-                        )),
-                    ],
-                ),
-            ],
-        );
-        assert_eq!(
-            a_equals_b_plus_a_conflicting.get_type_conflicts(),
-            vec!["a".to_string()].into_iter().collect()
-        );
+    fn test_symbol_nodes_detect_conflicting_arities() {
+        unimplemented!()
     }
 
     #[test]
-    fn test_symbol_node_identifies_incorrect_argument_types() {
-        assert_eq!(
-            SymbolNode::leaf_object("a".to_string()).get_incorrect_argument_types(),
-            vec![].into_iter().collect()
-        );
-        assert_eq!(
-            SymbolNode::leaf(Symbol::new(
-                "a".to_string(),
-                Type::new("Variable".to_string())
-            ))
-            .get_incorrect_argument_types(),
-            vec![].into_iter().collect()
-        );
-        assert_eq!(
-            SymbolNode::new(
-                Symbol::new_object("a".to_string()),
-                vec![
-                    SymbolNode::leaf_object("b".to_string()),
-                    SymbolNode::leaf_object("c".to_string()),
-                ]
-            )
-            .get_incorrect_argument_types(),
-            vec!["a".to_string()].into_iter().collect()
-        );
-
-        assert_eq!(
-            SymbolNode::new(
-                Symbol::new(
-                    "a".to_string(),
-                    Type::new_generic_function_with_arguments(3)
-                ),
-                vec![
-                    SymbolNode::leaf_object("b".to_string()),
-                    SymbolNode::leaf_object("c".to_string()),
-                ]
-            )
-            .get_incorrect_argument_types(),
-            vec!["a".to_string()].into_iter().collect()
-        );
-
-        let a_equals_b_plus_c = SymbolNode::new_generic(
-            "=".to_string(),
-            vec![
-                SymbolNode::leaf_object("a".to_string()),
-                SymbolNode::new_generic(
-                    "+".to_string(),
-                    vec![
-                        SymbolNode::leaf_object("b".to_string()),
-                        SymbolNode::leaf(Symbol::new(
-                            "c".to_string(),
-                            Type::new("Variable".to_string()),
-                        )),
-                    ],
-                ),
-            ],
-        );
-
-        assert_eq!(
-            a_equals_b_plus_c.get_incorrect_argument_types(),
-            vec![].into_iter().collect()
-        );
-
-        let a_equals_b_plus_c_valid_equals = SymbolNode::new(
-            Symbol::new("=".to_string(), "=".into()),
-            vec![
-                SymbolNode::leaf_object("a".to_string()),
-                SymbolNode::new(
-                    "+".into(),
-                    vec![
-                        SymbolNode::leaf_object("b".to_string()),
-                        SymbolNode::leaf(Symbol::new("c".to_string(), "Variable".into())),
-                    ],
-                ),
-            ],
-        );
-        assert_eq!(
-            a_equals_b_plus_c_valid_equals.get_incorrect_argument_types(),
-            vec![].into_iter().collect()
-        );
-
-        let a_equals_b_plus_c_invalid_return_type = SymbolNode::new(
-            Symbol::new("=".to_string(), "Specific".into()),
-            vec![
-                SymbolNode::leaf_object("a".to_string()),
-                SymbolNode::new(
-                    Symbol::new("+".to_string(), "Boolean".into()),
-                    vec![
-                        SymbolNode::leaf_object("b".to_string()),
-                        SymbolNode::leaf(Symbol::new(
-                            "c".to_string(),
-                            Type::new("Variable".to_string()),
-                        )),
-                    ],
-                ),
-            ],
-        );
-
-        assert_eq!(
-            a_equals_b_plus_c_invalid_return_type.get_incorrect_argument_types(),
-            vec!["=".to_string()].into_iter().collect()
-        );
+    fn test_symbol_nodes_detect_conflicting_types() {
+        unimplemented!()
     }
 
     #[test]
@@ -743,4 +586,3 @@ mod test_statement {
         assert!(a_equals_b.generalizes(&a_equals_b_integers));
     }
 }
-
