@@ -35,16 +35,6 @@ impl SymbolNode {
         Self::new(root, vec![SymbolNode::leaf(child)])
     }
 
-    pub fn new_generic(root: String, children: Vec<Self>) -> Self {
-        Self::new(
-            Symbol::new(
-                root,
-                Type::new_generic_function_with_arguments(children.len()),
-            ),
-            children,
-        )
-    }
-
     pub fn leaf_object(root: String) -> Self {
         Self::leaf(Symbol::new_object(root))
     }
@@ -368,6 +358,18 @@ pub struct Symbol {
     evaluates_to_type: Type,
 }
 
+impl From<&str> for Symbol {
+    fn from(value: &str) -> Self {
+        Self::from(value.to_string())
+    }
+}
+
+impl From<String> for Symbol {
+    fn from(value: String) -> Self {
+        Self::new(value, Type::Object)
+    }
+}
+
 impl Symbol {
     pub fn new(name: SymbolName, symbol_type: Type) -> Self {
         Self {
@@ -615,7 +617,7 @@ mod test_statement {
         assert_eq!(
             SymbolNode::leaf(Symbol::new(
                 "a".to_string(),
-                Type::new_from_object("Variable".to_string())
+                Type::new("Variable".to_string())
             ))
             .get_incorrect_argument_types(),
             vec![].into_iter().collect()
@@ -657,7 +659,7 @@ mod test_statement {
                         SymbolNode::leaf_object("b".to_string()),
                         SymbolNode::leaf(Symbol::new(
                             "c".to_string(),
-                            Type::new_from_object("Variable".to_string()),
+                            Type::new("Variable".to_string()),
                         )),
                     ],
                 ),
@@ -670,23 +672,14 @@ mod test_statement {
         );
 
         let a_equals_b_plus_c_valid_equals = SymbolNode::new(
-            Symbol::new(
-                "=".to_string(),
-                Type::new(
-                    "=".to_string(),
-                    Type::new_generic_function_with_arguments(2),
-                ),
-            ),
+            Symbol::new("=".to_string(), "=".into()),
             vec![
                 SymbolNode::leaf_object("a".to_string()),
-                SymbolNode::new_generic(
-                    "+".to_string(),
+                SymbolNode::new(
+                    "+".into(),
                     vec![
                         SymbolNode::leaf_object("b".to_string()),
-                        SymbolNode::leaf(Symbol::new(
-                            "c".to_string(),
-                            Type::new_from_object("Variable".to_string()),
-                        )),
+                        SymbolNode::leaf(Symbol::new("c".to_string(), "Variable".into())),
                     ],
                 ),
             ],
@@ -697,31 +690,16 @@ mod test_statement {
         );
 
         let a_equals_b_plus_c_invalid_return_type = SymbolNode::new(
-            Symbol::new(
-                "=".to_string(),
-                Type::new_generic_function(
-                    vec![
-                        Type::new_from_object("Specific".to_string()),
-                        Type::new_from_object("Specific".to_string()),
-                    ],
-                    Type::new_from_object("Specific".to_string()),
-                ),
-            ),
+            Symbol::new("=".to_string(), "Specific".into()),
             vec![
                 SymbolNode::leaf_object("a".to_string()),
                 SymbolNode::new(
-                    Symbol::new(
-                        "+".to_string(),
-                        Type::new_generic_function(
-                            vec![Type::default(), Type::default()],
-                            Type::new_from_object("Different Specific".to_string()),
-                        ),
-                    ),
+                    Symbol::new("+".to_string(), "Boolean".into()),
                     vec![
                         SymbolNode::leaf_object("b".to_string()),
                         SymbolNode::leaf(Symbol::new(
                             "c".to_string(),
-                            Type::new_from_object("Variable".to_string()),
+                            Type::new("Variable".to_string()),
                         )),
                     ],
                 ),
@@ -736,8 +714,8 @@ mod test_statement {
 
     #[test]
     fn test_generalizes_and_is_generalized_by() {
-        let a_equals_b = SymbolNode::new_generic(
-            "=".to_string(),
+        let a_equals_b = SymbolNode::new(
+            "=".into(),
             vec![
                 SymbolNode::leaf_object("a".to_string()),
                 SymbolNode::leaf_object("b".to_string()),
@@ -748,24 +726,15 @@ mod test_statement {
         assert!(a_equals_b.is_generalized_by(&a_equals_b));
 
         let a_equals_b_integers = SymbolNode::new(
-            Symbol::new(
-                "=".to_string(),
-                Type::new_generic_function(
-                    vec![
-                        Type::new_from_object("Integer".to_string()),
-                        Type::new_from_object("Integer".to_string()),
-                    ],
-                    Type::new_from_object("Boolean".to_string()),
-                ),
-            ),
+            Symbol::new("=".to_string(), Type::new("Boolean".to_string())),
             vec![
                 SymbolNode::leaf(Symbol::new(
                     "a".to_string(),
-                    Type::new_from_object("Integer".to_string()),
+                    Type::new("Integer".to_string()),
                 )),
                 SymbolNode::leaf(Symbol::new(
                     "b".to_string(),
-                    Type::new_from_object("Integer".to_string()),
+                    Type::new("Integer".to_string()),
                 )),
             ],
         );
