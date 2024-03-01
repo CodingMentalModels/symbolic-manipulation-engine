@@ -59,15 +59,22 @@ A type system is necessary because:
 - When we write math, we implicitly know what types things are, and notation, etc. reflects that.  
 
 Our type system should:
-- Allow for different "arities" of symbols; that is, how many "arguments" they take.  
-    - `5` has arity 0
-    - `+` has arity 2
-    - `!` (factorial) has arity 1
-- Allow for "return types", e.g. `+` returns a $\mathbb{R}$, a logical predicate returns a boolean. This allows nesting of `SymbolNode`s.
 - Model and enforce a type hierarchy, to allow e.g. $\mathbb{N} \subset \mathbb{Z} \subset \mathbb{Q} \subset \ldots$.  
-- Each "function signature" (i.e. arity, return type) gets its own hierarchy.  
-    - A 0-arity symbol with a return type is not the same as a 0-arity symbol of that type.  e.g. $x \in \mathbb{Z}$ and $y \in \cdot \mapsto \mathbb{Z}$ are considered different types.
 - Allow transformations to be predicated on the types of the variables involved.
+
+Our symbols then have:
+- An arity (could be 0)
+- A return type
+
+Expressions should be checked for unambiguous arities and return types.
+
+## Generic vs. Unique
+
+Symbols may be "Generic" or "Unique", with "Generic" symbols being interchangeable from a transformation perspective.
+
+e.g. the transformation $a = b => b = a$ could be defined for the generic symbols $a$, $b$, and the unique symbol $=$.  In that case $x = y$ would be transformable, but $x + y$ wouldn't be, because $=$ is a unique.
+
+
 
 ## Features
 
