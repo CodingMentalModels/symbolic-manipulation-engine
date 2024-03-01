@@ -41,13 +41,15 @@ impl Parser {
         let mut left_expr = if let Some(token) = token_stack.pop() {
             match self.get_interpretation(&None, &token) {
                 Some(interpretation) => match interpretation.get_expression_type() {
-                    ExpressionType::Singleton | ExpressionType::Prefix => {
-                        // Handle according to the specific interpretation
-                        // For Singleton, just create a node
-                        SymbolNode::leaf_object(token.to_string())
-                        // For Prefix, handle the prefix logic
+                    ExpressionType::Singleton => SymbolNode::leaf_object(token.to_string()),
+                    ExpressionType::Prefix => {
+                        let right_expr = self.parse_expression(
+                            token_stack,
+                            interpretation.get_expression_precidence() + 1,
+                        )?;
+                        SymbolNode::new(Symbol::new_object(token.to_string()), vec![right_expr])
                     }
-                    _ => return Err(ParserError::ExpectedLeftArgument),
+                    _ => return Err(ParserError::ExpectedLeftArgument(token)),
                 },
                 None => return Err(ParserError::NoValidInterpretation(token)),
             }
@@ -137,7 +139,7 @@ pub enum ParserError {
     NoValidInterpretation(Token),
     NoTokensRemainingToInterpret,
     ExpectedButFound(Token, Token),
-    ExpectedLeftArgument,
+    ExpectedLeftArgument(Token),
 }
 
 #[cfg(test)]

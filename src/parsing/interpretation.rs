@@ -123,7 +123,7 @@ impl Interpretation {
             }
             ExpressionType::Infix => match so_far {
                 None => {
-                    return Err(ParserError::ExpectedLeftArgument);
+                    return Err(ParserError::ExpectedLeftArgument(token));
                 }
                 Some(left) => {
                     let right = parser.parse(tokens)?;
