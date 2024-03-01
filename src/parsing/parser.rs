@@ -29,37 +29,93 @@ impl Parser {
         Self::new_raw(new_interpretations)
     }
 
-    pub fn parse(&self, tokens: &mut TokenStack) -> ParserResult {
-        tokens.remove_whitespace();
+    pub fn parse(&self, token_stack: &mut TokenStack) -> Result<SymbolNode, ParserError> {
+        self.parse_expression(token_stack, 0)
+    }
 
-        let mut left_arg = Some(self.parse_next(None, tokens)?);
+    fn parse_expression(
+        &self,
+        token_stack: &mut TokenStack,
+        min_precedence: ExpressionPrecidence,
+    ) -> Result<SymbolNode, ParserError> {
+        let mut left_expr = if let Some(token) = token_stack.pop() {
+            match self.get_interpretation(&None, &token) {
+                Some(interpretation) => match interpretation.get_expression_type() {
+                    ExpressionType::Singleton | ExpressionType::Prefix => {
+                        // Handle according to the specific interpretation
+                        // For Singleton, just create a node
+                        SymbolNode::leaf_object(token.to_string())
+                        // For Prefix, handle the prefix logic
+                    }
+                    _ => return Err(ParserError::ExpectedLeftArgument),
+                },
+                None => return Err(ParserError::NoValidInterpretation(token)),
+            }
+        } else {
+            return Err(ParserError::NoTokensRemainingToInterpret);
+        };
 
-        while let Some(_token) = tokens.peek() {
-            match self.parse_next(left_arg.clone(), tokens) {
-                Ok(node) => {
-                    left_arg = Some(node);
-                }
-                Err(ParserError::NoTokensRemainingToInterpret)
-                | Err(ParserError::NoValidInterpretation(_)) => {
-                    return Ok(left_arg.unwrap());
-                }
-                Err(e) => {
-                    return Err(e);
-                }
+        while let Some(next_token) = token_stack.peek() {
+            let interpretation =
+                match self.get_interpretation(&Some(left_expr.clone()), &next_token) {
+                    Some(interp) => interp,
+                    None => break,
+                };
+
+            if interpretation.get_expression_precidence() < min_precedence {
+                break;
+            }
+
+            token_stack.pop(); // Consume the token
+
+            // Handle according to the expression type, e.g., Infix
+            // This is a placeholder logic, adapt based on your actual rules
+            if interpretation.get_expression_type() == ExpressionType::Infix {
+                let right_expr = self.parse_expression(
+                    token_stack,
+                    interpretation.get_expression_precidence() + 1,
+                )?;
+                left_expr = SymbolNode::new(
+                    Symbol::new_object(next_token.to_string()),
+                    vec![left_expr, right_expr],
+                );
             }
         }
-        return Ok(left_arg.unwrap());
+
+        Ok(left_expr)
     }
 
-    pub fn parse_next(&self, so_far: Option<SymbolNode>, tokens: &mut TokenStack) -> ParserResult {
-        let token = tokens
-            .peek()
-            .ok_or(ParserError::NoTokensRemainingToInterpret)?;
-        let interpretation = self
-            .get_interpretation(&so_far, &token)
-            .ok_or(ParserError::NoValidInterpretation(token))?;
-        return interpretation.interpret(self, so_far, tokens);
-    }
+    //    pub fn parse(&self, tokens: &mut TokenStack) -> ParserResult {
+    //        tokens.remove_whitespace();
+    //
+    //        let mut left_arg = Some(self.parse_next(None, tokens)?);
+    //
+    //        while let Some(_token) = tokens.peek() {
+    //            match self.parse_next(left_arg.clone(), tokens) {
+    //                Ok(node) => {
+    //                    left_arg = Some(node);
+    //                }
+    //                Err(ParserError::NoTokensRemainingToInterpret)
+    //                | Err(ParserError::NoValidInterpretation(_)) => {
+    //                    return Ok(left_arg.unwrap());
+    //                }
+    //                Err(e) => {
+    //                    return Err(e);
+    //                }
+    //            }
+    //        }
+    //        return Ok(left_arg.unwrap());
+    //    }
+    //
+    //    pub fn parse_next(&self, so_far: Option<SymbolNode>, tokens: &mut TokenStack) -> ParserResult {
+    //        let token = tokens
+    //            .peek()
+    //            .ok_or(ParserError::NoTokensRemainingToInterpret)?;
+    //        let interpretation = self
+    //            .get_interpretation(&so_far, &token)
+    //            .ok_or(ParserError::NoValidInterpretation(token))?;
+    //        return interpretation.interpret(self, so_far, tokens);
+    //    }
 
     pub fn get_interpretation(
         &self,

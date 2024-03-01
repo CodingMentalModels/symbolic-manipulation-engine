@@ -47,6 +47,14 @@ impl Interpretation {
         )
     }
 
+    pub fn get_expression_type(&self) -> ExpressionType {
+        self.expression_type
+    }
+
+    pub fn get_expression_precidence(&self) -> ExpressionPrecidence {
+        self.expression_precidence
+    }
+
     pub fn satisfies_condition(&self, so_far: &Option<SymbolNode>, token: &Token) -> bool {
         let is_ok_expression_type = match self.expression_type {
             ExpressionType::Singleton
@@ -136,7 +144,7 @@ pub enum InterpretationCondition {
     IsObject,
 }
 
-#[derive(Clone, Debug, Hash, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, Hash, PartialEq, Eq)]
 pub enum ExpressionType {
     Singleton,
     Functional,
