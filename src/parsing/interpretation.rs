@@ -127,7 +127,7 @@ impl Interpretation {
                 }
                 Some(left) => {
                     let right = parser.parse(tokens)?;
-                    let operator = SymbolNode::new_generic(token.to_string(), vec![left, right]);
+                    let operator = SymbolNode::new(token.to_string().into(), vec![left, right]);
                     return Ok(operator);
                 }
             },

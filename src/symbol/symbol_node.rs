@@ -9,7 +9,6 @@ pub type SymbolNodeAddress = Vec<usize>;
 
 #[derive(Clone, Debug, Hash, PartialEq, Eq)]
 pub enum SymbolNodeError {
-    IncorrectArgumentTypes(Vec<String>),
     TypeConflicts(Vec<String>),
     DifferentNumberOfArguments,
     RelabellingNotInjective,
@@ -272,19 +271,10 @@ impl SymbolNode {
 
     pub fn validate(&self) -> Result<(), SymbolNodeError> {
         let type_conflicts = self.get_type_conflicts();
-        let incorrect_argument_types = self.get_incorrect_argument_types();
 
         if type_conflicts.len() > 0 {
             return Err(SymbolNodeError::TypeConflicts(
                 type_conflicts.into_iter().map(|x| x.to_string()).collect(),
-            ));
-        }
-        if incorrect_argument_types.len() > 0 {
-            return Err(SymbolNodeError::IncorrectArgumentTypes(
-                incorrect_argument_types
-                    .into_iter()
-                    .map(|x| x.to_string())
-                    .collect(),
             ));
         }
 
@@ -302,30 +292,6 @@ impl SymbolNode {
             } else {
                 type_map.insert(symbol.get_name(), symbol.get_evaluates_to_type());
             }
-        }
-
-        return to_return;
-    }
-
-    pub fn get_incorrect_argument_types(&self) -> HashSet<SymbolName> {
-        let mut to_return: HashSet<_> = Vec::new().into_iter().collect();
-
-        let argument_types_from_type = self.root.get_evaluates_to_type().get_argument_types();
-        let argument_types_from_children = self
-            .children
-            .iter()
-            .map(|child| child.root.get_evaluates_to_type())
-            .collect::<Vec<_>>();
-
-        if !Type::are_pairwise_allowed_to_take(
-            argument_types_from_type,
-            argument_types_from_children,
-        ) {
-            to_return.insert(self.root.get_name());
-        }
-
-        for child in &self.children {
-            to_return.extend(child.get_incorrect_argument_types());
         }
 
         return to_return;

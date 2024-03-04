@@ -57,11 +57,11 @@ impl TypeHierarchy {
                     parent: Some(parent_type.clone()),
                     children: vec![],
                 };
-                self.nodes.insert(type_to_add, node.clone());
+                self.nodes.insert(type_to_add.clone(), node.clone());
 
                 match self.nodes.get_mut(&parent_type) {
                     Some(parent_node) => {
-                        parent_node.children.push(type_to_add);
+                        parent_node.children.push(type_to_add.clone());
                     }
                     None => return Err(TypeError::ParentNotFound(type_to_add)),
                 }
@@ -229,12 +229,17 @@ mod test_type {
         let binary_function = Type::new("BinaryFunction".to_string());
         let plus = Type::new("Plus".to_string());
 
-        let mut type_hierarchy =
-            TypeHierarchy::chain(vec![quaternion, complex, real, rational]).unwrap();
-        type_hierarchy.add_child_to_parent(real, irrational);
+        let mut type_hierarchy = TypeHierarchy::chain(vec![
+            quaternion.clone(),
+            complex.clone(),
+            real.clone(),
+            rational.clone(),
+        ])
+        .unwrap();
+        type_hierarchy.add_child_to_parent(real.clone(), irrational.clone());
 
-        type_hierarchy.add_chain(vec![unary_function]);
-        type_hierarchy.add_chain(vec![binary_function, plus]);
+        type_hierarchy.add_chain(vec![unary_function.clone()]);
+        type_hierarchy.add_chain(vec![binary_function.clone(), plus.clone()]);
 
         assert_eq!(
             type_hierarchy.is_supertype_of(&quaternion, &quaternion),
