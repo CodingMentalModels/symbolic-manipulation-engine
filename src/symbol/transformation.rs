@@ -143,7 +143,7 @@ impl Transformation {
 
         // Check that we aren't substituting something illegal
         let empty_hierarchy = TypeHierarchy::new();
-        if empty_hierarchy.is_generalized_by(&statement, &substituted_from) {
+        if empty_hierarchy.is_generalized_by(&statement, &substituted_from) == Ok(true) {
             Ok(substituted_to)
         } else {
             Err(TransformationError::StatementDoesNotMatch)

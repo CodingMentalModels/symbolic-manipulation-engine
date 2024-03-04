@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 
 use serde::{Deserialize, Serialize};
 
@@ -9,17 +9,18 @@ pub type TypeName = String;
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub struct TypeHierarchy {
     // Using a HashMap to quickly access nodes by their Type
-    nodes: HashMap<Type, TypeHierarchyNode>,
+    type_map: HashMap<Type, TypeHierarchyNode>,
 }
 
 impl TypeHierarchy {
     pub fn new() -> Self {
         let mut hierarchy = TypeHierarchy {
-            nodes: HashMap::new(),
+            type_map: HashMap::new(),
         };
-        hierarchy.nodes.insert(
+        hierarchy.type_map.insert(
             Type::Object,
             TypeHierarchyNode {
+                inner: Type::Object,
                 parent: None,
                 children: vec![],
             },
@@ -29,7 +30,7 @@ impl TypeHierarchy {
 
     pub fn chain(types: Vec<Type>) -> Result<Self, TypeError> {
         let mut hierarchy = Self::new();
-        hierarchy.add_chain(types);
+        hierarchy.add_chain(types)?;
         Ok(hierarchy)
     }
 
@@ -50,16 +51,17 @@ impl TypeHierarchy {
         type_to_add: Type,
         parent_type: Type,
     ) -> Result<Type, TypeError> {
-        match self.nodes.get(&type_to_add) {
-            Some(node) => Err(TypeError::TypeHierarchyAlreadyIncludes(type_to_add)),
+        match self.type_map.get(&type_to_add) {
+            Some(_node) => Err(TypeError::TypeHierarchyAlreadyIncludes(type_to_add)),
             None => {
                 let node = TypeHierarchyNode {
+                    inner: type_to_add.clone(),
                     parent: Some(parent_type.clone()),
                     children: vec![],
                 };
-                self.nodes.insert(type_to_add.clone(), node.clone());
+                self.type_map.insert(type_to_add.clone(), node.clone());
 
-                match self.nodes.get_mut(&parent_type) {
+                match self.type_map.get_mut(&parent_type) {
                     Some(parent_node) => {
                         parent_node.children.push(type_to_add.clone());
                     }
@@ -70,40 +72,73 @@ impl TypeHierarchy {
         }
     }
 
-    pub fn generalizes(&self, left: &SymbolNode, right: &SymbolNode) -> bool {
-        left.get_root_name() == right.get_root_name()
+    pub fn get_parent_child_pairs(&self) -> HashSet<(Option<Type>, Type)> {
+        self.type_map
+            .iter()
+            .map(|(t, n)| (n.parent.clone(), t.clone()))
+            .collect()
+    }
+
+    pub fn generalizes(&self, left: &SymbolNode, right: &SymbolNode) -> Result<bool, TypeError> {
+        let root_generalizes = left.get_root_name() == right.get_root_name()
             && self.is_supertype_of(
                 &left.get_evaluates_to_type(),
                 &right.get_evaluates_to_type(),
-            )
-            && left.get_children().len() == right.get_children().len()
-            && left
-                .get_children()
-                .iter()
-                .zip(right.get_children().iter())
-                .all(|(x, y)| self.generalizes(x, y))
+            )?
+            && left.get_children().len() == right.get_children().len();
+
+        let children_generalize = left
+            .get_children()
+            .iter()
+            .zip(right.get_children().iter())
+            .try_fold(true, |acc, (x, y)| {
+                self.generalizes(x, y).map(|result| acc && result)
+            })?;
+
+        Ok(root_generalizes && children_generalize)
     }
 
-    pub fn is_generalized_by(&self, left: &SymbolNode, right: &SymbolNode) -> bool {
+    pub fn is_generalized_by(
+        &self,
+        left: &SymbolNode,
+        right: &SymbolNode,
+    ) -> Result<bool, TypeError> {
         self.generalizes(right, left)
     }
 
-    pub fn is_subtype_of(&self, child: &Type, parent: &Type) -> bool {
+    pub fn contains_type(&self, t: &Type) -> bool {
+        self.type_map.contains_key(t)
+    }
+
+    fn type_exists_or_error(&self, t: &Type) -> Result<(), TypeError> {
+        if self.contains_type(t) {
+            Ok(())
+        } else {
+            Err(TypeError::InvalidType(t.clone()))
+        }
+    }
+
+    pub fn is_subtype_of(&self, child: &Type, parent: &Type) -> Result<bool, TypeError> {
+        self.type_exists_or_error(child)?;
+        self.type_exists_or_error(parent)?;
+        if child == parent {
+            return Ok(true);
+        }
         let mut current = child;
-        while let Some(node) = self.nodes.get(current) {
+        while let Some(node) = self.type_map.get(current) {
             if let Some(ref parent_type) = node.parent {
                 if parent_type == parent {
-                    return true;
+                    return Ok(true);
                 }
                 current = parent_type;
             } else {
                 break;
             }
         }
-        false
+        Ok(false)
     }
 
-    pub fn is_supertype_of(&self, parent: &Type, child: &Type) -> bool {
+    pub fn is_supertype_of(&self, parent: &Type, child: &Type) -> Result<bool, TypeError> {
         self.is_subtype_of(child, parent)
     }
 
@@ -111,20 +146,24 @@ impl TypeHierarchy {
         &self,
         maybe_parents: Vec<Type>,
         maybe_children: Vec<Type>,
-    ) -> bool {
+    ) -> Result<bool, TypeError> {
         if maybe_parents.len() != maybe_children.len() {
-            return false;
+            return Ok(false);
         }
 
         maybe_parents
             .iter()
             .zip(maybe_children.iter())
-            .all(|(parent, child)| self.is_subtype_of(parent, child))
+            .try_fold(true, |acc, (parent, child)| {
+                self.is_subtype_of(parent, child)
+                    .map(|result| acc && result)
+            })
     }
 }
 
 #[derive(Clone, Debug, Hash, PartialEq, Eq, Serialize, Deserialize)]
 pub struct TypeHierarchyNode {
+    inner: Type,
     parent: Option<Type>,
     children: Vec<Type>,
 }
@@ -170,6 +209,7 @@ impl Type {
 pub enum TypeError {
     TypeHierarchyAlreadyIncludes(Type),
     ParentNotFound(Type),
+    InvalidType(Type),
 }
 
 #[cfg(test)]
@@ -189,7 +229,8 @@ mod test_type {
 
     #[test]
     fn test_generalizes_and_is_generalized_by() {
-        let type_hierarchy = TypeHierarchy::new();
+        let mut type_hierarchy = TypeHierarchy::chain(vec!["Integer".into()]).unwrap();
+        type_hierarchy.add_chain(vec!["Boolean".into()]);
         let a_equals_b = SymbolNode::new(
             "=".into(),
             vec![
@@ -198,8 +239,12 @@ mod test_type {
             ],
         );
 
-        assert!(type_hierarchy.generalizes(&a_equals_b, &a_equals_b));
-        assert!(type_hierarchy.is_generalized_by(&a_equals_b, &a_equals_b));
+        assert!(type_hierarchy
+            .generalizes(&a_equals_b, &a_equals_b)
+            .unwrap());
+        assert!(type_hierarchy
+            .is_generalized_by(&a_equals_b, &a_equals_b)
+            .unwrap());
 
         let a_equals_b_integers = SymbolNode::new(
             Symbol::new("=".to_string(), Type::new("Boolean".to_string())),
@@ -215,8 +260,12 @@ mod test_type {
             ],
         );
 
-        assert!(!type_hierarchy.generalizes(&a_equals_b_integers, &a_equals_b));
-        assert!(type_hierarchy.generalizes(&a_equals_b, &a_equals_b_integers));
+        assert!(!type_hierarchy
+            .generalizes(&a_equals_b_integers, &a_equals_b)
+            .unwrap());
+        assert!(type_hierarchy
+            .generalizes(&a_equals_b, &a_equals_b_integers)
+            .unwrap());
     }
     #[test]
     fn test_type_hierarchy_is_supertype_of() {
@@ -236,47 +285,97 @@ mod test_type {
             rational.clone(),
         ])
         .unwrap();
-        type_hierarchy.add_child_to_parent(real.clone(), irrational.clone());
+
+        //        assert_eq!(
+        //            type_hierarchy
+        //                .get_parent_child_pairs()
+        //                .into_iter()
+        //                .map(|(p, c)| format!("{:?} > {:?}", p, c))
+        //                .collect::<Vec<String>>()
+        //                .join("\n"),
+        //            "".to_string()
+        //        );
+
+        type_hierarchy.add_child_to_parent(irrational.clone(), real.clone());
 
         type_hierarchy.add_chain(vec![unary_function.clone()]);
         type_hierarchy.add_chain(vec![binary_function.clone(), plus.clone()]);
 
         assert_eq!(
-            type_hierarchy.is_supertype_of(&quaternion, &quaternion),
+            type_hierarchy
+                .is_supertype_of(&quaternion, &quaternion)
+                .unwrap(),
             true
         );
-        assert_eq!(type_hierarchy.is_supertype_of(&quaternion, &complex), true);
-        assert_eq!(type_hierarchy.is_supertype_of(&quaternion, &real), true);
-        assert_eq!(type_hierarchy.is_supertype_of(&quaternion, &rational), true);
         assert_eq!(
-            type_hierarchy.is_supertype_of(&quaternion, &irrational),
+            type_hierarchy
+                .is_supertype_of(&quaternion, &complex)
+                .unwrap(),
+            true
+        );
+        assert_eq!(
+            type_hierarchy.is_supertype_of(&quaternion, &real).unwrap(),
+            true
+        );
+        assert_eq!(
+            type_hierarchy
+                .is_supertype_of(&quaternion, &rational)
+                .unwrap(),
+            true
+        );
+        assert_eq!(
+            type_hierarchy
+                .is_supertype_of(&quaternion, &irrational)
+                .unwrap(),
             true
         );
 
         assert_eq!(
-            type_hierarchy.is_supertype_of(&Type::Object, &quaternion),
+            type_hierarchy
+                .is_supertype_of(&Type::Object, &quaternion)
+                .unwrap(),
             true
         );
 
         assert_eq!(
-            type_hierarchy.is_supertype_of(&quaternion, &Type::Object),
+            type_hierarchy
+                .is_supertype_of(&quaternion, &Type::Object)
+                .unwrap(),
             false
         );
         assert_eq!(
-            type_hierarchy.is_supertype_of(&quaternion, &unary_function),
+            type_hierarchy
+                .is_supertype_of(&quaternion, &unary_function)
+                .unwrap(),
             false
         );
 
         assert_eq!(
-            type_hierarchy.is_supertype_of(&irrational, &rational),
+            type_hierarchy
+                .is_supertype_of(&irrational, &rational)
+                .unwrap(),
             false
         );
-        assert_eq!(type_hierarchy.is_supertype_of(&real, &rational), true);
-        assert_eq!(type_hierarchy.is_supertype_of(&real, &irrational), true);
+        assert_eq!(
+            type_hierarchy.is_supertype_of(&real, &rational).unwrap(),
+            true
+        );
+        assert_eq!(
+            type_hierarchy.is_supertype_of(&real, &irrational).unwrap(),
+            true
+        );
 
-        assert_eq!(type_hierarchy.is_supertype_of(&Type::Object, &plus), false);
+        assert_eq!(
+            type_hierarchy
+                .is_supertype_of(&Type::Object, &plus)
+                .unwrap(),
+            true
+        );
 
-        assert_eq!(type_hierarchy.is_supertype_of(&plus, &plus), true);
-        assert_eq!(type_hierarchy.is_supertype_of(&plus, &quaternion), false);
+        assert_eq!(type_hierarchy.is_supertype_of(&plus, &plus).unwrap(), true);
+        assert_eq!(
+            type_hierarchy.is_supertype_of(&plus, &quaternion).unwrap(),
+            false
+        );
     }
 }
