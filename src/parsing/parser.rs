@@ -15,6 +15,7 @@ pub struct Parser {
 
 impl Parser {
     pub fn new(mut interpretations: Vec<Interpretation>) -> Self {
+        interpretations.push(Interpretation::parentheses());
         interpretations.push(Interpretation::any_object());
         Self::new_raw(interpretations)
     }
@@ -54,7 +55,7 @@ impl Parser {
                         token_stack.pop_and_assert_or_error(Token::RightParen)?; // Expect a closing parenthesis
                         contained_expr
                     }
-                    t => return Err(ParserError::InvalidExpressionType(token, t)),
+                    t => return Err(ParserError::InvalidLeftExpressionType(token, t)),
                 },
                 None => return Err(ParserError::NoValidInterpretation(token)),
             }
@@ -112,6 +113,7 @@ pub enum ParserError {
     ExpectedButFound(Token, Token),
     ExpectedLeftArgument(Token),
     InvalidExpressionType(Token, ExpressionType),
+    InvalidLeftExpressionType(Token, ExpressionType),
 }
 
 #[cfg(test)]
@@ -129,13 +131,13 @@ mod test_parser {
         let plus_interpretation = Interpretation::new(
             InterpretationCondition::Matches(Token::Custom("+".to_string())),
             ExpressionType::Infix,
-            0,
+            1,
             Type::NamedType("Plus".to_string()),
         );
         let equals_interpretation = Interpretation::new(
             InterpretationCondition::Matches(Token::Custom("=".to_string())),
             ExpressionType::Infix,
-            1,
+            2,
             Type::NamedType("Equals".to_string()),
         );
 
@@ -168,7 +170,7 @@ mod test_parser {
         let implies_interpretation = Interpretation::new(
             InterpretationCondition::Matches(Token::Custom("=>".to_string())),
             ExpressionType::Infix,
-            0,
+            1,
             "=>".into(),
         );
 
@@ -194,10 +196,11 @@ mod test_parser {
 
         let f_interpretation = Interpretation::new(
             InterpretationCondition::Matches(Token::Object("f".to_string())),
-            ExpressionType::Functional,
-            0,
+            ExpressionType::Singleton,
+            1,
             "Function".into(),
         );
+
         let parser = Parser::new(vec![f_interpretation]);
 
         let parsed = parser.parse(&mut tokens);

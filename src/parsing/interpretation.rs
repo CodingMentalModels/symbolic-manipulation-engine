@@ -38,11 +38,20 @@ impl Interpretation {
         }
     }
 
+    pub fn parentheses() -> Self {
+        Interpretation::new(
+            InterpretationCondition::Matches(Token::LeftParen),
+            ExpressionType::Outfix,
+            PARENTHESES_PRECEDENCE,
+            Type::Ignore_me_im_a_paren,
+        )
+    }
+
     pub fn any_object() -> Self {
         Interpretation::new(
             InterpretationCondition::IsObject,
             ExpressionType::Singleton,
-            0,
+            1,
             Type::Object,
         )
     }
@@ -74,65 +83,6 @@ impl Interpretation {
                 } else {
                     return false;
                 }
-            }
-        }
-    }
-
-    pub fn interpret(
-        &self,
-        parser: &Parser,
-        so_far: Option<SymbolNode>,
-        tokens: &mut TokenStack,
-    ) -> ParserResult {
-        println!("Interpreting: {:?} ({:?})", tokens, self.expression_type);
-        let token = tokens
-            .pop()
-            .ok_or(ParserError::NoTokensRemainingToInterpret)?;
-        match self.expression_type {
-            ExpressionType::Singleton => {
-                let symbol = Symbol::new(token.to_string(), self.output_type.clone());
-                return Ok(SymbolNode::new(symbol, vec![]));
-            }
-            ExpressionType::Functional => {
-                let function = Symbol::new(token.to_string(), self.output_type.clone());
-                tokens.pop_and_assert_or_error(Token::LeftParen)?;
-                let mut children = Vec::new();
-                loop {
-                    children.push(parser.parse(tokens)?);
-                    let delimiter = tokens
-                        .pop()
-                        .ok_or(ParserError::NoTokensRemainingToInterpret)?;
-                    if delimiter == Token::RightParen {
-                        break;
-                    }
-                    if delimiter != Token::Comma {
-                        return Err(ParserError::ExpectedButFound(Token::Comma, delimiter));
-                    }
-                }
-                let to_return = SymbolNode::new(function, children);
-                return Ok(to_return);
-            }
-            ExpressionType::Prefix => {
-                let prefix = Symbol::new(token.to_string(), self.output_type.clone());
-                let children = if tokens.is_empty() {
-                    vec![]
-                } else {
-                    vec![parser.parse(tokens)?]
-                };
-                return Ok(SymbolNode::new(prefix, children));
-            }
-            ExpressionType::Infix => match so_far {
-                None => {
-                    return Err(ParserError::ExpectedLeftArgument(token));
-                }
-                Some(left) => {
-                    let right = parser.parse(tokens)?;
-                    let operator = SymbolNode::new(token.to_string().into(), vec![left, right]);
-                    return Ok(operator);
-                }
-            },
-            _ => {
-                unimplemented!()
             }
         }
     }
