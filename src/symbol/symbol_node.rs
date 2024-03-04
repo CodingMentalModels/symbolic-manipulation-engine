@@ -68,6 +68,14 @@ impl SymbolNode {
         &self.root
     }
 
+    pub fn get_root_name(&self) -> String {
+        self.get_symbol().get_name()
+    }
+
+    pub fn get_evaluates_to_type(&self) -> Type {
+        self.root.get_evaluates_to_type()
+    }
+
     pub fn get_node(&self, address: SymbolNodeAddress) -> Option<Self> {
         let mut current_node = self.clone();
         for i in address {

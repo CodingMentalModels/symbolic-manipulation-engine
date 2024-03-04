@@ -2,6 +2,8 @@ use std::collections::HashMap;
 
 use serde::{Deserialize, Serialize};
 
+use super::symbol_node::SymbolNode;
+
 pub type TypeName = String;
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
@@ -69,20 +71,20 @@ impl TypeHierarchy {
     }
 
     pub fn generalizes(&self, left: &SymbolNode, right: &SymbolNode) -> bool {
-        left.root.get_name() == right.root.get_name()
+        left.get_root_name() == right.get_root_name()
             && self.is_supertype_of(
-                &left.root.get_evaluates_to_type(),
-                &right.root.get_evaluates_to_type(),
+                &left.get_evaluates_to_type(),
+                &right.get_evaluates_to_type(),
             )
-            && left.children.len() == right.children.len()
+            && left.get_children().len() == right.get_children().len()
             && left
-                .children
+                .get_children()
                 .iter()
-                .zip(right.children.iter())
-                .all(|(x, y)| x.generalizes(y))
+                .zip(right.get_children().iter())
+                .all(|(x, y)| self.generalizes(x, y))
     }
 
-    pub fn is_generalized_by(left: &SymbolNode, right: &SymbolNode) -> bool {
+    pub fn is_generalized_by(&self, left: &SymbolNode, right: &SymbolNode) -> bool {
         self.generalizes(right, left)
     }
 
@@ -172,6 +174,8 @@ pub enum TypeError {
 
 #[cfg(test)]
 mod test_type {
+    use crate::symbol::symbol_node::Symbol;
+
     use super::*;
 
     #[test]
@@ -185,6 +189,7 @@ mod test_type {
 
     #[test]
     fn test_generalizes_and_is_generalized_by() {
+        let type_hierarchy = TypeHierarchy::new();
         let a_equals_b = SymbolNode::new(
             "=".into(),
             vec![
@@ -193,8 +198,8 @@ mod test_type {
             ],
         );
 
-        assert!(a_equals_b.generalizes(&a_equals_b));
-        assert!(a_equals_b.is_generalized_by(&a_equals_b));
+        assert!(type_hierarchy.generalizes(&a_equals_b, &a_equals_b));
+        assert!(type_hierarchy.is_generalized_by(&a_equals_b, &a_equals_b));
 
         let a_equals_b_integers = SymbolNode::new(
             Symbol::new("=".to_string(), Type::new("Boolean".to_string())),
@@ -210,8 +215,8 @@ mod test_type {
             ],
         );
 
-        assert!(!a_equals_b_integers.generalizes(&a_equals_b));
-        assert!(a_equals_b.generalizes(&a_equals_b_integers));
+        assert!(!type_hierarchy.generalizes(&a_equals_b_integers, &a_equals_b));
+        assert!(type_hierarchy.generalizes(&a_equals_b, &a_equals_b_integers));
     }
     #[test]
     fn test_type_hierarchy_is_supertype_of() {
