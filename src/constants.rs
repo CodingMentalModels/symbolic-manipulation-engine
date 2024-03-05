@@ -1,1 +1,2 @@
 pub const PARENTHESIS_PRECEDENCE: u8 = 99;
+pub const COMMA_PRECEDENCE: u8 = 99;

@@ -48,6 +48,15 @@ impl Interpretation {
         )
     }
 
+    pub fn comma() -> Self {
+        Interpretation::new(
+            InterpretationCondition::Matches(Token::Comma),
+            ExpressionType::Infix,
+            COMMA_PRECEDENCE,
+            InterpretedType::Delimiter,
+        )
+    }
+
     pub fn any_object() -> Self {
         Interpretation::new(
             InterpretationCondition::IsObject,
@@ -65,6 +74,10 @@ impl Interpretation {
         self.expression_precidence
     }
 
+    pub fn get_output_type(&self) -> InterpretedType {
+        self.output_type.clone()
+    }
+
     pub fn get_symbol_node(
         &self,
         token: &Token,
@@ -77,6 +90,9 @@ impl Interpretation {
                 } else {
                     Ok(children[0].clone())
                 }
+            }
+            InterpretedType::Delimiter => {
+                unreachable!();
             }
             InterpretedType::Type(t) => Ok(SymbolNode::new(
                 Symbol::new(token.to_string(), t.clone()),
@@ -132,6 +148,7 @@ impl Default for ExpressionType {
 #[derive(Clone, Debug, Hash, PartialEq, Eq)]
 pub enum InterpretedType {
     PassThrough,
+    Delimiter,
     Type(Type),
 }
 

@@ -3,7 +3,7 @@ use crate::parsing::tokenizer::{Token, Tokenizer};
 use crate::symbol::symbol_node::{Symbol, SymbolNode};
 use crate::symbol::symbol_type::Type;
 
-use super::interpretation::ExpressionPrecedence;
+use super::interpretation::{ExpressionPrecedence, InterpretedType};
 use super::tokenizer::TokenStack;
 
 pub type ParserResult = Result<SymbolNode, ParserError>;
@@ -16,6 +16,7 @@ pub struct Parser {
 impl Parser {
     pub fn new(mut interpretations: Vec<Interpretation>) -> Self {
         interpretations.push(Interpretation::parentheses());
+        interpretations.push(Interpretation::comma());
         interpretations.push(Interpretation::any_object());
         Self::new_raw(interpretations)
     }
@@ -80,8 +81,17 @@ impl Parser {
                     token_stack,
                     interpretation.get_expression_precidence() + 1,
                 )?;
-                left_expression = interpretation
-                    .get_symbol_node(&next_token, vec![left_expression, right_expression])?;
+                let mut children = vec![left_expression, right_expression];
+                if interpretation.get_output_type() == InterpretedType::Delimiter {
+                    while token_stack.peek().map_or(false, |t| t == next_token) {
+                        let next_expression = self.parse_expression(
+                            token_stack,
+                            interpretation.get_expression_precidence() + 1,
+                        )?;
+                        children.push(next_expression);
+                    }
+                }
+                left_expression = interpretation.get_symbol_node(&next_token, children)?;
             }
         }
 
