@@ -1,6 +1,7 @@
 use std::{collections::VecDeque, unimplemented};
 
 use crate::{
+    constants::*,
     parsing::parser::ParserError,
     symbol::{
         symbol_node::{Symbol, SymbolNode},
@@ -13,22 +14,22 @@ use super::{
     tokenizer::{Token, TokenStack},
 };
 
-pub type ExpressionPrecidence = u8;
+pub type ExpressionPrecedence = u8;
 
 #[derive(Clone, Debug, Hash, PartialEq, Eq)]
 pub struct Interpretation {
     condition: InterpretationCondition,
     expression_type: ExpressionType,
-    expression_precidence: ExpressionPrecidence,
-    output_type: Type,
+    expression_precidence: ExpressionPrecedence,
+    output_type: InterpretedType,
 }
 
 impl Interpretation {
     pub fn new(
         condition: InterpretationCondition,
         expression_type: ExpressionType,
-        expression_precidence: ExpressionPrecidence,
-        output_type: Type,
+        expression_precidence: ExpressionPrecedence,
+        output_type: InterpretedType,
     ) -> Self {
         Interpretation {
             condition,
@@ -41,9 +42,9 @@ impl Interpretation {
     pub fn parentheses() -> Self {
         Interpretation::new(
             InterpretationCondition::Matches(Token::LeftParen),
-            ExpressionType::Outfix,
-            PARENTHESES_PRECEDENCE,
-            Type::Ignore_me_im_a_paren,
+            ExpressionType::Outfix(Token::RightParen),
+            PARENTHESIS_PRECEDENCE,
+            InterpretedType::PassThrough,
         )
     }
 
@@ -52,15 +53,15 @@ impl Interpretation {
             InterpretationCondition::IsObject,
             ExpressionType::Singleton,
             1,
-            Type::Object,
+            Type::Object.into(),
         )
     }
 
     pub fn get_expression_type(&self) -> ExpressionType {
-        self.expression_type
+        self.expression_type.clone()
     }
 
-    pub fn get_expression_precidence(&self) -> ExpressionPrecidence {
+    pub fn get_expression_precidence(&self) -> ExpressionPrecedence {
         self.expression_precidence
     }
 
@@ -69,7 +70,7 @@ impl Interpretation {
             ExpressionType::Singleton
             | ExpressionType::Functional
             | ExpressionType::Prefix
-            | ExpressionType::Outfix => so_far.is_none(),
+            | ExpressionType::Outfix(_) => so_far.is_none(),
             ExpressionType::Infix | ExpressionType::Postfix => so_far.is_some(),
         };
         if !is_ok_expression_type {
@@ -94,19 +95,42 @@ pub enum InterpretationCondition {
     IsObject,
 }
 
-#[derive(Clone, Copy, Debug, Hash, PartialEq, Eq)]
+#[derive(Clone, Debug, Hash, PartialEq, Eq)]
 pub enum ExpressionType {
     Singleton,
     Functional,
     Prefix,
     Infix,
     Postfix,
-    Outfix,
+    Outfix(Token),
 }
 
 impl Default for ExpressionType {
     fn default() -> Self {
         ExpressionType::Singleton
+    }
+}
+
+#[derive(Clone, Debug, Hash, PartialEq, Eq)]
+pub enum InterpretedType {
+    PassThrough,
+    Type(Type),
+}
+
+impl From<Type> for InterpretedType {
+    fn from(value: Type) -> Self {
+        Self::Type(value)
+    }
+}
+
+impl From<String> for InterpretedType {
+    fn from(value: String) -> Self {
+        Self::from(Type::from(value))
+    }
+}
+impl From<&str> for InterpretedType {
+    fn from(value: &str) -> Self {
+        Self::from(Type::from(value))
     }
 }
 

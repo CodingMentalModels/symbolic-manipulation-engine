@@ -3,7 +3,7 @@ use crate::parsing::tokenizer::{Token, Tokenizer};
 use crate::symbol::symbol_node::{Symbol, SymbolNode};
 use crate::symbol::symbol_type::Type;
 
-use super::interpretation::ExpressionPrecidence;
+use super::interpretation::ExpressionPrecedence;
 use super::tokenizer::TokenStack;
 
 pub type ParserResult = Result<SymbolNode, ParserError>;
@@ -37,7 +37,7 @@ impl Parser {
     fn parse_expression(
         &self,
         token_stack: &mut TokenStack,
-        min_precedence: ExpressionPrecidence,
+        min_precedence: ExpressionPrecedence,
     ) -> Result<SymbolNode, ParserError> {
         let mut left_expression = if let Some(token) = token_stack.pop() {
             match self.get_interpretation(&None, &token) {
@@ -50,9 +50,9 @@ impl Parser {
                         )?;
                         SymbolNode::new(Symbol::new_object(token.to_string()), vec![right_expr])
                     }
-                    ExpressionType::Outfix => {
+                    ExpressionType::Outfix(other_token) => {
                         let contained_expr = self.parse_expression(token_stack, 0)?; // Reset precedence for inner expression
-                        token_stack.pop_and_assert_or_error(Token::RightParen)?; // Expect a closing parenthesis
+                        token_stack.pop_and_assert_or_error(other_token)?; // Expect a closing parenthesis
                         contained_expr
                     }
                     t => return Err(ParserError::InvalidLeftExpressionType(token, t)),
@@ -132,13 +132,13 @@ mod test_parser {
             InterpretationCondition::Matches(Token::Custom("+".to_string())),
             ExpressionType::Infix,
             1,
-            Type::NamedType("Plus".to_string()),
+            "Plus".into(),
         );
         let equals_interpretation = Interpretation::new(
             InterpretationCondition::Matches(Token::Custom("=".to_string())),
             ExpressionType::Infix,
             2,
-            Type::NamedType("Equals".to_string()),
+            "Equals".into(),
         );
 
         let mut parser = Parser::new(vec![plus_interpretation, equals_interpretation]);
@@ -214,6 +214,30 @@ mod test_parser {
                     SymbolNode::leaf_object("y".to_string()),
                     SymbolNode::leaf_object("z".to_string()),
                 ]
+            ))
+        )
+    }
+
+    #[test]
+    fn test_parser_parses_outfix() {
+        let mut tokens = Tokenizer::new_with_tokens(vec![]).tokenize("|x|");
+
+        let pipe_interpretation = Interpretation::new(
+            InterpretationCondition::Matches(Token::Object("|".to_string())),
+            ExpressionType::Outfix(Token::Object("|".to_string())),
+            1,
+            "Absolute Value".into(),
+        );
+
+        let parser = Parser::new(vec![pipe_interpretation]);
+
+        let parsed = parser.parse(&mut tokens);
+
+        assert_eq!(
+            parsed,
+            Ok(SymbolNode::new(
+                Symbol::new("|".to_string(), "Absolute Value".into(),),
+                vec![SymbolNode::leaf_object("x".to_string()),]
             ))
         )
     }
