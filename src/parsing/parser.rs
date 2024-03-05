@@ -44,16 +44,16 @@ impl Parser {
                 Some(interpretation) => match interpretation.get_expression_type() {
                     ExpressionType::Singleton => SymbolNode::leaf_object(token.to_string()),
                     ExpressionType::Prefix => {
-                        let right_expr = self.parse_expression(
+                        let right_expression = self.parse_expression(
                             token_stack,
                             interpretation.get_expression_precidence() + 1,
                         )?;
-                        SymbolNode::new(Symbol::new_object(token.to_string()), vec![right_expr])
+                        interpretation.get_symbol_node(&token, vec![right_expression])?
                     }
-                    ExpressionType::Outfix(other_token) => {
-                        let contained_expr = self.parse_expression(token_stack, 0)?; // Reset precedence for inner expression
-                        token_stack.pop_and_assert_or_error(other_token)?; // Expect a closing parenthesis
-                        contained_expr
+                    ExpressionType::Outfix(closing_token) => {
+                        let contained_expression = self.parse_expression(token_stack, 0)?; // Reset precedence for inner expression
+                        token_stack.pop_and_assert_or_error(closing_token)?;
+                        interpretation.get_symbol_node(&token, vec![contained_expression])?
                     }
                     t => return Err(ParserError::InvalidLeftExpressionType(token, t)),
                 },
@@ -81,10 +81,8 @@ impl Parser {
                     token_stack,
                     interpretation.get_expression_precidence() + 1,
                 )?;
-                left_expression = SymbolNode::new(
-                    Symbol::new_object(next_token.to_string()),
-                    vec![left_expression, right_expression],
-                );
+                left_expression = interpretation
+                    .get_symbol_node(&next_token, vec![left_expression, right_expression])?;
             }
         }
 
@@ -114,6 +112,7 @@ pub enum ParserError {
     ExpectedLeftArgument(Token),
     InvalidExpressionType(Token, ExpressionType),
     InvalidLeftExpressionType(Token, ExpressionType),
+    InvalidPassThroughInterpretation(Token),
 }
 
 #[cfg(test)]
@@ -129,13 +128,13 @@ mod test_parser {
         let boxed_integer = Box::new(integer_type.clone());
 
         let plus_interpretation = Interpretation::new(
-            InterpretationCondition::Matches(Token::Custom("+".to_string())),
+            InterpretationCondition::Matches(Token::Object("+".to_string())),
             ExpressionType::Infix,
             1,
             "Plus".into(),
         );
         let equals_interpretation = Interpretation::new(
-            InterpretationCondition::Matches(Token::Custom("=".to_string())),
+            InterpretationCondition::Matches(Token::Object("=".to_string())),
             ExpressionType::Infix,
             2,
             "Equals".into(),
@@ -168,7 +167,7 @@ mod test_parser {
         let mut tokens = Tokenizer::new_with_tokens(vec!["=>".to_string()]).tokenize("p=>q");
 
         let implies_interpretation = Interpretation::new(
-            InterpretationCondition::Matches(Token::Custom("=>".to_string())),
+            InterpretationCondition::Matches(Token::Object("=>".to_string())),
             ExpressionType::Infix,
             1,
             "=>".into(),
@@ -220,7 +219,7 @@ mod test_parser {
 
     #[test]
     fn test_parser_parses_outfix() {
-        let mut tokens = Tokenizer::new_with_tokens(vec![]).tokenize("|x|");
+        let mut tokens = Tokenizer::new_with_tokens(vec!["|".to_string()]).tokenize("|x|");
 
         let pipe_interpretation = Interpretation::new(
             InterpretationCondition::Matches(Token::Object("|".to_string())),

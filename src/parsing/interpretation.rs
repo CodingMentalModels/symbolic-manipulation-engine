@@ -65,6 +65,26 @@ impl Interpretation {
         self.expression_precidence
     }
 
+    pub fn get_symbol_node(
+        &self,
+        token: &Token,
+        children: Vec<SymbolNode>,
+    ) -> Result<SymbolNode, ParserError> {
+        match &self.output_type {
+            InterpretedType::PassThrough => {
+                if children.len() != 1 {
+                    Err(ParserError::InvalidPassThroughInterpretation(token.clone()))
+                } else {
+                    Ok(children[0].clone())
+                }
+            }
+            InterpretedType::Type(t) => Ok(SymbolNode::new(
+                Symbol::new(token.to_string(), t.clone()),
+                children,
+            )),
+        }
+    }
+
     pub fn satisfies_condition(&self, so_far: &Option<SymbolNode>, token: &Token) -> bool {
         let is_ok_expression_type = match self.expression_type {
             ExpressionType::Singleton

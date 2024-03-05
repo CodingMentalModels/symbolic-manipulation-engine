@@ -38,7 +38,7 @@ impl Tokenizer {
                     let mut custom_token_found = false;
                     while let Some(&c) = chars.peek() {
                         if self.custom_tokens.contains(&token) {
-                            tokens.push_back(Token::Custom(token.clone()));
+                            tokens.push_back(Token::Object(token.clone()));
                             custom_token_found = true;
                             break;
                         }
@@ -130,7 +130,6 @@ pub enum Token {
     Comma,
     Whitespace,
     Object(String),
-    Custom(String),
 }
 
 impl Token {
@@ -141,7 +140,6 @@ impl Token {
             Self::Comma => ",".to_string(),
             Self::Whitespace => " ".to_string(),
             Self::Object(s) => s.clone(),
-            Self::Custom(s) => s.clone(),
         }
     }
 }
@@ -152,7 +150,7 @@ mod test_tokenizer {
 
     #[test]
     fn test_tokenizer_tokenizes() {
-        let mut tokenizer = Tokenizer::default();
+        let tokenizer = Tokenizer::default();
 
         assert_eq!(
             tokenizer.tokenize("a").as_vector(),
@@ -218,11 +216,11 @@ mod test_tokenizer {
             vec![
                 Token::Object("2".to_string()),
                 Token::Whitespace,
-                Token::Custom("+".to_string()),
+                Token::Object("+".to_string()),
                 Token::Whitespace,
                 Token::Object("2".to_string()),
                 Token::Whitespace,
-                Token::Custom("=".to_string()),
+                Token::Object("=".to_string()),
                 Token::Whitespace,
                 Token::Object("4".to_string()),
             ]
@@ -232,9 +230,9 @@ mod test_tokenizer {
             tokenizer.tokenize("2+2=4").as_vector(),
             vec![
                 Token::Object("2".to_string()),
-                Token::Custom("+".to_string()),
+                Token::Object("+".to_string()),
                 Token::Object("2".to_string()),
-                Token::Custom("=".to_string()),
+                Token::Object("=".to_string()),
                 Token::Object("4".to_string()),
             ]
         );
