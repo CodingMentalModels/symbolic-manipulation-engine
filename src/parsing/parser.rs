@@ -42,7 +42,6 @@ impl Parser {
         let mut left_expression = if let Some(token) = token_stack.pop() {
             match self.get_interpretation(&None, &token) {
                 Some(interpretation) => match interpretation.get_expression_type() {
-                    ExpressionType::Singleton => SymbolNode::leaf_object(token.to_string()),
                     ExpressionType::Prefix => {
                         let right_expression = self.parse_expression(
                             token_stack,
@@ -195,7 +194,7 @@ mod test_parser {
 
         let f_interpretation = Interpretation::new(
             InterpretationCondition::Matches(Token::Object("f".to_string())),
-            ExpressionType::Singleton,
+            ExpressionType::Prefix,
             1,
             "Function".into(),
         );
@@ -263,9 +262,6 @@ mod test_parser {
         assert!(maybe_interpretation.is_some());
         let interpretation = maybe_interpretation.unwrap();
         assert!(interpretation.satisfies_condition(&None, &token));
-        assert_eq!(
-            interpretation.get_expression_type(),
-            ExpressionType::Singleton
-        );
+        assert_eq!(interpretation.get_expression_type(), ExpressionType::Prefix);
     }
 }

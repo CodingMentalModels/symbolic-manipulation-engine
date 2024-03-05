@@ -51,7 +51,7 @@ impl Interpretation {
     pub fn any_object() -> Self {
         Interpretation::new(
             InterpretationCondition::IsObject,
-            ExpressionType::Singleton,
+            ExpressionType::Prefix,
             1,
             Type::Object.into(),
         )
@@ -87,10 +87,9 @@ impl Interpretation {
 
     pub fn satisfies_condition(&self, so_far: &Option<SymbolNode>, token: &Token) -> bool {
         let is_ok_expression_type = match self.expression_type {
-            ExpressionType::Singleton
-            | ExpressionType::Functional
-            | ExpressionType::Prefix
-            | ExpressionType::Outfix(_) => so_far.is_none(),
+            ExpressionType::Functional | ExpressionType::Prefix | ExpressionType::Outfix(_) => {
+                so_far.is_none()
+            }
             ExpressionType::Infix | ExpressionType::Postfix => so_far.is_some(),
         };
         if !is_ok_expression_type {
@@ -117,7 +116,6 @@ pub enum InterpretationCondition {
 
 #[derive(Clone, Debug, Hash, PartialEq, Eq)]
 pub enum ExpressionType {
-    Singleton,
     Functional,
     Prefix,
     Infix,
@@ -127,7 +125,7 @@ pub enum ExpressionType {
 
 impl Default for ExpressionType {
     fn default() -> Self {
-        ExpressionType::Singleton
+        ExpressionType::Prefix
     }
 }
 
