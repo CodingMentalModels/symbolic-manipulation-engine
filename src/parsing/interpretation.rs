@@ -60,7 +60,7 @@ impl Interpretation {
     pub fn any_object() -> Self {
         Interpretation::new(
             InterpretationCondition::IsObject,
-            ExpressionType::Prefix,
+            ExpressionType::Singleton,
             1,
             Type::Object.into(),
         )
@@ -70,7 +70,7 @@ impl Interpretation {
         self.expression_type.clone()
     }
 
-    pub fn get_expression_precidence(&self) -> ExpressionPrecedence {
+    pub fn get_expression_precedence(&self) -> ExpressionPrecedence {
         self.expression_precidence
     }
 
@@ -103,7 +103,7 @@ impl Interpretation {
 
     pub fn satisfies_condition(&self, so_far: &Option<SymbolNode>, token: &Token) -> bool {
         let is_ok_expression_type = match self.expression_type {
-            ExpressionType::Functional | ExpressionType::Prefix | ExpressionType::Outfix(_) => {
+            ExpressionType::Singleton | ExpressionType::Prefix | ExpressionType::Outfix(_) => {
                 so_far.is_none()
             }
             ExpressionType::Infix | ExpressionType::Postfix => so_far.is_some(),
@@ -132,7 +132,7 @@ pub enum InterpretationCondition {
 
 #[derive(Clone, Debug, Hash, PartialEq, Eq)]
 pub enum ExpressionType {
-    Functional,
+    Singleton,
     Prefix,
     Infix,
     Postfix,
@@ -141,7 +141,7 @@ pub enum ExpressionType {
 
 impl Default for ExpressionType {
     fn default() -> Self {
-        ExpressionType::Prefix
+        ExpressionType::Singleton
     }
 }
 
@@ -177,7 +177,7 @@ mod test_interpretation {
     fn test_interpretation_satisfies_condition() {
         let f_interpretation = Interpretation::new(
             InterpretationCondition::Matches(Token::Object("f".to_string())),
-            ExpressionType::Functional,
+            ExpressionType::Singleton,
             0,
             "Function".into(),
         );

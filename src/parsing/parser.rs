@@ -32,6 +32,7 @@ impl Parser {
     }
 
     pub fn parse(&self, token_stack: &mut TokenStack) -> Result<SymbolNode, ParserError> {
+        token_stack.remove_whitespace();
         self.parse_expression(token_stack, 0)
     }
 
@@ -41,12 +42,19 @@ impl Parser {
         min_precedence: ExpressionPrecedence,
     ) -> Result<SymbolNode, ParserError> {
         let mut left_expression = if let Some(token) = token_stack.pop() {
+            println!(
+                "Parsing left_expression: {:?} ({:?}) with min_precedence {:?}",
+                token,
+                token_stack.to_string(),
+                min_precedence
+            );
             match self.get_interpretation(&None, &token) {
                 Some(interpretation) => match interpretation.get_expression_type() {
+                    ExpressionType::Singleton => interpretation.get_symbol_node(&token, vec![])?,
                     ExpressionType::Prefix => {
                         let right_expression = self.parse_expression(
                             token_stack,
-                            interpretation.get_expression_precidence() + 1,
+                            interpretation.get_expression_precedence() + 1,
                         )?;
                         interpretation.get_symbol_node(&token, vec![right_expression])?
                     }
@@ -64,29 +72,57 @@ impl Parser {
         };
 
         while let Some(next_token) = token_stack.peek() {
+            println!(
+                "Parsing next token: {:?} ({:?})",
+                next_token,
+                token_stack.to_string()
+            );
             let interpretation =
                 match self.get_interpretation(&Some(left_expression.clone()), &next_token) {
                     Some(interpretation) => interpretation,
-                    None => break,
+                    None => {
+                        println!(
+                            "No valid interpretation of the next token so returning: {:?} ({:?})",
+                            next_token,
+                            token_stack.to_string()
+                        );
+                        break;
+                    }
                 };
 
-            if interpretation.get_expression_precidence() < min_precedence {
+            if interpretation.get_expression_precedence() < min_precedence {
+                println!(
+                    "Expression precedence is below minimum {:?} vs. {:?}",
+                    interpretation.get_expression_precedence(),
+                    min_precedence
+                );
                 break;
             }
 
             token_stack.pop(); // Consume the token
 
             if interpretation.get_expression_type() == ExpressionType::Infix {
+                println!(
+                    "Parsing infix: {:?} ({:?})",
+                    next_token,
+                    token_stack.to_string()
+                );
                 let right_expression = self.parse_expression(
                     token_stack,
-                    interpretation.get_expression_precidence() + 1,
+                    interpretation.get_expression_precedence() + 1,
                 )?;
                 let mut children = vec![left_expression, right_expression];
                 if interpretation.get_output_type() == InterpretedType::Delimiter {
+                    println!(
+                        "Parsing delimiter: {:?} ({:?})",
+                        next_token,
+                        token_stack.to_string()
+                    );
                     while token_stack.peek().map_or(false, |t| t == next_token) {
+                        token_stack.pop(); // Consume the delimiter
                         let next_expression = self.parse_expression(
                             token_stack,
-                            interpretation.get_expression_precidence() + 1,
+                            interpretation.get_expression_precedence() + 1,
                         )?;
                         children.push(next_expression);
                     }
@@ -237,7 +273,7 @@ mod test_parser {
             "Absolute Value".into(),
         );
 
-        let parser = Parser::new(vec![pipe_interpretation]);
+        let parser = Parser::new(vec![pipe_interpretation.clone()]);
 
         let parsed = parser.parse(&mut tokens);
 
@@ -247,7 +283,34 @@ mod test_parser {
                 Symbol::new("|".to_string(), "Absolute Value".into(),),
                 vec![SymbolNode::leaf_object("x".to_string()),]
             ))
-        )
+        );
+
+        let mut tokens =
+            Tokenizer::new_with_tokens(vec!["|".to_string(), "+".to_string()]).tokenize("|a+b|");
+
+        let addition_interpretation = Interpretation::new(
+            InterpretationCondition::Matches(Token::Object("+".to_string())),
+            ExpressionType::Infix,
+            2,
+            "Plus".into(),
+        );
+
+        let parser = Parser::new(vec![pipe_interpretation, addition_interpretation]);
+        let parsed = parser.parse(&mut tokens);
+
+        assert_eq!(
+            parsed,
+            Ok(SymbolNode::new(
+                Symbol::new("|".to_string(), "Absolute Value".into(),),
+                vec![SymbolNode::new(
+                    Symbol::new("+".to_string(), "Plus".into()),
+                    vec![
+                        SymbolNode::leaf(Symbol::new_object("a".to_string())),
+                        SymbolNode::leaf(Symbol::new_object("b".to_string()))
+                    ]
+                )]
+            ))
+        );
     }
 
     #[test]
@@ -264,7 +327,7 @@ mod test_parser {
 
     #[test]
     fn test_parser_gets_interpretation() {
-        let mut tokens = Tokenizer::new_with_tokens(vec![]).tokenize("f(x, y, z)");
+        let mut tokens = Tokenizer::new_with_tokens(vec![]).tokenize("x + y + z)");
 
         let parser = Parser::new(vec![]);
         let token = tokens.pop().unwrap();
@@ -272,6 +335,9 @@ mod test_parser {
         assert!(maybe_interpretation.is_some());
         let interpretation = maybe_interpretation.unwrap();
         assert!(interpretation.satisfies_condition(&None, &token));
-        assert_eq!(interpretation.get_expression_type(), ExpressionType::Prefix);
+        assert_eq!(
+            interpretation.get_expression_type(),
+            ExpressionType::Singleton
+        );
     }
 }

@@ -77,6 +77,14 @@ impl TokenStack {
         self.0.clone().into_iter().collect()
     }
 
+    pub fn to_string(&self) -> String {
+        self.as_vector()
+            .into_iter()
+            .map(|t| t.to_string())
+            .collect::<Vec<_>>()
+            .join("")
+    }
+
     pub fn remove_whitespace(&mut self) {
         self.0 = self
             .0
