@@ -33,7 +33,9 @@ impl Parser {
 
     pub fn parse(&self, token_stack: &mut TokenStack) -> Result<SymbolNode, ParserError> {
         token_stack.remove_whitespace();
-        self.parse_expression(token_stack, 0)
+        let to_return = self.parse_expression(token_stack, 0)?;
+        to_return.split_delimiters();
+        return Ok(to_return);
     }
 
     fn parse_expression(
@@ -112,21 +114,6 @@ impl Parser {
                     interpretation.get_expression_precedence() + 1,
                 )?;
                 let mut children = vec![left_expression, right_expression];
-                if interpretation.get_output_type() == InterpretedType::Delimiter {
-                    println!(
-                        "Parsing delimiter: {:?} ({:?})",
-                        next_token,
-                        token_stack.to_string()
-                    );
-                    while token_stack.peek().map_or(false, |t| t == next_token) {
-                        token_stack.pop(); // Consume the delimiter
-                        let next_expression = self.parse_expression(
-                            token_stack,
-                            interpretation.get_expression_precedence() + 1,
-                        )?;
-                        children.push(next_expression);
-                    }
-                }
                 left_expression = interpretation.get_symbol_node(&next_token, children)?;
             }
         }

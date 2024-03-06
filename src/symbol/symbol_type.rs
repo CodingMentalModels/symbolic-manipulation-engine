@@ -171,6 +171,7 @@ pub struct TypeHierarchyNode {
 #[derive(Clone, Debug, Hash, PartialEq, Eq, Serialize, Deserialize)]
 pub enum Type {
     Object,
+    Delimiter,
     NamedType(TypeName),
 }
 
@@ -200,6 +201,7 @@ impl Type {
     pub fn to_string(&self) -> String {
         match self {
             Type::Object => "Object".to_string(),
+            Type::Delimiter => "Delimiter".to_string(),
             Type::NamedType(name) => name.clone(),
         }
     }

@@ -75,6 +75,39 @@ impl SymbolNode {
         self.root.get_evaluates_to_type()
     }
 
+    pub fn split_delimiters(&self) -> Self {
+        let mut new_children = vec![];
+        for child in self.children.iter() {
+            let new_child = child.split_delimiters();
+            new_children.append(&mut new_child.split_if_delimiter());
+        }
+        Self::new(self.get_symbol().clone(), new_children)
+    }
+
+    pub fn split_if_delimiter(&self) -> Vec<Self> {
+        if self.get_evaluates_to_type() == Type::Delimiter {
+            self.split_self()
+        } else {
+            vec![self.clone()]
+        }
+    }
+
+    pub fn split_self(&self) -> Vec<Self> {
+        self.split(self.get_symbol())
+    }
+
+    pub fn split(&self, symbol: &Symbol) -> Vec<Self> {
+        if self.get_symbol() == symbol {
+            let mut to_return = vec![];
+            for child in self.children.iter() {
+                to_return.append(&mut child.split(symbol));
+            }
+            to_return
+        } else {
+            vec![self.clone()]
+        }
+    }
+
     pub fn get_node(&self, address: SymbolNodeAddress) -> Option<Self> {
         let mut current_node = self.clone();
         for i in address {
@@ -489,6 +522,11 @@ mod test_statement {
         );
 
         assert_eq!(a_equals_c_plus_b, expected);
+    }
+
+    #[test]
+    fn test_symbol_node_splits_delimiters() {
+        unimplemented!();
     }
 
     #[test]

@@ -91,9 +91,10 @@ impl Interpretation {
                     Ok(children[0].clone())
                 }
             }
-            InterpretedType::Delimiter => {
-                unreachable!();
-            }
+            InterpretedType::Delimiter => Ok(SymbolNode::new(
+                Symbol::new(token.to_string(), Type::Delimiter),
+                children,
+            )),
             InterpretedType::Type(t) => Ok(SymbolNode::new(
                 Symbol::new(token.to_string(), t.clone()),
                 children,
