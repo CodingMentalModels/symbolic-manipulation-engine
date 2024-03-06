@@ -131,6 +131,7 @@ impl Parser {
             }
         }
 
+        println!("Returning expression: {:?}", left_expression);
         Ok(left_expression)
     }
 
@@ -295,7 +296,7 @@ mod test_parser {
             "Plus".into(),
         );
 
-        let parser = Parser::new(vec![pipe_interpretation, addition_interpretation]);
+        let parser = Parser::new(vec![pipe_interpretation, addition_interpretation.clone()]);
         let parsed = parser.parse(&mut tokens);
 
         assert_eq!(
@@ -309,6 +310,29 @@ mod test_parser {
                         SymbolNode::leaf(Symbol::new_object("b".to_string()))
                     ]
                 )]
+            ))
+        );
+
+        let mut tokens =
+            Tokenizer::new_with_tokens(vec!["|".to_string(), "+".to_string()]).tokenize("a+(b+c)");
+
+        let parser = Parser::new(vec![Interpretation::parentheses(), addition_interpretation]);
+        let parsed = parser.parse(&mut tokens);
+
+        assert_eq!(
+            parsed,
+            Ok(SymbolNode::new(
+                Symbol::new("+".to_string(), "Plus".into(),),
+                vec![
+                    SymbolNode::leaf(Symbol::new_object("a".to_string())),
+                    SymbolNode::new(
+                        Symbol::new("+".to_string(), "Plus".into()),
+                        vec![
+                            SymbolNode::leaf(Symbol::new_object("b".to_string())),
+                            SymbolNode::leaf(Symbol::new_object("c".to_string()))
+                        ]
+                    )
+                ]
             ))
         );
     }
