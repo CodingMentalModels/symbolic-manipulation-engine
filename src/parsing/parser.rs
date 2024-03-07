@@ -162,13 +162,13 @@ mod test_parser {
         let plus_interpretation = Interpretation::new(
             InterpretationCondition::Matches(Token::Object("+".to_string())),
             ExpressionType::Infix,
-            1,
+            2,
             "Plus".into(),
         );
         let equals_interpretation = Interpretation::new(
             InterpretationCondition::Matches(Token::Object("=".to_string())),
             ExpressionType::Infix,
-            2,
+            1,
             "Equals".into(),
         );
 
@@ -179,10 +179,10 @@ mod test_parser {
         assert_eq!(
             parsed,
             Ok(SymbolNode::new(
-                Symbol::new("=".to_string(), "=".into(),),
+                Symbol::new("=".to_string(), "Equals".into(),),
                 vec![
                     SymbolNode::new(
-                        Symbol::new("+".to_string(), "+".into(),),
+                        Symbol::new("+".to_string(), "Plus".into(),),
                         vec![
                             SymbolNode::leaf_object("2".to_string()),
                             SymbolNode::leaf_object("2".to_string())
