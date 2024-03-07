@@ -157,7 +157,6 @@ mod test_parser {
         let mut tokens = Tokenizer::new_with_tokens(vec!["+".to_string(), "=".to_string()])
             .tokenize("2 + 2 = 4");
         let integer_type = Type::new("Integer".to_string());
-        let boxed_integer = Box::new(integer_type.clone());
 
         let plus_interpretation = Interpretation::new(
             InterpretationCondition::Matches(Token::Object("+".to_string())),
