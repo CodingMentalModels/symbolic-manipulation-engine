@@ -59,15 +59,22 @@ A type system is necessary because:
 - When we write math, we implicitly know what types things are, and notation, etc. reflects that.  
 
 Our type system should:
-- Allow for different "arities" of symbols; that is, how many "arguments" they take.  
-    - `5` has arity 0
-    - `+` has arity 2
-    - `!` (factorial) has arity 1
-- Allow for "return types", e.g. `+` returns a $\mathbb{R}$, a logical predicate returns a boolean. This allows nesting of `SymbolNode`s.
 - Model and enforce a type hierarchy, to allow e.g. $\mathbb{N} \subset \mathbb{Z} \subset \mathbb{Q} \subset \ldots$.  
-- Each "function signature" (i.e. arity, return type) gets its own hierarchy.  
-    - A 0-arity symbol with a return type is not the same as a 0-arity symbol of that type.  e.g. $x \in \mathbb{Z}$ and $y \in \cdot \mapsto \mathbb{Z}$ are considered different types.
 - Allow transformations to be predicated on the types of the variables involved.
+
+Our symbols then have:
+- An arity (could be 0)
+- A return type
+
+Expressions should be checked for unambiguous arities and return types.
+
+## Generic vs. Unique
+
+Symbols may be "Generic" or "Unique", with "Generic" symbols being interchangeable from a transformation perspective.
+
+e.g. the transformation $a = b => b = a$ could be defined for the generic symbols $a$, $b$, and the unique symbol $=$.  In that case $x = y$ would be transformable, but $x + y$ wouldn't be, because $=$ is a unique.
+
+
 
 ## Features
 
@@ -111,10 +118,16 @@ In order to interact with the engine, we'll need an interface.  Let's start with
 
 Inputting statements as trees is going to be painful, we want to be able to input them as plaintext and have them be parsed out.
 
-### Database
+Examples:
+- `./sme hypothesize '2 + 2 = 4'` should add =(+(2, 2), 4) to the workspace and interpret the numbers as the broadest type that's in the current `Context`.  That means that the workspace needs to know not only the definitions of various symbols / transforms, but also their syntactic form, e.g.
+    - `2` and `4` should be interpreted as `2 \in 2` and `4 \in 4` where those have certain (procedurally defined) properties.
+    - `+` and `=` are `Infix`, binary operators, which should be interpreted as being over the broadest applicable type until otherwise specified.
 
-- Stores and retreives `Context`s
-- Stores and retreives saved work
+This means that the parsing process should look like:
+- Tokenize chunks of characters based on spaces, commas, parentheses, brackets, certain reserved characters like `+` and `!`.  
+- For each token, check the active workspace for an `Interpretation`, which consists of criteria (e.g. `InputCriteria::Matches(SomeRegex)`) and a rule for how to interpret it as a type and the syntactic form (`Infix`, `Prefix`, etc.).  
+- Given the interpretations, try to parse the output and kick out helpful errors where that's not possible.
+- Allow parsing hints to disambiguate, e.g. it should always be possible to force a certain set of characters to be tokenized into one or force certain types by providing flags to the command.
 
 ### Pretty Printing
 
