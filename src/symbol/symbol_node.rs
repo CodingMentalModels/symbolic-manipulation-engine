@@ -581,6 +581,21 @@ mod test_statement {
         );
 
         assert_eq!(a_plus_b_plus_c.split_delimiters(), expected);
+
+        let x_plus_y = SymbolNode::new(
+            "+".into(),
+            vec![
+                SymbolNode::leaf(Symbol::new_object("b".to_string())),
+                SymbolNode::leaf(Symbol::new_object("c".to_string())),
+            ],
+        );
+
+        let x_plus_y_equals_a_plus_b_plus_c =
+            SymbolNode::new("=".into(), vec![x_plus_y.clone(), a_plus_b_plus_c]);
+
+        let expected = SymbolNode::new("=".into(), vec![x_plus_y, expected]);
+
+        assert_eq!(x_plus_y_equals_a_plus_b_plus_c.split_delimiters(), expected);
     }
 
     #[test]
@@ -599,13 +614,15 @@ mod test_statement {
             ],
         );
 
+        let expected = vec![
+            SymbolNode::leaf(Symbol::new_object("a".to_string())),
+            SymbolNode::leaf(Symbol::new_object("b".to_string())),
+            SymbolNode::leaf(Symbol::new_object("c".to_string())),
+        ];
+
         assert_eq!(
             a_plus_b_plus_c.split(&Symbol::new_object("+".to_string())),
-            vec![
-                SymbolNode::leaf(Symbol::new_object("a".to_string())),
-                SymbolNode::leaf(Symbol::new_object("b".to_string())),
-                SymbolNode::leaf(Symbol::new_object("c".to_string())),
-            ],
+            expected
         );
     }
 
