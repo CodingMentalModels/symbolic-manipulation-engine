@@ -34,8 +34,7 @@ impl Parser {
     pub fn parse(&self, token_stack: &mut TokenStack) -> Result<SymbolNode, ParserError> {
         token_stack.remove_whitespace();
         let to_return = self.parse_expression(token_stack, 0)?;
-        to_return.split_delimiters();
-        return Ok(to_return);
+        return Ok(to_return.split_delimiters().collapse_delimiters());
     }
 
     fn parse_expression(

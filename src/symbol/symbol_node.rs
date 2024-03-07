@@ -116,6 +116,19 @@ impl SymbolNode {
         }
     }
 
+    pub fn collapse_delimiters(&self) -> Self {
+        let mut new_children = vec![];
+        for child in self.children.iter() {
+            let new_child = child.collapse_delimiters();
+            if new_child.get_evaluates_to_type() == Type::Delimiter {
+                new_children.append(&mut new_child.children.clone());
+            } else {
+                new_children.push(new_child);
+            }
+        }
+        Self::new(self.root.clone(), new_children)
+    }
+
     pub fn get_node(&self, address: SymbolNodeAddress) -> Option<Self> {
         let mut current_node = self.clone();
         for i in address {
@@ -585,8 +598,8 @@ mod test_statement {
         let x_plus_y = SymbolNode::new(
             "+".into(),
             vec![
-                SymbolNode::leaf(Symbol::new_object("b".to_string())),
-                SymbolNode::leaf(Symbol::new_object("c".to_string())),
+                SymbolNode::leaf(Symbol::new_object("x".to_string())),
+                SymbolNode::leaf(Symbol::new_object("y".to_string())),
             ],
         );
 
@@ -622,6 +635,80 @@ mod test_statement {
 
         assert_eq!(
             a_plus_b_plus_c.split(&Symbol::new_object("+".to_string())),
+            expected
+        );
+    }
+
+    #[test]
+    fn test_symbol_node_collapses_delimiters() {
+        let trivial_node = SymbolNode::leaf(Symbol::new_object("x".to_string()));
+        assert_eq!(trivial_node, trivial_node.collapse_delimiters());
+
+        let no_delimiters = SymbolNode::new(
+            "+".into(),
+            vec![
+                SymbolNode::leaf(Symbol::new_object("a".to_string())),
+                SymbolNode::new(
+                    "+".into(),
+                    vec![
+                        SymbolNode::leaf(Symbol::new_object("b".to_string())),
+                        SymbolNode::leaf(Symbol::new_object("c".to_string())),
+                    ],
+                ),
+            ],
+        );
+
+        assert_eq!(no_delimiters.collapse_delimiters(), no_delimiters);
+
+        let a_plus_b_plus_c = SymbolNode::new(
+            Symbol::delimiter("+".to_string()),
+            vec![
+                SymbolNode::leaf_object("a".to_string()),
+                SymbolNode::new(
+                    Symbol::delimiter("+".to_string()),
+                    vec![
+                        SymbolNode::leaf_object("b".to_string()),
+                        SymbolNode::leaf_object("c".to_string()),
+                    ],
+                ),
+            ],
+        );
+
+        let expected = SymbolNode::new(
+            Symbol::delimiter("+".to_string()),
+            vec![
+                SymbolNode::leaf_object("a".to_string()),
+                SymbolNode::leaf_object("b".to_string()),
+                SymbolNode::leaf_object("c".to_string()),
+            ],
+        );
+
+        assert_eq!(a_plus_b_plus_c.collapse_delimiters(), expected);
+
+        let x_plus_y = SymbolNode::new(
+            Symbol::delimiter("+".to_string()),
+            vec![
+                SymbolNode::leaf(Symbol::new_object("x".to_string())),
+                SymbolNode::leaf(Symbol::new_object("y".to_string())),
+            ],
+        );
+
+        let x_plus_y_equals_a_plus_b_plus_c =
+            SymbolNode::new("=".into(), vec![x_plus_y.clone(), a_plus_b_plus_c]);
+
+        let expected = SymbolNode::new(
+            "=".into(),
+            vec![
+                SymbolNode::leaf(Symbol::new_object("x".to_string())),
+                SymbolNode::leaf(Symbol::new_object("y".to_string())),
+                SymbolNode::leaf(Symbol::new_object("a".to_string())),
+                SymbolNode::leaf(Symbol::new_object("b".to_string())),
+                SymbolNode::leaf(Symbol::new_object("c".to_string())),
+            ],
+        );
+
+        assert_eq!(
+            x_plus_y_equals_a_plus_b_plus_c.collapse_delimiters(),
             expected
         );
     }
