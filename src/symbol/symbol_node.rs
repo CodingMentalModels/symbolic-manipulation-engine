@@ -10,6 +10,7 @@ pub type SymbolNodeAddress = Vec<usize>;
 #[derive(Clone, Debug, Hash, PartialEq, Eq)]
 pub enum SymbolNodeError {
     TypeConflicts(Vec<String>),
+    ConflictingSymbolArities(Symbol),
     DifferentNumberOfArguments,
     RelabellingNotInjective,
     InvalidAddress,
@@ -77,6 +78,41 @@ impl SymbolNode {
 
     pub fn get_evaluates_to_type(&self) -> Type {
         self.root.get_evaluates_to_type()
+    }
+
+    pub fn has_conflicting_arities(&self) -> bool {
+        match self.get_arities() {
+            Err(SymbolNodeError::ConflictingSymbolArities(_)) => true,
+            _ => false,
+        }
+    }
+
+    pub fn get_arities(&self) -> Result<HashMap<Symbol, usize>, SymbolNodeError> {
+        let mut arities = HashMap::new();
+        self.collect_arities(&mut arities)?;
+        Ok(arities)
+    }
+
+    fn collect_arities(&self, arities: &mut HashMap<Symbol, usize>) -> Result<(), SymbolNodeError> {
+        // Check if the symbol already exists with a different arity
+        match arities.entry(self.root.clone()) {
+            std::collections::hash_map::Entry::Vacant(e) => {
+                e.insert(self.get_n_children());
+            }
+            std::collections::hash_map::Entry::Occupied(mut e) => {
+                // If the arity (number of children) is different, return an error
+                if *e.get() != self.get_n_children() {
+                    return Err(SymbolNodeError::ConflictingSymbolArities(self.root.clone()));
+                }
+            }
+        }
+
+        // Recursively collect arities from children
+        for child in &self.children {
+            child.collect_arities(arities)?;
+        }
+
+        Ok(())
     }
 
     pub fn split_delimiters(&self) -> Self {
@@ -715,7 +751,116 @@ mod test_statement {
 
     #[test]
     fn test_symbol_nodes_detect_conflicting_arities() {
-        unimplemented!()
+        let trivial = SymbolNode::leaf_object("x".to_string());
+        let trivial_arities = trivial.get_arities();
+        assert_eq!(trivial_arities.clone().unwrap().len(), 1);
+        assert_eq!(
+            trivial_arities
+                .unwrap()
+                .get(&Symbol::new_object("x".to_string())),
+            Some(&0)
+        );
+        assert!(!trivial.has_conflicting_arities());
+
+        let function = SymbolNode::new(
+            Symbol::new_object("f".to_string()),
+            vec![
+                SymbolNode::leaf_object("x".to_string()),
+                SymbolNode::leaf_object("y".to_string()),
+                SymbolNode::leaf_object("z".to_string()),
+            ],
+        );
+        let function_arities = function.get_arities();
+        assert_eq!(function_arities.clone().unwrap().len(), 4);
+        assert_eq!(function_arities.clone().unwrap().get(&"f".into()), Some(&3));
+        assert_eq!(function_arities.clone().unwrap().get(&"x".into()), Some(&0));
+        assert_eq!(function_arities.clone().unwrap().get(&"y".into()), Some(&0));
+        assert_eq!(function_arities.clone().unwrap().get(&"z".into()), Some(&0));
+        assert!(!function.has_conflicting_arities());
+
+        let a_plus_b_plus_c = SymbolNode::new(
+            Symbol::new_object("+".to_string()),
+            vec![
+                SymbolNode::leaf_object("a".to_string()),
+                SymbolNode::new(
+                    Symbol::new_object("+".to_string()),
+                    vec![
+                        SymbolNode::leaf_object("b".to_string()),
+                        SymbolNode::leaf_object("c".to_string()),
+                    ],
+                ),
+            ],
+        );
+
+        let x_plus_y = SymbolNode::new(
+            Symbol::new_object("+".to_string()),
+            vec![
+                SymbolNode::leaf(Symbol::new_object("x".to_string())),
+                SymbolNode::leaf(Symbol::new_object("y".to_string())),
+            ],
+        );
+
+        let x_plus_y_equals_a_plus_b_plus_c =
+            SymbolNode::new("=".into(), vec![x_plus_y.clone(), a_plus_b_plus_c]);
+
+        let x_plus_y_equals_a_plus_b_plus_c_arities = x_plus_y_equals_a_plus_b_plus_c.get_arities();
+        assert_eq!(
+            x_plus_y_equals_a_plus_b_plus_c_arities
+                .clone()
+                .unwrap()
+                .len(),
+            7
+        );
+        assert_eq!(
+            x_plus_y_equals_a_plus_b_plus_c_arities
+                .clone()
+                .unwrap()
+                .get(&"=".into()),
+            Some(&2)
+        );
+        assert_eq!(
+            x_plus_y_equals_a_plus_b_plus_c_arities
+                .clone()
+                .unwrap()
+                .get(&"+".into()),
+            Some(&2)
+        );
+        assert_eq!(
+            x_plus_y_equals_a_plus_b_plus_c_arities
+                .clone()
+                .unwrap()
+                .get(&"a".into()),
+            Some(&0)
+        );
+        assert_eq!(
+            x_plus_y_equals_a_plus_b_plus_c_arities
+                .clone()
+                .unwrap()
+                .get(&"b".into()),
+            Some(&0)
+        );
+        assert_eq!(
+            x_plus_y_equals_a_plus_b_plus_c_arities
+                .clone()
+                .unwrap()
+                .get(&"c".into()),
+            Some(&0)
+        );
+        assert_eq!(
+            x_plus_y_equals_a_plus_b_plus_c_arities
+                .clone()
+                .unwrap()
+                .get(&"x".into()),
+            Some(&0)
+        );
+        assert_eq!(
+            x_plus_y_equals_a_plus_b_plus_c_arities
+                .clone()
+                .unwrap()
+                .get(&"y".into()),
+            Some(&0)
+        );
+        assert!(!x_plus_y_equals_a_plus_b_plus_c.has_conflicting_arities());
     }
 
     #[test]
