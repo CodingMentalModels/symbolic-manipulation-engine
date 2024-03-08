@@ -1,4 +1,7 @@
-use std::collections::{HashMap, HashSet};
+use std::{
+    collections::{HashMap, HashSet},
+    unimplemented,
+};
 
 use serde::{Deserialize, Serialize};
 
@@ -385,6 +388,10 @@ impl SymbolNode {
         }
 
         return to_return;
+    }
+
+    pub fn get_type_map(&self) -> Result<HashMap<String, Type>, SymbolNodeError> {
+        unimplemented!()
     }
 }
 
@@ -865,6 +872,50 @@ mod test_statement {
 
     #[test]
     fn test_symbol_nodes_detect_conflicting_types() {
-        unimplemented!()
+        let trivial = SymbolNode::leaf_object("x".to_string());
+        let trivial_types = trivial.get_type_map();
+        assert_eq!(trivial_types.clone().unwrap().len(), 1);
+        assert_eq!(
+            trivial_types.clone().unwrap().get(&"x".to_string()),
+            Some(&Type::Object)
+        );
+
+        let a_plus_b_plus_c = SymbolNode::new(
+            Symbol::new("+".to_string(), "Operator".into()),
+            vec![
+                SymbolNode::leaf_object("a".to_string()),
+                SymbolNode::new(
+                    Symbol::new("+".to_string(), "Operator".into()),
+                    vec![
+                        SymbolNode::leaf_object("b".to_string()),
+                        SymbolNode::leaf_object("c".to_string()),
+                    ],
+                ),
+            ],
+        );
+
+        let x_plus_y = SymbolNode::new(
+            Symbol::new("+".to_string(), "Operator".into()),
+            vec![
+                SymbolNode::leaf(Symbol::new_object("x".to_string())),
+                SymbolNode::leaf(Symbol::new_object("y".to_string())),
+            ],
+        );
+
+        let x_plus_y_equals_a_plus_b_plus_c = SymbolNode::new(
+            Symbol::new("=".to_string(), "Operator".into()),
+            vec![x_plus_y.clone(), a_plus_b_plus_c],
+        );
+
+        let expected = vec![
+            ("+".to_string(), "Operator".into()),
+            ("=".to_string(), "Operator".into()),
+            ("a".to_string(), Type::Object),
+            ("b".to_string(), Type::Object),
+            ("c".to_string(), Type::Object),
+        ]
+        .into_iter()
+        .collect();
+        assert_eq!(x_plus_y_equals_a_plus_b_plus_c.get_type_map(), Ok(expected));
     }
 }
