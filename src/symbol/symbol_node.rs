@@ -12,7 +12,7 @@ pub type SymbolNodeAddress = Vec<usize>;
 
 #[derive(Clone, Debug, Hash, PartialEq, Eq)]
 pub enum SymbolNodeError {
-    TypeConflicts(Vec<String>),
+    ConflictingTypes(String, Type, Type),
     ConflictingSymbolArities(Symbol),
     DifferentNumberOfArguments,
     RelabellingNotInjective,
@@ -363,35 +363,51 @@ impl SymbolNode {
     }
 
     pub fn validate(&self) -> Result<(), SymbolNodeError> {
-        let type_conflicts = self.get_type_conflicts();
-
-        if type_conflicts.len() > 0 {
-            return Err(SymbolNodeError::TypeConflicts(
-                type_conflicts.into_iter().map(|x| x.to_string()).collect(),
-            ));
-        }
-
+        self.get_type_map()?;
+        self.get_arities()?;
         Ok(())
     }
 
-    pub fn get_type_conflicts(&self) -> HashSet<SymbolName> {
-        let mut to_return: HashSet<_> = Vec::new().into_iter().collect();
-        let mut type_map = HashMap::new();
-        for symbol in self.get_symbols() {
-            if type_map.contains_key(&symbol.get_name()) {
-                if type_map.get(&symbol.get_name()).unwrap() != &symbol.get_evaluates_to_type() {
-                    to_return.insert(symbol.get_name());
+    pub fn get_type_map(&self) -> Result<HashMap<String, Type>, SymbolNodeError> {
+        let children_type_map =
+            self.children
+                .iter()
+                .try_fold(HashMap::new(), |mut acc, child| {
+                    let child_types = child.get_type_map()?;
+                    for (name, t) in child_types.iter() {
+                        match acc.get(name) {
+                            None => {
+                                acc.insert(name.clone(), t.clone());
+                            }
+                            Some(prior_type) => {
+                                if prior_type != t {
+                                    return Err(SymbolNodeError::ConflictingTypes(
+                                        name.clone(),
+                                        t.clone(),
+                                        prior_type.clone(),
+                                    ));
+                                }
+                            }
+                        }
+                    }
+                    Ok(acc)
+                })?;
+        let mut to_return = children_type_map.clone();
+        match children_type_map.get(&self.get_root_name()) {
+            Some(prior_type) => {
+                if &self.get_evaluates_to_type() != prior_type {
+                    return Err(SymbolNodeError::ConflictingTypes(
+                        self.get_root_name(),
+                        self.get_evaluates_to_type(),
+                        prior_type.clone(),
+                    ));
                 }
-            } else {
-                type_map.insert(symbol.get_name(), symbol.get_evaluates_to_type());
+            }
+            None => {
+                to_return.insert(self.get_root_name(), self.get_evaluates_to_type());
             }
         }
-
-        return to_return;
-    }
-
-    pub fn get_type_map(&self) -> Result<HashMap<String, Type>, SymbolNodeError> {
-        unimplemented!()
+        Ok(to_return)
     }
 }
 
@@ -913,6 +929,8 @@ mod test_statement {
             ("a".to_string(), Type::Object),
             ("b".to_string(), Type::Object),
             ("c".to_string(), Type::Object),
+            ("x".to_string(), Type::Object),
+            ("y".to_string(), Type::Object),
         ]
         .into_iter()
         .collect();

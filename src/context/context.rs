@@ -76,13 +76,13 @@ mod tests {
             .unwrap();
         let additive_commutativity = Transformation::new(a_plus_b, b_plus_a);
 
-        let mut a_times_b = parser
+        let a_times_b = parser
             .parse(
                 &mut Tokenizer::new_with_tokens(vec!["*".to_string(), "=".to_string()])
                     .tokenize("a * b"),
             )
             .unwrap();
-        let mut b_times_a = parser
+        let b_times_a = parser
             .parse(
                 &mut Tokenizer::new_with_tokens(vec!["*".to_string(), "=".to_string()])
                     .tokenize("b * a"),
@@ -91,6 +91,10 @@ mod tests {
         let multiplicative_commutativity = Transformation::new(a_times_b, b_times_a);
 
         let transformations = vec![additive_commutativity, multiplicative_commutativity];
-        let context = Context::new(types, transformations);
+
+        let context = Context::new(types.clone(), transformations.clone());
+
+        assert_eq!(context.get_types(), &types);
+        assert_eq!(context.get_transformations(), &transformations);
     }
 }
