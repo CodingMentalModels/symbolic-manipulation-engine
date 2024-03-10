@@ -92,6 +92,13 @@ e.g. the transformation $a = b => b = a$ could be defined for the generic symbol
 - `Transformation`s are rules for mapping one or more `Statement`s to a new `Statement`.  
 - `Context`s are groups of saved, allowable `Transformation`s which can be imported and used, e.g. one might have a `Basic Algebra` `Context`, which can perform algebraic manipulations.
 
+### Context
+
+A `Context` owns:
+ - A `TypeHierarchy`, which it passes along to the Workspace (and validates) when it imports.
+ - A list of allowed `Transformations`
+
+
 ### Workspaces
 
 A `Workspace` is a scope for doing transformations, consisting of allowed transformations, statements (whether hypothesized or results of transformations), and their provenances.  

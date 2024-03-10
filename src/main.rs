@@ -1,6 +1,7 @@
 mod cli;
 mod config;
 mod constants;
+mod context;
 mod parsing;
 mod symbol;
 mod workspace;

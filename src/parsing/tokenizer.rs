@@ -140,6 +140,18 @@ pub enum Token {
     Object(String),
 }
 
+impl From<String> for Token {
+    fn from(value: String) -> Self {
+        Self::Object(value)
+    }
+}
+
+impl From<&str> for Token {
+    fn from(value: &str) -> Self {
+        Self::Object(value.to_string())
+    }
+}
+
 impl Token {
     pub fn to_string(&self) -> String {
         match self {

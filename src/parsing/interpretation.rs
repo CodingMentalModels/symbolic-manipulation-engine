@@ -66,6 +66,15 @@ impl Interpretation {
         )
     }
 
+    pub fn infix_operator(token: Token) -> Self {
+        Interpretation::new(
+            InterpretationCondition::Matches(token.clone()),
+            ExpressionType::Infix,
+            2,
+            token.to_string().into(),
+        )
+    }
+
     pub fn get_expression_type(&self) -> ExpressionType {
         self.expression_type.clone()
     }
