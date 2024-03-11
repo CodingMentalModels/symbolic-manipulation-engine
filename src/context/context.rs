@@ -52,9 +52,9 @@ mod tests {
         ])
         .unwrap();
 
-        let equals_interpretation = Interpretation::infix_operator("=".into());
-        let plus_interpretation = Interpretation::infix_operator("+".into());
-        let times_interpretation = Interpretation::infix_operator("*".into());
+        let equals_interpretation = Interpretation::infix_operator("=".into(), 1);
+        let plus_interpretation = Interpretation::infix_operator("+".into(), 2);
+        let times_interpretation = Interpretation::infix_operator("*".into(), 3);
 
         let mut parser = Parser::new(vec![
             equals_interpretation,

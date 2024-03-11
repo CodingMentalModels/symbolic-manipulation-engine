@@ -249,6 +249,60 @@ mod test_parser {
     }
 
     #[test]
+    fn test_parses_nested() {
+        let functions = vec!["omega", "f", "g", "h"];
+
+        let mut tokens = Tokenizer::new_with_tokens(
+            functions
+                .clone()
+                .into_iter()
+                .map(|s| s.to_string())
+                .collect(),
+        )
+        .tokenize("omega(f(g(w, x, y), h(z)))");
+
+        let function_interpretations = functions
+            .into_iter()
+            .map(|name| {
+                Interpretation::new(
+                    InterpretationCondition::Matches(Token::Object(name.to_string())),
+                    ExpressionType::Prefix,
+                    1,
+                    "Function".into(),
+                )
+            })
+            .collect();
+
+        let parser = Parser::new(function_interpretations);
+
+        let parsed = parser.parse(&mut tokens);
+
+        assert_eq!(
+            parsed,
+            Ok(SymbolNode::new(
+                Symbol::new("omega".to_string(), "Function".into()),
+                vec![SymbolNode::new(
+                    Symbol::new("f".to_string(), "Function".into(),),
+                    vec![
+                        SymbolNode::new(
+                            Symbol::new("g".to_string(), "Function".into()),
+                            vec![
+                                SymbolNode::leaf_object("w".to_string()),
+                                SymbolNode::leaf_object("x".to_string()),
+                                SymbolNode::leaf_object("y".to_string()),
+                            ]
+                        ),
+                        SymbolNode::new(
+                            Symbol::new("h".to_string(), "Function".into()),
+                            vec![SymbolNode::leaf_object("z".to_string()),]
+                        ),
+                    ]
+                )]
+            ))
+        )
+    }
+
+    #[test]
     fn test_parser_parses_outfix() {
         let mut tokens = Tokenizer::new_with_tokens(vec!["|".to_string()]).tokenize("|x|");
 
