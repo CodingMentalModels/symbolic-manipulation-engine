@@ -14,52 +14,36 @@ impl Tokenizer {
 
     pub fn tokenize(&self, s: &str) -> TokenStack {
         let mut tokens = VecDeque::new();
-        let custom_indices = self
-            .custom_tokens
-            .iter()
-            .map(|token| s.match_indices(token))
-            .flatten()
-            .map(|(i, _)| i)
-            .collect::<Vec<_>>();
-        let mut chars = s.chars().peekable();
-        let mut i = 0;
-        while let Some(c) = chars.next() {
+        let mut chars = MultiPeek::new(s.chars());
+        let mut next_token: Option<Token> = None;
+        while let Some(c) = chars.peek() {
             match c {
-                '(' => tokens.push_back(Token::LeftParen),
-                ')' => tokens.push_back(Token::RightParen),
-                ',' => tokens.push_back(Token::Comma),
+                '(' => next_token = Some(Token::LeftParen),
+                ')' => next_token = Some(Token::RightParen),
+                ',' => next_token = Some(Token::Comma),
                 _ => {
                     if c.is_whitespace() {
-                        tokens.push_back(Token::Whitespace);
-                        continue;
-                    }
-                    let mut token = String::new();
-                    token.push(c);
-                    let mut custom_token_found = false;
-                    while let Some(&c) = chars.peek() {
-                        if self.custom_tokens.contains(&token) {
-                            tokens.push_back(Token::Object(token.clone()));
-                            custom_token_found = true;
-                            break;
+                        next_token = Some(Token::Whitespace);
+                    } else {
+                        for custom_token in self.custom_tokens.iter() {
+                            if chars
+                                .peek_many(custom_token.len())
+                                .map(|s| s.into_iter().collect::<String>())
+                                == Some(custom_token.clone())
+                            {
+                                next_token = Some(Token::Object(custom_token.clone()));
+                            }
                         }
-                        if c == '('
-                            || c == ')'
-                            || c == ','
-                            || c.is_whitespace()
-                            || custom_indices.contains(&(i + 1))
-                        {
-                            break;
-                        }
-                        token.push(c);
-                        chars.next();
-                        i += 1;
                     }
-                    if !custom_token_found {
-                        tokens.push_back(Token::Object(token));
+                    match next_token {
+                        Some(ref t) => {
+                            tokens.push_back(t.clone());
+                            chars.next_many(t.len());
+                        }
+                        None => tokens.push_back(Token::Object(chars.collect())),
                     }
                 }
             }
-            i += 1;
         }
         TokenStack::new(tokens)
     }
@@ -160,6 +144,88 @@ impl Token {
             Self::Comma => ",".to_string(),
             Self::Whitespace => " ".to_string(),
             Self::Object(s) => s.clone(),
+        }
+    }
+
+    pub fn len(&self) -> usize {
+        self.to_string().len()
+    }
+}
+
+struct MultiPeek<I: Iterator> {
+    iter: I,
+    peeked: Vec<I::Item>,
+}
+
+impl<I: Iterator> MultiPeek<I>
+where
+    I::Item: Clone,
+{
+    fn new(iter: I) -> Self {
+        Self {
+            iter,
+            peeked: Vec::new(),
+        }
+    }
+
+    // Peek at the very next item without consuming it
+    fn peek(&mut self) -> Option<&I::Item> {
+        if self.peeked.is_empty() {
+            if let Some(item) = self.iter.next() {
+                self.peeked.push(item);
+            }
+        }
+        self.peeked.first()
+    }
+
+    // Peek at the next n items without consuming them
+    fn peek_many(&mut self, n: usize) -> Option<&[I::Item]> {
+        while self.peeked.len() < n {
+            if let Some(item) = self.iter.next() {
+                self.peeked.push(item);
+            } else {
+                break;
+            }
+        }
+        if self.peeked.is_empty() {
+            None
+        } else {
+            Some(&self.peeked[..self.peeked.len().min(n)])
+        }
+    }
+
+    fn next_many(&mut self, n: usize) -> Vec<I::Item> {
+        let mut result = Vec::new();
+
+        // First, take as many items as possible from the already peeked ones
+        while result.len() < n && !self.peeked.is_empty() {
+            result.push(self.peeked.remove(0));
+        }
+
+        // If more items are needed, take them directly from the underlying iterator
+        while result.len() < n {
+            if let Some(item) = self.iter.next() {
+                result.push(item);
+            } else {
+                break; // Stop if the iterator runs out of items
+            }
+        }
+
+        result
+    }
+}
+
+impl<I: Iterator> Iterator for MultiPeek<I>
+where
+    I::Item: Clone,
+{
+    type Item = I::Item;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        if !self.peeked.is_empty() {
+            Some(self.peeked.remove(0))
+        } else {
+            self.iter.next()
         }
     }
 }
