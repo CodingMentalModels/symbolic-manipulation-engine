@@ -239,8 +239,6 @@ mod test_parser {
 
     #[test]
     fn test_parser_parses_functional() {
-        let mut tokens = Tokenizer::new_with_tokens(vec![]).tokenize("f(x, y, z)");
-
         let f_interpretation = Interpretation::new(
             InterpretationCondition::Matches(Token::Object("f".to_string())),
             ExpressionType::Functional,
@@ -249,6 +247,20 @@ mod test_parser {
         );
 
         let parser = Parser::new(vec![f_interpretation]);
+
+        let mut tokens = Tokenizer::new_with_tokens(vec![]).tokenize("f()");
+
+        let parsed = parser.parse(&mut tokens);
+
+        assert_eq!(
+            parsed,
+            Ok(SymbolNode::new(
+                Symbol::new("f".to_string(), "Function".into(),),
+                vec![]
+            ))
+        );
+
+        let mut tokens = Tokenizer::new_with_tokens(vec![]).tokenize("f(x, y, z)");
 
         let parsed = parser.parse(&mut tokens);
 
@@ -262,7 +274,7 @@ mod test_parser {
                     SymbolNode::leaf_object("z".to_string()),
                 ]
             ))
-        )
+        );
     }
 
     #[test]
@@ -283,6 +295,34 @@ mod test_parser {
             .collect();
 
         let parser = Parser::new(function_interpretations.clone());
+
+        let mut tokens = Tokenizer::new_with_tokens(
+            functions
+                .clone()
+                .into_iter()
+                .map(|s| s.to_string())
+                .collect(),
+        )
+        .tokenize("omega(f(g(h())))");
+
+        let parsed = parser.parse(&mut tokens);
+
+        assert_eq!(
+            parsed,
+            Ok(SymbolNode::new(
+                Symbol::new("omega".to_string(), "Function".into(),),
+                vec![SymbolNode::new(
+                    Symbol::new("f".to_string(), "Function".into()),
+                    vec![SymbolNode::new(
+                        Symbol::new("g".to_string(), "Function".into(),),
+                        vec![SymbolNode::new(
+                            Symbol::new("h".to_string(), "Function".into()),
+                            vec![]
+                        ),]
+                    )]
+                ),]
+            ))
+        );
 
         let mut tokens = Tokenizer::new_with_tokens(
             functions
