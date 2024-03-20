@@ -16,7 +16,6 @@ pub struct Parser {
 impl Parser {
     pub fn new(mut interpretations: Vec<Interpretation>) -> Self {
         interpretations.push(Interpretation::parentheses());
-        interpretations.push(Interpretation::comma());
         interpretations.push(Interpretation::any_object());
         Self::new_raw(interpretations)
     }
@@ -34,7 +33,7 @@ impl Parser {
     pub fn parse(&self, token_stack: &mut TokenStack) -> Result<SymbolNode, ParserError> {
         token_stack.remove_whitespace();
         let to_return = self.parse_expression(token_stack, 0)?;
-        return Ok(to_return.split_delimiters().collapse_delimiters());
+        return Ok(to_return);
     }
 
     fn parse_expression(
@@ -63,6 +62,24 @@ impl Parser {
                         let contained_expression = self.parse_expression(token_stack, 0)?; // Reset precedence for inner expression
                         token_stack.pop_and_assert_or_error(closing_token)?;
                         interpretation.get_symbol_node(&token, vec![contained_expression])?
+                    }
+                    ExpressionType::Functional => {
+                        println!("Parsing functional: {:?} ({:?})", token, token_stack);
+                        let mut args = Vec::new();
+                        token_stack.pop_and_assert_or_error(Token::LeftParen)?;
+                        if token_stack.peek() != Some(Token::RightParen) {
+                            // There may be no args
+                            while let Some(_arg_token) = token_stack.peek() {
+                                let arg_expression = self.parse_expression(token_stack, 0)?; // Reset precedence for arg
+                                args.push(arg_expression);
+                                if token_stack.peek() == Some(Token::RightParen) {
+                                    token_stack.pop();
+                                    break;
+                                }
+                                token_stack.pop_and_assert_or_error(Token::Comma)?;
+                            }
+                        }
+                        interpretation.get_symbol_node(&token, args)?
                     }
                     t => return Err(ParserError::InvalidLeftExpressionType(token, t)),
                 },
@@ -226,7 +243,7 @@ mod test_parser {
 
         let f_interpretation = Interpretation::new(
             InterpretationCondition::Matches(Token::Object("f".to_string())),
-            ExpressionType::Prefix,
+            ExpressionType::Functional,
             1,
             "Function".into(),
         );
@@ -258,7 +275,7 @@ mod test_parser {
             .map(|name| {
                 Interpretation::new(
                     InterpretationCondition::Matches(Token::Object(name.to_string())),
-                    ExpressionType::Prefix,
+                    ExpressionType::Functional,
                     1,
                     "Function".into(),
                 )

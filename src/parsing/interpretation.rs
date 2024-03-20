@@ -75,6 +75,14 @@ impl Interpretation {
         )
     }
 
+    pub fn function(token: Token, precedence: u8) -> Self {
+        Interpretation::new(
+            InterpretationCondition::Matches(token.clone()),
+            ExpressionType::Functional,
+            precedence,
+            token.to_string().into(),
+        )
+    }
     pub fn get_expression_type(&self) -> ExpressionType {
         self.expression_type.clone()
     }
@@ -113,9 +121,10 @@ impl Interpretation {
 
     pub fn satisfies_condition(&self, so_far: &Option<SymbolNode>, token: &Token) -> bool {
         let is_ok_expression_type = match self.expression_type {
-            ExpressionType::Singleton | ExpressionType::Prefix | ExpressionType::Outfix(_) => {
-                so_far.is_none()
-            }
+            ExpressionType::Singleton
+            | ExpressionType::Prefix
+            | ExpressionType::Outfix(_)
+            | ExpressionType::Functional => so_far.is_none(),
             ExpressionType::Infix | ExpressionType::Postfix => so_far.is_some(),
         };
         if !is_ok_expression_type {
@@ -147,6 +156,7 @@ pub enum ExpressionType {
     Infix,
     Postfix,
     Outfix(Token),
+    Functional,
 }
 
 impl Default for ExpressionType {
