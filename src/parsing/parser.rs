@@ -252,16 +252,8 @@ mod test_parser {
     fn test_parses_nested() {
         let functions = vec!["omega", "f", "g", "h"];
 
-        let mut tokens = Tokenizer::new_with_tokens(
-            functions
-                .clone()
-                .into_iter()
-                .map(|s| s.to_string())
-                .collect(),
-        )
-        .tokenize("omega(f(g(w, x, y), h(z)))");
-
-        let function_interpretations = functions
+        let function_interpretations: Vec<_> = functions
+            .clone()
             .into_iter()
             .map(|name| {
                 Interpretation::new(
@@ -272,6 +264,45 @@ mod test_parser {
                 )
             })
             .collect();
+
+        let parser = Parser::new(function_interpretations.clone());
+
+        let mut tokens = Tokenizer::new_with_tokens(
+            functions
+                .clone()
+                .into_iter()
+                .map(|s| s.to_string())
+                .collect(),
+        )
+        .tokenize("f(g(x), h(y))");
+
+        let parsed = parser.parse(&mut tokens);
+
+        assert_eq!(
+            parsed,
+            Ok(SymbolNode::new(
+                Symbol::new("f".to_string(), "Function".into(),),
+                vec![
+                    SymbolNode::new(
+                        Symbol::new("g".to_string(), "Function".into()),
+                        vec![SymbolNode::leaf_object("x".to_string()),]
+                    ),
+                    SymbolNode::new(
+                        Symbol::new("h".to_string(), "Function".into()),
+                        vec![SymbolNode::leaf_object("y".to_string()),]
+                    ),
+                ]
+            ))
+        );
+
+        let mut tokens = Tokenizer::new_with_tokens(
+            functions
+                .clone()
+                .into_iter()
+                .map(|s| s.to_string())
+                .collect(),
+        )
+        .tokenize("omega(f(g(w, x, y), h(z)))");
 
         let parser = Parser::new(function_interpretations);
 
@@ -299,7 +330,7 @@ mod test_parser {
                     ]
                 )]
             ))
-        )
+        );
     }
 
     #[test]
