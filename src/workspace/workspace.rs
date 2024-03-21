@@ -257,19 +257,21 @@ mod test_workspace {
 
     #[test]
     fn test_workspace_imports_context() {
-        let mut workspace = Workspace::new();
-
-        let context = Context::new();
-
-        workspace.import_context(context);
-
-        let ambiguous_context = Context::new();
-
-        workspace.import_context(context);
-
-        assert_eq!(workspace.transformations.len(),);
+        //        let mut workspace = Workspace::new();
+        //
+        //        let context = Context::new();
+        //
+        //        assert_eq!(workspace.try_import_context(context), Ok(()));
+        //
+        //        let ambiguous_context = Context::new();
+        //
+        //        assert_eq!(
+        //            workspace.try_import_context(context),
+        //            Err(ContextError::AmbiguousTypes(vec![set_type]))
+        //        );
+        //
+        //        assert_eq!(workspace.transformations.len(),);
 
         unimplemented!()
     }
 }
-

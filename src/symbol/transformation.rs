@@ -2,6 +2,7 @@ use std::collections::{HashMap, HashSet};
 
 use serde::{Deserialize, Serialize};
 
+use crate::parsing::parser::Parser;
 use crate::symbol::symbol_node::{Symbol, SymbolNode, SymbolNodeError};
 use crate::symbol::symbol_type::Type;
 
@@ -17,6 +18,20 @@ pub struct Transformation {
 impl Transformation {
     pub fn new(from: SymbolNode, to: SymbolNode) -> Transformation {
         Transformation { from, to }
+    }
+
+    pub fn reflexivity(
+        operator_name: String,
+        operator_type: Type,
+        object_name: String,
+        object_type: Type,
+    ) -> Self {
+        let object = SymbolNode::leaf(Symbol::new(object_name, object_type));
+        let node = SymbolNode::new(
+            Symbol::new(operator_name, operator_type),
+            vec![object.clone(), object.clone()],
+        );
+        Transformation::new(node.clone(), node)
     }
 
     pub fn to_string(&self) -> String {
@@ -161,6 +176,8 @@ pub enum TransformationError {
 
 #[cfg(test)]
 mod test_transformation {
+    use crate::parsing::{interpretation::Interpretation, tokenizer::Token};
+
     use super::*;
 
     #[test]
@@ -312,5 +329,23 @@ mod test_transformation {
 
         assert_eq!(transformed, Ok(d_equals_b));
     }
-}
 
+    #[test]
+    fn test_transformation_reflexivity() {
+        let transformation =
+            Transformation::reflexivity("=".to_string(), "=".into(), "x".to_string(), Type::Object);
+
+        let interpretations = vec![Interpretation::infix_operator(
+            Token::Object("=".to_string()),
+            3,
+        )];
+
+        let parser = Parser::new(interpretations);
+        let expected = parser
+            .parse_from_string(vec!["=".to_string()], "x=x")
+            .unwrap();
+
+        assert_eq!(transformation.from, expected);
+        assert_eq!(transformation.to, expected);
+    }
+}
