@@ -6,7 +6,7 @@ use crate::constants::*;
 #[derive(Debug, Default, PartialEq, Eq)]
 pub struct Tokenizer {
     custom_tokens: Vec<String>,
-    next_token: Vec<char>,
+    token_in_progress: Vec<char>,
     tokens: VecDeque<Token>,
 }
 
@@ -14,37 +14,37 @@ impl Tokenizer {
     pub fn new_with_tokens(custom_tokens: Vec<String>) -> Tokenizer {
         Tokenizer {
             custom_tokens,
-            next_token: Vec::new(),
+            token_in_progress: Vec::new(),
             tokens: VecDeque::new(),
         }
     }
 
     pub fn tokenize(&mut self, s: &str) -> TokenStack {
-        self.next_token = Vec::new();
+        self.token_in_progress = Vec::new();
         self.tokens = VecDeque::new();
         let mut queue = CharQueue::from_string(s.to_string());
         while let Some(_token) = queue.peek() {
             if queue.starts_with(&LPAREN.to_string()) {
-                self.consume_next_token();
+                self.consume_token_in_progress();
                 self.tokens.push_back(Token::LeftParen);
                 queue.take();
             } else if queue.starts_with(&RPAREN.to_string()) {
-                self.consume_next_token();
+                self.consume_token_in_progress();
                 self.tokens.push_back(Token::RightParen);
                 queue.take();
             } else if queue.starts_with(&COMMA.to_string()) {
-                self.consume_next_token();
+                self.consume_token_in_progress();
                 self.tokens.push_back(Token::Comma);
                 queue.take();
             } else if queue.starts_with_whitespace() {
-                self.consume_next_token();
+                self.consume_token_in_progress();
                 self.tokens.push_back(Token::Whitespace);
                 queue.take();
             } else {
                 let mut found_custom_token = false;
                 for custom_token in self.custom_tokens.clone().iter() {
                     if queue.starts_with(custom_token) {
-                        self.consume_next_token();
+                        self.consume_token_in_progress();
                         self.tokens
                             .push_back(Token::Object(queue.take_n_as_string(custom_token.len())));
                         found_custom_token = true;
@@ -52,20 +52,21 @@ impl Tokenizer {
                     }
                 }
                 if !found_custom_token {
-                    self.next_token
+                    self.token_in_progress
                         .push(queue.take().expect("We know there's a next one."));
                 }
             }
         }
-        self.consume_next_token();
+        self.consume_token_in_progress();
         TokenStack::new(self.tokens.clone())
     }
 
-    fn consume_next_token(&mut self) {
-        if self.next_token.len() > 0 {
-            self.tokens
-                .push_back(Token::Object(self.next_token.clone().into_iter().collect()));
-            self.next_token = Vec::new();
+    fn consume_token_in_progress(&mut self) {
+        if self.token_in_progress.len() > 0 {
+            self.tokens.push_back(Token::Object(
+                self.token_in_progress.clone().into_iter().collect(),
+            ));
+            self.token_in_progress = Vec::new();
         }
     }
 }
