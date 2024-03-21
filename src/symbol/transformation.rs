@@ -34,6 +34,20 @@ impl Transformation {
         Transformation::new(node.clone(), node)
     }
 
+    pub fn symmetry(
+        operator_name: String,
+        operator_type: Type,
+        object_names: (String, String),
+        object_type: Type,
+    ) -> Self {
+        let left = SymbolNode::leaf(Symbol::new(object_names.0, object_type.clone()));
+        let right = SymbolNode::leaf(Symbol::new(object_names.1, object_type));
+        let operator = Symbol::new(operator_name, operator_type);
+        let from = SymbolNode::new(operator.clone(), vec![left.clone(), right.clone()]);
+        let to = SymbolNode::new(operator, vec![right.clone(), left.clone()]);
+        Transformation::new(from, to)
+    }
+
     pub fn to_string(&self) -> String {
         format!("{} -> {}", self.from.to_string(), self.to.to_string())
     }
@@ -347,5 +361,33 @@ mod test_transformation {
 
         assert_eq!(transformation.from, expected);
         assert_eq!(transformation.to, expected);
+    }
+
+    #[test]
+    fn test_transformation_symmetry() {
+        let transformation = Transformation::symmetry(
+            "+".to_string(),
+            "+".into(),
+            ("x".to_string(), "y".to_string()),
+            "Integer".into(),
+        );
+
+        let interpretations = vec![
+            Interpretation::infix_operator(Token::Object("+".to_string()), 3),
+            Interpretation::singleton("x", "Integer".into()),
+            Interpretation::singleton("y", "Integer".into()),
+        ];
+        let parser = Parser::new(interpretations);
+
+        let expected_from = parser
+            .parse_from_string(vec!["+".to_string()], "x+y")
+            .unwrap();
+
+        let expected_to = parser
+            .parse_from_string(vec!["+".to_string()], "y+x")
+            .unwrap();
+
+        assert_eq!(transformation.from, expected_from);
+        assert_eq!(transformation.to, expected_to);
     }
 }
