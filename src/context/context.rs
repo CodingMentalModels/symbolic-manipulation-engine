@@ -56,19 +56,19 @@ mod tests {
         let plus_interpretation = Interpretation::infix_operator("+".into(), 2);
         let times_interpretation = Interpretation::infix_operator("*".into(), 3);
 
-        let mut parser = Parser::new(vec![
+        let parser = Parser::new(vec![
             equals_interpretation,
             plus_interpretation,
             times_interpretation,
         ]);
 
-        let mut a_plus_b = parser
+        let a_plus_b = parser
             .parse(
                 &mut Tokenizer::new_with_tokens(vec!["+".to_string(), "=".to_string()])
                     .tokenize("a + b"),
             )
             .unwrap();
-        let mut b_plus_a = parser
+        let b_plus_a = parser
             .parse(
                 &mut Tokenizer::new_with_tokens(vec!["+".to_string(), "=".to_string()])
                     .tokenize("b + a"),
