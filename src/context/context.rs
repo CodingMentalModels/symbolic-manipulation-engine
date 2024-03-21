@@ -30,6 +30,14 @@ impl Context {
     pub fn get_transformations(&self) -> &Vec<Transformation> {
         &self.transformations
     }
+
+    pub fn serialize(&self) -> String {
+        toml::to_string(self).unwrap()
+    }
+
+    pub fn deserialize(serialized: &str) -> Result<Self, toml::de::Error> {
+        toml::from_str(serialized)
+    }
 }
 
 #[cfg(test)]
