@@ -4,7 +4,7 @@ use crate::symbol::symbol_node::{Symbol, SymbolNode};
 use crate::symbol::symbol_type::Type;
 
 use super::interpretation::{ExpressionPrecedence, InterpretedType};
-use super::tokenizer::TokenStack;
+use super::tokenizer::{self, TokenStack};
 
 pub type ParserResult = Result<SymbolNode, ParserError>;
 
@@ -34,6 +34,16 @@ impl Parser {
         token_stack.remove_whitespace();
         let to_return = self.parse_expression(token_stack, 0)?;
         return Ok(to_return);
+    }
+
+    pub fn parse_from_string(
+        &self,
+        custom_tokens: Vec<String>,
+        s: &str,
+    ) -> Result<SymbolNode, ParserError> {
+        let mut tokenizer = Tokenizer::new_with_tokens(custom_tokens);
+        let mut token_stack = tokenizer.tokenize(s);
+        self.parse(&mut token_stack)
     }
 
     fn parse_expression(
