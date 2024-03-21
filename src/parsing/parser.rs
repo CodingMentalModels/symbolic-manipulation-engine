@@ -16,7 +16,6 @@ pub struct Parser {
 impl Parser {
     pub fn new(mut interpretations: Vec<Interpretation>) -> Self {
         interpretations.push(Interpretation::parentheses());
-        interpretations.push(Interpretation::comma());
         interpretations.push(Interpretation::any_object());
         Self::new_raw(interpretations)
     }
@@ -34,7 +33,7 @@ impl Parser {
     pub fn parse(&self, token_stack: &mut TokenStack) -> Result<SymbolNode, ParserError> {
         token_stack.remove_whitespace();
         let to_return = self.parse_expression(token_stack, 0)?;
-        return Ok(to_return.split_delimiters().collapse_delimiters());
+        return Ok(to_return);
     }
 
     fn parse_expression(
@@ -63,6 +62,24 @@ impl Parser {
                         let contained_expression = self.parse_expression(token_stack, 0)?; // Reset precedence for inner expression
                         token_stack.pop_and_assert_or_error(closing_token)?;
                         interpretation.get_symbol_node(&token, vec![contained_expression])?
+                    }
+                    ExpressionType::Functional => {
+                        println!("Parsing functional: {:?} ({:?})", token, token_stack);
+                        let mut args = Vec::new();
+                        token_stack.pop_and_assert_or_error(Token::LeftParen)?;
+                        if token_stack.peek() != Some(Token::RightParen) {
+                            // There may be no args
+                            while let Some(_arg_token) = token_stack.peek() {
+                                let arg_expression = self.parse_expression(token_stack, 0)?; // Reset precedence for arg
+                                args.push(arg_expression);
+                                if token_stack.peek() == Some(Token::RightParen) {
+                                    token_stack.pop();
+                                    break;
+                                }
+                                token_stack.pop_and_assert_or_error(Token::Comma)?;
+                            }
+                        }
+                        interpretation.get_symbol_node(&token, args)?
                     }
                     t => return Err(ParserError::InvalidLeftExpressionType(token, t)),
                 },
@@ -222,16 +239,28 @@ mod test_parser {
 
     #[test]
     fn test_parser_parses_functional() {
-        let mut tokens = Tokenizer::new_with_tokens(vec![]).tokenize("f(x, y, z)");
-
         let f_interpretation = Interpretation::new(
             InterpretationCondition::Matches(Token::Object("f".to_string())),
-            ExpressionType::Prefix,
+            ExpressionType::Functional,
             1,
             "Function".into(),
         );
 
         let parser = Parser::new(vec![f_interpretation]);
+
+        let mut tokens = Tokenizer::new_with_tokens(vec![]).tokenize("f()");
+
+        let parsed = parser.parse(&mut tokens);
+
+        assert_eq!(
+            parsed,
+            Ok(SymbolNode::new(
+                Symbol::new("f".to_string(), "Function".into(),),
+                vec![]
+            ))
+        );
+
+        let mut tokens = Tokenizer::new_with_tokens(vec![]).tokenize("f(x, y, z)");
 
         let parsed = parser.parse(&mut tokens);
 
@@ -245,7 +274,120 @@ mod test_parser {
                     SymbolNode::leaf_object("z".to_string()),
                 ]
             ))
+        );
+    }
+
+    #[test]
+    fn test_parses_nested() {
+        let functions = vec!["omega", "f", "g", "h"];
+
+        let function_interpretations: Vec<_> = functions
+            .clone()
+            .into_iter()
+            .map(|name| {
+                Interpretation::new(
+                    InterpretationCondition::Matches(Token::Object(name.to_string())),
+                    ExpressionType::Functional,
+                    1,
+                    "Function".into(),
+                )
+            })
+            .collect();
+
+        let parser = Parser::new(function_interpretations.clone());
+
+        let mut tokens = Tokenizer::new_with_tokens(
+            functions
+                .clone()
+                .into_iter()
+                .map(|s| s.to_string())
+                .collect(),
         )
+        .tokenize("omega(f(g(h())))");
+
+        let parsed = parser.parse(&mut tokens);
+
+        assert_eq!(
+            parsed,
+            Ok(SymbolNode::new(
+                Symbol::new("omega".to_string(), "Function".into(),),
+                vec![SymbolNode::new(
+                    Symbol::new("f".to_string(), "Function".into()),
+                    vec![SymbolNode::new(
+                        Symbol::new("g".to_string(), "Function".into(),),
+                        vec![SymbolNode::new(
+                            Symbol::new("h".to_string(), "Function".into()),
+                            vec![]
+                        ),]
+                    )]
+                ),]
+            ))
+        );
+
+        let mut tokens = Tokenizer::new_with_tokens(
+            functions
+                .clone()
+                .into_iter()
+                .map(|s| s.to_string())
+                .collect(),
+        )
+        .tokenize("f(g(x), h(y))");
+
+        let parsed = parser.parse(&mut tokens);
+
+        assert_eq!(
+            parsed,
+            Ok(SymbolNode::new(
+                Symbol::new("f".to_string(), "Function".into(),),
+                vec![
+                    SymbolNode::new(
+                        Symbol::new("g".to_string(), "Function".into()),
+                        vec![SymbolNode::leaf_object("x".to_string()),]
+                    ),
+                    SymbolNode::new(
+                        Symbol::new("h".to_string(), "Function".into()),
+                        vec![SymbolNode::leaf_object("y".to_string()),]
+                    ),
+                ]
+            ))
+        );
+
+        let mut tokens = Tokenizer::new_with_tokens(
+            functions
+                .clone()
+                .into_iter()
+                .map(|s| s.to_string())
+                .collect(),
+        )
+        .tokenize("omega(f(g(w, x, y), h(z)))");
+
+        let parser = Parser::new(function_interpretations);
+
+        let parsed = parser.parse(&mut tokens);
+
+        assert_eq!(
+            parsed,
+            Ok(SymbolNode::new(
+                Symbol::new("omega".to_string(), "Function".into()),
+                vec![SymbolNode::new(
+                    Symbol::new("f".to_string(), "Function".into(),),
+                    vec![
+                        SymbolNode::new(
+                            Symbol::new("g".to_string(), "Function".into()),
+                            vec![
+                                SymbolNode::leaf_object("w".to_string()),
+                                SymbolNode::leaf_object("x".to_string()),
+                                SymbolNode::leaf_object("y".to_string()),
+                            ]
+                        ),
+                        SymbolNode::new(
+                            Symbol::new("h".to_string(), "Function".into()),
+                            vec![SymbolNode::leaf_object("z".to_string()),]
+                        ),
+                    ]
+                )]
+            ))
+        );
     }
 
     #[test]

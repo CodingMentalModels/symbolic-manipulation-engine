@@ -1,67 +1,73 @@
 use std::collections::VecDeque;
 
 use super::parser::ParserError;
+use crate::constants::*;
 
 #[derive(Debug, Default, PartialEq, Eq)]
 pub struct Tokenizer {
     custom_tokens: Vec<String>,
+    token_in_progress: Vec<char>,
+    tokens: VecDeque<Token>,
 }
 
 impl Tokenizer {
     pub fn new_with_tokens(custom_tokens: Vec<String>) -> Tokenizer {
-        Tokenizer { custom_tokens }
+        Tokenizer {
+            custom_tokens,
+            token_in_progress: Vec::new(),
+            tokens: VecDeque::new(),
+        }
     }
 
-    pub fn tokenize(&self, s: &str) -> TokenStack {
-        let mut tokens = VecDeque::new();
-        let custom_indices = self
-            .custom_tokens
-            .iter()
-            .map(|token| s.match_indices(token))
-            .flatten()
-            .map(|(i, _)| i)
-            .collect::<Vec<_>>();
-        let mut chars = s.chars().peekable();
-        let mut i = 0;
-        while let Some(c) = chars.next() {
-            match c {
-                '(' => tokens.push_back(Token::LeftParen),
-                ')' => tokens.push_back(Token::RightParen),
-                ',' => tokens.push_back(Token::Comma),
-                _ => {
-                    if c.is_whitespace() {
-                        tokens.push_back(Token::Whitespace);
-                        continue;
-                    }
-                    let mut token = String::new();
-                    token.push(c);
-                    let mut custom_token_found = false;
-                    while let Some(&c) = chars.peek() {
-                        if self.custom_tokens.contains(&token) {
-                            tokens.push_back(Token::Object(token.clone()));
-                            custom_token_found = true;
-                            break;
-                        }
-                        if c == '('
-                            || c == ')'
-                            || c == ','
-                            || c.is_whitespace()
-                            || custom_indices.contains(&(i + 1))
-                        {
-                            break;
-                        }
-                        token.push(c);
-                        chars.next();
-                        i += 1;
-                    }
-                    if !custom_token_found {
-                        tokens.push_back(Token::Object(token));
+    pub fn tokenize(&mut self, s: &str) -> TokenStack {
+        self.token_in_progress = Vec::new();
+        self.tokens = VecDeque::new();
+        let mut queue = CharQueue::from_string(s.to_string());
+        while let Some(_token) = queue.peek() {
+            if queue.starts_with(&LPAREN.to_string()) {
+                self.consume_token_in_progress();
+                self.tokens.push_back(Token::LeftParen);
+                queue.take();
+            } else if queue.starts_with(&RPAREN.to_string()) {
+                self.consume_token_in_progress();
+                self.tokens.push_back(Token::RightParen);
+                queue.take();
+            } else if queue.starts_with(&COMMA.to_string()) {
+                self.consume_token_in_progress();
+                self.tokens.push_back(Token::Comma);
+                queue.take();
+            } else if queue.starts_with_whitespace() {
+                self.consume_token_in_progress();
+                self.tokens.push_back(Token::Whitespace);
+                queue.take();
+            } else {
+                let mut found_custom_token = false;
+                for custom_token in self.custom_tokens.clone().iter() {
+                    if queue.starts_with(custom_token) {
+                        self.consume_token_in_progress();
+                        self.tokens
+                            .push_back(Token::Object(queue.take_n_as_string(custom_token.len())));
+                        found_custom_token = true;
+                        break;
                     }
                 }
+                if !found_custom_token {
+                    self.token_in_progress
+                        .push(queue.take().expect("We know there's a next one."));
+                }
             }
-            i += 1;
         }
-        TokenStack::new(tokens)
+        self.consume_token_in_progress();
+        TokenStack::new(self.tokens.clone())
+    }
+
+    fn consume_token_in_progress(&mut self) {
+        if self.token_in_progress.len() > 0 {
+            self.tokens.push_back(Token::Object(
+                self.token_in_progress.clone().into_iter().collect(),
+            ));
+            self.token_in_progress = Vec::new();
+        }
     }
 }
 
@@ -140,6 +146,18 @@ pub enum Token {
     Object(String),
 }
 
+impl From<String> for Token {
+    fn from(value: String) -> Self {
+        Self::Object(value)
+    }
+}
+
+impl From<&str> for Token {
+    fn from(value: &str) -> Self {
+        Self::Object(value.to_string())
+    }
+}
+
 impl Token {
     pub fn to_string(&self) -> String {
         match self {
@@ -150,6 +168,86 @@ impl Token {
             Self::Object(s) => s.clone(),
         }
     }
+
+    pub fn len(&self) -> usize {
+        self.to_string().len()
+    }
+}
+
+pub struct CharQueue {
+    queue: VecDeque<char>,
+}
+
+impl CharQueue {
+    pub fn new(queue: VecDeque<char>) -> Self {
+        Self { queue }
+    }
+
+    pub fn from_string(s: String) -> Self {
+        Self::new(s.chars().into_iter().collect())
+    }
+
+    pub fn peek(&self) -> Option<char> {
+        let to_return = self.peek_n(1);
+        if to_return.len() == 0 {
+            return None;
+        } else {
+            Some(to_return[0])
+        }
+    }
+
+    pub fn peek_n(&self, n: usize) -> Vec<char> {
+        if self.len() <= n {
+            self.queue.clone().into_iter().collect()
+        } else {
+            self.queue.clone().into_iter().take(n).collect()
+        }
+    }
+
+    pub fn take(&mut self) -> Option<char> {
+        let to_return = self.take_n(1);
+        if to_return.len() == 0 {
+            None
+        } else {
+            Some(to_return[0])
+        }
+    }
+
+    pub fn take_n(&mut self, n: usize) -> VecDeque<char> {
+        if self.queue.len() <= n {
+            std::mem::replace(&mut self.queue, VecDeque::new())
+        } else {
+            let mut taken = VecDeque::with_capacity(n);
+            for _ in 0..n {
+                // This unwrap is safe because we know there are at least n elements.
+                taken.push_back(self.queue.pop_front().unwrap());
+            }
+            taken
+        }
+    }
+
+    pub fn take_n_as_string(&mut self, n: usize) -> String {
+        self.take_n(n).into_iter().collect::<String>()
+    }
+
+    pub fn len(&self) -> usize {
+        self.queue.len()
+    }
+
+    pub fn starts_with_whitespace(&self) -> bool {
+        match self.peek() {
+            None => false,
+            Some(c) => c.is_whitespace(),
+        }
+    }
+
+    pub fn starts_with(&self, s: &str) -> bool {
+        self.to_string().starts_with(s)
+    }
+
+    pub fn to_string(&self) -> String {
+        self.queue.clone().into_iter().collect()
+    }
 }
 
 #[cfg(test)]
@@ -158,7 +256,7 @@ mod test_tokenizer {
 
     #[test]
     fn test_tokenizer_tokenizes() {
-        let tokenizer = Tokenizer::default();
+        let mut tokenizer = Tokenizer::default();
 
         assert_eq!(
             tokenizer.tokenize("a").as_vector(),
@@ -244,5 +342,64 @@ mod test_tokenizer {
                 Token::Object("4".to_string()),
             ]
         );
+    }
+
+    #[test]
+    fn test_char_queue_takes() {
+        let mut queue = CharQueue::from_string("ABCDEFGH".to_string());
+        assert_eq!(queue.peek(), Some('A'));
+        assert_eq!(queue.peek_n(3), vec!['A', 'B', 'C']);
+        assert_eq!(
+            queue.peek_n(12),
+            vec!['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H']
+        );
+
+        assert_eq!(queue.take(), Some('A'));
+        assert_eq!(queue.peek_n(12), vec!['B', 'C', 'D', 'E', 'F', 'G', 'H']);
+
+        assert_eq!(queue.take_n(3), vec!['B', 'C', 'D']);
+        assert_eq!(queue.take_n(10), vec!['E', 'F', 'G', 'H']);
+    }
+
+    #[test]
+    fn test_char_queue_takes_n_as_string() {
+        let mut queue = CharQueue::from_string("ABCDEFGH".to_string());
+
+        assert_eq!(queue.take_n_as_string(1), "A".to_string());
+        assert_eq!(queue.take_n_as_string(3), "BCD".to_string());
+        assert_eq!(queue.take_n_as_string(10), "EFGH".to_string());
+    }
+
+    #[test]
+    fn test_char_queue_starts_with_whitespace() {
+        let queue = CharQueue::from_string("".to_string());
+        assert!(!queue.starts_with_whitespace());
+
+        let queue = CharQueue::from_string("123456789".to_string());
+        assert!(!queue.starts_with_whitespace());
+
+        let queue = CharQueue::from_string(" 123456789".to_string());
+        assert!(queue.starts_with_whitespace());
+
+        let queue = CharQueue::from_string("  123456789".to_string());
+        assert!(queue.starts_with_whitespace());
+
+        let queue = CharQueue::from_string("\n123456789".to_string());
+        assert!(queue.starts_with_whitespace());
+
+        let queue = CharQueue::from_string(" 2 = 4".to_string());
+        assert!(queue.starts_with_whitespace());
+    }
+
+    #[test]
+    fn test_char_queue_starts_with() {
+        let mut queue = CharQueue::from_string("123456789".to_string());
+        assert!(queue.starts_with(""));
+        assert!(queue.starts_with("123"));
+        assert!(!queue.starts_with("12345678999999999999"));
+        assert!(!queue.starts_with("234"));
+        let one = queue.take();
+        assert!(queue.starts_with("234"));
+        assert!(!queue.starts_with("2345678999999999999"));
     }
 }
