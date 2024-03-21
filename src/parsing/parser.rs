@@ -288,7 +288,69 @@ mod test_parser {
     }
 
     #[test]
-    fn test_parses_nested() {
+    fn test_parser_parses_from_string() {
+        let operators = vec![("^", 6), ("*", 5), ("/", 5), ("+", 4), ("-", 4), ("=", 3)];
+        let operator_names: Vec<_> = operators
+            .clone()
+            .into_iter()
+            .map(|(name, _precedence)| name.to_string())
+            .collect();
+
+        let operators_interpretations: Vec<_> = operators
+            .clone()
+            .into_iter()
+            .map(|(name, precedence)| {
+                Interpretation::new(
+                    InterpretationCondition::Matches(Token::Object(name.to_string())),
+                    ExpressionType::Infix,
+                    precedence,
+                    "Operator".into(),
+                )
+            })
+            .collect();
+
+        let parser = Parser::new(operators_interpretations.clone());
+
+        let pythagorean_theorem =
+            parser.parse_from_string(operator_names.clone(), "a^2 + b^2 = c^2");
+
+        let a_squared = parser
+            .parse_from_string(operator_names.clone(), "a^2")
+            .unwrap();
+        let b_squared = parser
+            .parse_from_string(operator_names.clone(), "b^2")
+            .unwrap();
+        let c_squared = parser
+            .parse_from_string(operator_names.clone(), "c^2")
+            .unwrap();
+
+        assert_eq!(
+            a_squared.clone(),
+            SymbolNode::new(
+                Symbol::new("^".to_string(), "Operator".into()),
+                vec![
+                    SymbolNode::leaf_object("a".to_string()),
+                    SymbolNode::leaf_object("2".to_string()),
+                ]
+            )
+        );
+
+        let expected = SymbolNode::new(
+            Symbol::new("=".to_string(), "Operator".into()),
+            vec![
+                SymbolNode::new(
+                    Symbol::new("+".to_string(), "Operator".into()),
+                    vec![a_squared, b_squared],
+                ),
+                c_squared,
+            ],
+        );
+
+        assert_eq!(pythagorean_theorem, Ok(expected));
+    }
+
+    #[test]
+    fn test_parser_parses_nested() {
         let functions = vec!["omega", "f", "g", "h"];
 
         let function_interpretations: Vec<_> = functions
