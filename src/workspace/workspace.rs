@@ -174,7 +174,7 @@ mod test_workspace {
 
     use std::unimplemented;
 
-    use crate::context::context::Context;
+    use crate::{context::context::Context, symbol::symbol_type::TypeHierarchy};
 
     use super::*;
 
@@ -257,20 +257,55 @@ mod test_workspace {
 
     #[test]
     fn test_workspace_imports_context() {
-        //        let mut workspace = Workspace::new();
-        //
-        //        let context = Context::new();
-        //
-        //        assert_eq!(workspace.try_import_context(context), Ok(()));
-        //
-        //        let ambiguous_context = Context::new();
-        //
-        //        assert_eq!(
-        //            workspace.try_import_context(context),
-        //            Err(ContextError::AmbiguousTypes(vec![set_type]))
-        //        );
-        //
-        //        assert_eq!(workspace.transformations.len(),);
+        let mut workspace = Workspace::new();
+
+        let mut types =
+            TypeHierarchy::chain(vec!["Real".into(), "Rational".into(), "Integer".into()]).unwrap();
+        types.add_chain(vec!["Operator".into(), "=".into()]);
+        types.add_chain_to_parent(vec!["+".into()], "Operator".into());
+
+        let equality_reflexivity = Transformation::reflexivity(
+            "=".to_string(),
+            "=".into(),
+            "x".to_string(),
+            "Real".into(),
+        );
+
+        let equality_symmetry = Transformation::symmetry(
+            "=".to_string(),
+            "=".into(),
+            ("x".to_string(), "y".to_string()),
+            "Real".into(),
+        );
+
+        let context = Context::new(
+            types,
+            vec![equality_reflexivity.clone(), equality_symmetry.clone()],
+        );
+
+        assert_eq!(workspace.try_import_context(context), Ok(()));
+        assert_eq!(workspace.types, types);
+        assert_eq!(workspace.transformations.len(), 2);
+
+        let mut complex_types = TypeHierarchy::chain(vec![
+            "Complex".into(),
+            "Real".into(),
+            "Rational".into(),
+            "Integer".into(),
+        ])
+        .unwrap();
+
+        complex_types.add_chain(vec!["Operator".into(), "=".into()]);
+        complex_types.add_chain_to_parent(vec!["+".into()], "Operator".into());
+        let ambiguous_context =
+            Context::new(complex_types, vec![equality_reflexivity, equality_symmetry]);
+
+        assert_eq!(
+            workspace.try_import_context(context),
+            Err(ContextError::AmbiguousTypes(vec![set_type]))
+        );
+
+        assert_eq!(workspace.transformations.len(),);
 
         unimplemented!()
     }
