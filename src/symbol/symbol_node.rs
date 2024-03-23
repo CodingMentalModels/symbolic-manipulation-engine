@@ -247,6 +247,14 @@ impl SymbolNode {
         result.into_iter().collect()
     }
 
+    pub fn get_types(&self) -> HashSet<Type> {
+        let mut result = vec![self.get_evaluates_to_type().clone()];
+        for child in &self.children {
+            result.extend(child.get_types());
+        }
+        result.into_iter().collect()
+    }
+
     pub fn to_symbol_string(&self) -> String {
         if self.children.len() == 0 {
             self.root.get_name()

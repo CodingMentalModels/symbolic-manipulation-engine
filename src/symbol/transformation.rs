@@ -20,6 +20,14 @@ impl Transformation {
         Transformation { from, to }
     }
 
+    pub fn get_from(&self) -> &SymbolNode {
+        &self.from
+    }
+
+    pub fn get_to(&self) -> &SymbolNode {
+        &self.to
+    }
+
     pub fn reflexivity(
         operator_name: String,
         operator_type: Type,

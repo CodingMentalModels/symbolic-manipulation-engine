@@ -4,6 +4,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::symbol::{
     symbol_node::{SymbolNode, SymbolNodeAddress},
+    symbol_type::{Type, TypeError, TypeHierarchy},
     transformation::{Transformation, TransformationError},
 };
 
@@ -13,22 +14,37 @@ type TransformationIndex = usize;
 #[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Workspace {
     statements: Vec<SymbolNode>,
+    types: TypeHierarchy,
     transformations: Vec<Transformation>,
     provenance: Vec<Provenance>,
 }
 
 impl Workspace {
-    pub fn new() -> Workspace {
-        Self::default()
+    pub fn new(types: TypeHierarchy) -> Workspace {
+        Self {
+            statements: vec![],
+            types,
+            transformations: vec![],
+            provenance: vec![],
+        }
     }
 
-    pub fn add_statement(&mut self, statement: SymbolNode) {
+    pub fn add_statement(&mut self, statement: SymbolNode) -> Result<(), WorkspaceError> {
+        self.types
+            .binds_statement_or_error(&statement)
+            .map_err(|x| WorkspaceError::from(x))?;
         self.statements.push(statement);
         self.provenance.push(Provenance::Hypothesis);
+        Ok(())
     }
 
-    pub fn add_transformation(&mut self, transformation: Transformation) {
+    pub fn add_transformation(
+        &mut self,
+        transformation: Transformation,
+    ) -> Result<(), WorkspaceError> {
+        self.types.binds_transformation_or_error(&transformation)?;
         self.transformations.push(transformation);
+        Ok(())
     }
 
     pub fn transform_all(
@@ -167,6 +183,19 @@ pub enum WorkspaceError {
     InvalidTransformationIndex,
     InvalidTransformationAddress,
     TransformationError(TransformationError),
+    StatementContainsTypesNotInHierarchy(Vec<Type>),
+    InvalidTypeErrorTransformation(TypeError),
+}
+
+impl From<TypeError> for WorkspaceError {
+    fn from(value: TypeError) -> Self {
+        match value {
+            TypeError::StatementIncludesTypesNotInHierarchy(types) => {
+                Self::StatementContainsTypesNotInHierarchy(types)
+            }
+            e => Self::InvalidTypeErrorTransformation(e),
+        }
+    }
 }
 
 #[cfg(test)]
@@ -180,7 +209,8 @@ mod test_workspace {
 
     #[test]
     fn test_workspace_adds_and_deletes_statement() {
-        let mut workspace = Workspace::new();
+        let types = TypeHierarchy::new();
+        let mut workspace = Workspace::new(types);
         let statement = SymbolNode::leaf_object("a".to_string());
         workspace.add_statement(statement);
         assert_eq!(workspace.statements.len(), 1);
@@ -193,9 +223,10 @@ mod test_workspace {
 
     #[test]
     fn test_workspace_transforms_statement_and_maintains_provenance() {
-        let mut workspace = Workspace::new();
+        let types = TypeHierarchy::new();
+        let mut workspace = Workspace::new(types);
         let statement = SymbolNode::leaf_object("a".to_string());
-        workspace.add_statement(statement);
+        assert_eq!(workspace.add_statement(statement), Ok(()));
         assert_eq!(workspace.statements.len(), 1);
 
         let transformation = Transformation::new(
@@ -205,7 +236,7 @@ mod test_workspace {
         workspace.add_transformation(transformation);
         assert_eq!(workspace.transformations.len(), 1);
 
-        workspace.transform_all(0, 0, HashMap::new());
+        let _transformed = workspace.transform_all(0, 0, HashMap::new());
         assert_eq!(workspace.statements.len(), 2);
         assert_eq!(
             workspace.statements,
@@ -238,7 +269,7 @@ mod test_workspace {
             SymbolNode::leaf_object("=".to_string()),
         ));
 
-        workspace.transform_at(1, 1, vec![]);
+        let _transformed = workspace.transform_at(1, 1, vec![]);
         assert_eq!(workspace.statements.len(), 3);
         assert_eq!(
             workspace.statements,
@@ -257,55 +288,56 @@ mod test_workspace {
 
     #[test]
     fn test_workspace_imports_context() {
-        let mut workspace = Workspace::new();
-
-        let mut types =
-            TypeHierarchy::chain(vec!["Real".into(), "Rational".into(), "Integer".into()]).unwrap();
-        types.add_chain(vec!["Operator".into(), "=".into()]);
-        types.add_chain_to_parent(vec!["+".into()], "Operator".into());
-
-        let equality_reflexivity = Transformation::reflexivity(
-            "=".to_string(),
-            "=".into(),
-            "x".to_string(),
-            "Real".into(),
-        );
-
-        let equality_symmetry = Transformation::symmetry(
-            "=".to_string(),
-            "=".into(),
-            ("x".to_string(), "y".to_string()),
-            "Real".into(),
-        );
-
-        let context = Context::new(
-            types,
-            vec![equality_reflexivity.clone(), equality_symmetry.clone()],
-        );
-
-        assert_eq!(workspace.try_import_context(context), Ok(()));
-        assert_eq!(workspace.types, types);
-        assert_eq!(workspace.transformations.len(), 2);
-
-        let mut complex_types = TypeHierarchy::chain(vec![
-            "Complex".into(),
-            "Real".into(),
-            "Rational".into(),
-            "Integer".into(),
-        ])
-        .unwrap();
-
-        complex_types.add_chain(vec!["Operator".into(), "=".into()]);
-        complex_types.add_chain_to_parent(vec!["+".into()], "Operator".into());
-        let ambiguous_context =
-            Context::new(complex_types, vec![equality_reflexivity, equality_symmetry]);
-
-        assert_eq!(
-            workspace.try_import_context(context),
-            Err(ContextError::AmbiguousTypes(vec![set_type]))
-        );
-
-        assert_eq!(workspace.transformations.len(),);
+        //        let types = TypeHierarchy::new();
+        //        let mut workspace = Workspace::new(types);
+        //
+        //        let mut types =
+        //            TypeHierarchy::chain(vec!["Real".into(), "Rational".into(), "Integer".into()]).unwrap();
+        //        types.add_chain(vec!["Operator".into(), "=".into()]);
+        //        types.add_chain_to_parent(vec!["+".into()], "Operator".into());
+        //
+        //        let equality_reflexivity = Transformation::reflexivity(
+        //            "=".to_string(),
+        //            "=".into(),
+        //            "x".to_string(),
+        //            "Real".into(),
+        //        );
+        //
+        //        let equality_symmetry = Transformation::symmetry(
+        //            "=".to_string(),
+        //            "=".into(),
+        //            ("x".to_string(), "y".to_string()),
+        //            "Real".into(),
+        //        );
+        //
+        //        let context = Context::new(
+        //            types,
+        //            vec![equality_reflexivity.clone(), equality_symmetry.clone()],
+        //        );
+        //
+        //        assert_eq!(workspace.try_import_context(context), Ok(()));
+        //        assert_eq!(workspace.types, types);
+        //        assert_eq!(workspace.transformations.len(), 2);
+        //
+        //        let mut complex_types = TypeHierarchy::chain(vec![
+        //            "Complex".into(),
+        //            "Real".into(),
+        //            "Rational".into(),
+        //            "Integer".into(),
+        //        ])
+        //        .unwrap();
+        //
+        //        complex_types.add_chain(vec!["Operator".into(), "=".into()]);
+        //        complex_types.add_chain_to_parent(vec!["+".into()], "Operator".into());
+        //        let ambiguous_context =
+        //            Context::new(complex_types, vec![equality_reflexivity, equality_symmetry]);
+        //
+        //        assert_eq!(
+        //            workspace.try_import_context(context),
+        //            Err(ContextError::AmbiguousTypes(vec![set_type]))
+        //        );
+        //
+        //        assert_eq!(workspace.transformations.len(),);
 
         unimplemented!()
     }

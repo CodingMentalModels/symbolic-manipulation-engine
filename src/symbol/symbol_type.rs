@@ -2,11 +2,11 @@ use std::collections::{HashMap, HashSet};
 
 use serde::{Deserialize, Serialize};
 
-use super::symbol_node::SymbolNode;
+use super::{symbol_node::SymbolNode, transformation::Transformation};
 
 pub type TypeName = String;
 
-#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
 pub struct TypeHierarchy {
     // Using a HashMap to quickly access nodes by their Type
     type_map: HashMap<Type, TypeHierarchyNode>,
@@ -159,6 +159,29 @@ impl TypeHierarchy {
                     .map(|result| acc && result)
             })
     }
+
+    pub fn binds_transformation_or_error(
+        &self,
+        transformation: &Transformation,
+    ) -> Result<(), TypeError> {
+        self.binds_statement_or_error(transformation.get_from())?;
+        self.binds_statement_or_error(transformation.get_to())
+    }
+
+    pub fn binds_statement_or_error(&self, statement: &SymbolNode) -> Result<(), TypeError> {
+        let missing_types: Vec<_> = statement
+            .get_types()
+            .into_iter()
+            .filter(|t| !self.contains_type(t))
+            .collect();
+        if missing_types.len() == 0 {
+            Ok(())
+        } else {
+            Err(TypeError::StatementIncludesTypesNotInHierarchy(
+                missing_types,
+            ))
+        }
+    }
 }
 
 #[derive(Clone, Debug, Hash, PartialEq, Eq, Serialize, Deserialize)]
@@ -212,6 +235,7 @@ pub enum TypeError {
     TypeHierarchyAlreadyIncludes(Type),
     ParentNotFound(Type),
     InvalidType(Type),
+    StatementIncludesTypesNotInHierarchy(Vec<Type>),
 }
 
 #[cfg(test)]
