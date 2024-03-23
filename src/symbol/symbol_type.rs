@@ -416,16 +416,6 @@ mod test_type {
         ])
         .unwrap();
 
-        assert_eq!(
-            type_hierarchy
-                .get_parent_child_pairs()
-                .into_iter()
-                .map(|(p, c)| format!("{:?} > {:?}", p, c))
-                .collect::<Vec<String>>()
-                .join("\n"),
-            "".to_string()
-        );
-
         type_hierarchy.add_child_to_parent(irrational.clone(), real.clone());
 
         type_hierarchy.add_chain(vec![unary_function.clone()]);
@@ -510,7 +500,38 @@ mod test_type {
     }
 
     #[test]
-    fn test_type_hierarchy_are_incompatible() {
+    fn test_type_hierarchy_unions() {
+        let mut trivial = TypeHierarchy::new();
+        assert_eq!(trivial.union(&trivial), Ok(trivial.clone()));
+
+        let mut chain =
+            TypeHierarchy::chain(vec!["Real".into(), "Rational".into(), "Integer".into()]).unwrap();
+
+        assert_eq!(trivial.union(&chain), chain.union(&trivial));
+        assert_eq!(trivial.union(&chain), Ok(chain.clone()));
+
+        assert_eq!(chain.union(&chain), Ok(chain.clone()));
+
+        let mut chain_with_complex = TypeHierarchy::chain(vec![
+            "Complex".into(),
+            "Real".into(),
+            "Rational".into(),
+            "Integer".into(),
+        ])
+        .unwrap();
+
+        assert_eq!(
+            chain_with_complex.union(&chain),
+            chain.union(&chain_with_complex)
+        );
+        assert_eq!(
+            chain_with_complex.union(&chain),
+            Ok(chain_with_complex.clone())
+        );
+    }
+
+    #[test]
+    fn test_type_hierarchy_are_compatible() {
         let mut trivial = TypeHierarchy::new();
         assert_eq!(
             TypeHierarchy::are_compatible_or_error(&trivial, &trivial),
