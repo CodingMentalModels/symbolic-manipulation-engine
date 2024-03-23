@@ -211,6 +211,7 @@ impl TypeHierarchy {
         // Merge the type maps. Handle conflicts or duplicate entries appropriately
         for (other_type, other_node) in other.type_map.iter() {
             if !new_hierarchy.type_map.contains_key(other_type) {
+                println!("Unioning in unconflicted {:?}", other_type.clone());
                 new_hierarchy
                     .type_map
                     .insert(other_type.clone(), other_node.clone());
@@ -220,6 +221,11 @@ impl TypeHierarchy {
                     // If the parent doesn't exist or isn't already in the lineage of the inner
                     // node, we add it
                     if self.is_subtype_of(&existing_node.inner, other_parent) != Ok(false) {
+                        println!(
+                            "Inserting parent {:?} into {:?}",
+                            other_parent.clone(),
+                            existing_node.inner.to_string()
+                        );
                         existing_node.parents.insert(other_parent.clone());
                     }
                 }
@@ -233,6 +239,11 @@ impl TypeHierarchy {
                     // If the child doesn't exist or isn't already in the lineage of the inner
                     // node, we add it
                     if self.is_supertype_of(&existing_node.inner, other_child) != Ok(false) {
+                        println!(
+                            "Inserting child {:?} into {:?}",
+                            other_child.clone(),
+                            existing_node.inner.to_string()
+                        );
                         existing_children.insert(other_child.clone());
                     }
                 }
