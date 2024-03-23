@@ -1,6 +1,9 @@
 use serde::{Deserialize, Serialize};
 
-use crate::symbol::{symbol_type::TypeHierarchy, transformation::Transformation};
+use crate::symbol::{
+    symbol_type::{Type, TypeError, TypeHierarchy},
+    transformation::Transformation,
+};
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Context {
@@ -16,10 +19,20 @@ impl Context {
         }
     }
 
-    pub fn new(types: TypeHierarchy, transformations: Vec<Transformation>) -> Self {
-        Self {
-            types,
-            transformations,
+    pub fn new(
+        types: TypeHierarchy,
+        transformations: Vec<Transformation>,
+    ) -> Result<Self, ContextError> {
+        match transformations
+            .iter()
+            .map(|transformation| types.binds_transformation_or_error(transformation))
+            .next()
+        {
+            None | Some(Ok(())) => Ok(Self {
+                types,
+                transformations,
+            }),
+            Some(Err(e)) => Err(ContextError::from(e)),
         }
     }
 
@@ -40,6 +53,23 @@ impl Context {
     }
 }
 
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+pub enum ContextError {
+    StatementIncludesTypesNotInHierarchy(Vec<Type>),
+    InvalidTypeErrorTransformation(TypeError),
+}
+
+impl From<TypeError> for ContextError {
+    fn from(value: TypeError) -> Self {
+        match value {
+            TypeError::StatementIncludesTypesNotInHierarchy(types) => {
+                Self::StatementIncludesTypesNotInHierarchy(types)
+            }
+            e => Self::InvalidTypeErrorTransformation(e),
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use crate::parsing::{interpretation::Interpretation, parser::Parser, tokenizer::Tokenizer};
@@ -52,14 +82,15 @@ mod tests {
         assert_eq!(context.get_types(), &TypeHierarchy::new());
         assert_eq!(context.get_transformations(), &vec![]);
 
-        let types = TypeHierarchy::chain(vec![
+        let mut types = TypeHierarchy::chain(vec![
             "Complex".into(),
             "Real".into(),
             "Rational".into(),
             "Integer".into(),
         ])
         .unwrap();
-
+        types.add_chain(vec!["Operator".into(), "+".into()]);
+        types.add_child_to_parent("*".into(), "Operator".into());
         let equals_interpretation = Interpretation::infix_operator("=".into(), 1);
         let plus_interpretation = Interpretation::infix_operator("+".into(), 2);
         let times_interpretation = Interpretation::infix_operator("*".into(), 3);
@@ -102,7 +133,10 @@ mod tests {
 
         let context = Context::new(types.clone(), transformations.clone());
 
-        assert_eq!(context.get_types(), &types);
-        assert_eq!(context.get_transformations(), &transformations);
+        assert_eq!(context.clone().unwrap().get_types(), &types);
+        assert_eq!(
+            context.clone().unwrap().get_transformations(),
+            &transformations
+        );
     }
 }
