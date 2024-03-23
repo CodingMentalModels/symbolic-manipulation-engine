@@ -1,3 +1,5 @@
+use std::collections::HashSet;
+
 use serde::{Deserialize, Serialize};
 
 use crate::symbol::{
@@ -55,7 +57,7 @@ impl Context {
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub enum ContextError {
-    StatementIncludesTypesNotInHierarchy(Vec<Type>),
+    StatementIncludesTypesNotInHierarchy(HashSet<Type>),
     InvalidTypeErrorTransformation(TypeError),
 }
 

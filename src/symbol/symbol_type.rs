@@ -1,4 +1,4 @@
-use std::collections::{HashMap, HashSet, VecDeque};
+use std::collections::{HashMap, HashSet};
 
 use serde::{Deserialize, Serialize};
 
@@ -188,7 +188,7 @@ impl TypeHierarchy {
     }
 
     pub fn binds_statement_or_error(&self, statement: &SymbolNode) -> Result<(), TypeError> {
-        let missing_types: Vec<_> = statement
+        let missing_types: HashSet<_> = statement
             .get_types()
             .into_iter()
             .filter(|t| !self.contains_type(t))
@@ -248,11 +248,11 @@ impl TypeHierarchy {
         match (left_to_right, right_to_left) {
             (Ok(()), Ok(())) => Ok(()),
             (
-                Err(TypeError::IncompatibleTypeRelationships(mut e)),
+                Err(TypeError::IncompatibleTypeRelationships(e)),
                 Err(TypeError::IncompatibleTypeRelationships(mut f)),
             ) => {
-                let mut to_return = e;
-                e.append(&mut f);
+                let to_return = e;
+                let to_return = to_return.union(&mut f).cloned().collect();
                 Err(TypeError::IncompatibleTypeRelationships(to_return))
             }
             (Err(e), _) => Err(e),
@@ -264,7 +264,7 @@ impl TypeHierarchy {
         h1: &TypeHierarchy,
         h2: &TypeHierarchy,
     ) -> Result<(), TypeError> {
-        let mut conflicts = Vec::new();
+        let mut conflicts = HashSet::new();
 
         // Check for conflicting subtype relationships
         for (child, node) in h1.type_map.iter() {
@@ -273,7 +273,7 @@ impl TypeHierarchy {
                 if h2.type_map.contains_key(child) && h2.type_map.contains_key(parent) {
                     let is_subtype_in_h2 = h2.is_subtype_of(child, parent).unwrap_or(false);
                     if !is_subtype_in_h2 {
-                        conflicts.push(child.clone());
+                        conflicts.insert(child.clone());
                     }
                 }
             }
@@ -333,13 +333,13 @@ impl Type {
     }
 }
 
-#[derive(Clone, Debug, Hash, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub enum TypeError {
     TypeHierarchyAlreadyIncludes(Type),
     ParentNotFound(Type),
     InvalidType(Type),
-    StatementIncludesTypesNotInHierarchy(Vec<Type>),
-    IncompatibleTypeRelationships(Vec<Type>),
+    StatementIncludesTypesNotInHierarchy(HashSet<Type>),
+    IncompatibleTypeRelationships(HashSet<Type>),
 }
 
 #[cfg(test)]
@@ -506,6 +506,87 @@ mod test_type {
         assert_eq!(
             type_hierarchy.is_supertype_of(&plus, &quaternion).unwrap(),
             false
+        );
+    }
+
+    #[test]
+    fn test_type_hierarchy_are_incompatible() {
+        let mut trivial = TypeHierarchy::new();
+        assert_eq!(
+            TypeHierarchy::are_compatible_or_error(&trivial, &trivial),
+            Ok(())
+        );
+
+        let mut chain =
+            TypeHierarchy::chain(vec!["Real".into(), "Rational".into(), "Integer".into()]).unwrap();
+
+        assert_eq!(
+            TypeHierarchy::are_compatible_or_error(&chain, &chain),
+            Ok(())
+        );
+
+        assert_eq!(
+            TypeHierarchy::are_compatible_or_error(&trivial, &chain),
+            Ok(())
+        );
+
+        assert_eq!(
+            TypeHierarchy::are_compatible_or_error(&chain, &trivial),
+            Ok(())
+        );
+
+        let mut chain_with_complex = TypeHierarchy::chain(vec![
+            "Complex".into(),
+            "Real".into(),
+            "Rational".into(),
+            "Integer".into(),
+        ])
+        .unwrap();
+
+        assert_eq!(
+            TypeHierarchy::are_compatible_or_error(&chain_with_complex, &chain),
+            Ok(())
+        );
+
+        assert_eq!(
+            TypeHierarchy::are_compatible_or_error(&chain, &chain_with_complex),
+            Ok(())
+        );
+
+        let mut chain_missing_rational =
+            TypeHierarchy::chain(vec!["Real".into(), "Integer".into()]).unwrap();
+
+        assert_eq!(
+            TypeHierarchy::are_compatible_or_error(&chain_with_complex, &chain_missing_rational),
+            Ok(())
+        );
+
+        assert_eq!(
+            TypeHierarchy::are_compatible_or_error(&chain_missing_rational, &chain_with_complex),
+            Ok(())
+        );
+
+        let mut inverted_chain_missing_rational =
+            TypeHierarchy::chain(vec!["Integer".into(), "Real".into()]).unwrap();
+
+        assert_eq!(
+            TypeHierarchy::are_compatible_or_error(
+                &inverted_chain_missing_rational,
+                &chain_missing_rational
+            ),
+            Err(TypeError::IncompatibleTypeRelationships(
+                vec!["Integer".into(), "Real".into()].into_iter().collect()
+            ))
+        );
+
+        assert_eq!(
+            TypeHierarchy::are_compatible_or_error(
+                &chain_missing_rational,
+                &inverted_chain_missing_rational
+            ),
+            Err(TypeError::IncompatibleTypeRelationships(
+                vec!["Integer".into(), "Real".into()].into_iter().collect()
+            ))
         );
     }
 }

@@ -195,9 +195,10 @@ pub enum WorkspaceError {
     InvalidTransformationIndex,
     InvalidTransformationAddress,
     TransformationError(TransformationError),
-    StatementContainsTypesNotInHierarchy(Vec<Type>),
-    IncompatibleTypeRelationships(Vec<Type>),
+    StatementContainsTypesNotInHierarchy(HashSet<Type>),
+    IncompatibleTypeRelationships(HashSet<Type>),
     InvalidTypeErrorTransformation(TypeError),
+    AttemptedToImportAmbiguousTypes(HashSet<Type>),
 }
 
 impl From<TypeError> for WorkspaceError {
@@ -327,12 +328,12 @@ mod test_workspace {
         );
 
         let context = Context::new(
-            types,
+            types.clone(),
             vec![equality_reflexivity.clone(), equality_symmetry.clone()],
         )
         .unwrap();
 
-        assert_eq!(workspace.try_import_context(context), Ok(()));
+        assert_eq!(workspace.try_import_context(context.clone()), Ok(()));
         assert_eq!(workspace.types, types);
         assert_eq!(workspace.transformations.len(), 2);
 
@@ -347,14 +348,18 @@ mod test_workspace {
         complex_types.add_chain(vec!["Operator".into(), "=".into()]);
         complex_types.add_chain_to_parent(vec!["+".into()], "Operator".into());
         let ambiguous_context =
-            Context::new(complex_types, vec![equality_reflexivity, equality_symmetry]);
+            Context::new(complex_types, vec![equality_reflexivity, equality_symmetry]).unwrap();
 
         assert_eq!(
-            workspace.try_import_context(context),
-            Err(ContextError::AmbiguousTypes(vec![set_type]))
+            workspace.try_import_context(ambiguous_context),
+            Err(WorkspaceError::AttemptedToImportAmbiguousTypes(
+                vec!["Real".into(), "Rational".into(), "Integer".into()]
+                    .into_iter()
+                    .collect()
+            ))
         );
 
-        assert_eq!(workspace.transformations.len(),);
+        assert_eq!(workspace.transformations.len(), 2);
 
         unimplemented!()
     }
