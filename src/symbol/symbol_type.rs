@@ -21,8 +21,8 @@ impl TypeHierarchy {
             Type::Object,
             TypeHierarchyNode {
                 inner: Type::Object,
-                parents: vec![],
-                children: vec![],
+                parents: HashSet::new(),
+                children: HashSet::new(),
             },
         );
         hierarchy
@@ -56,14 +56,14 @@ impl TypeHierarchy {
             None => {
                 let node = TypeHierarchyNode {
                     inner: type_to_add.clone(),
-                    parents: vec![parent_type.clone()],
-                    children: vec![],
+                    parents: vec![parent_type.clone()].into_iter().collect(),
+                    children: HashSet::new(),
                 };
                 self.type_map.insert(type_to_add.clone(), node.clone());
 
                 match self.type_map.get_mut(&parent_type) {
                     Some(parent_node) => {
-                        parent_node.children.push(type_to_add.clone());
+                        parent_node.children.insert(type_to_add.clone());
                     }
                     None => return Err(TypeError::ParentNotFound(type_to_add)),
                 }
@@ -209,18 +209,18 @@ impl TypeHierarchy {
         let mut new_hierarchy = self.clone();
 
         // Merge the type maps. Handle conflicts or duplicate entries appropriately
-        for (other_type, node) in other.type_map.iter() {
+        for (other_type, other_node) in other.type_map.iter() {
             if !new_hierarchy.type_map.contains_key(other_type) {
                 new_hierarchy
                     .type_map
-                    .insert(other_type.clone(), node.clone());
+                    .insert(other_type.clone(), other_node.clone());
             } else {
-                // For existing types, you might need to merge parent and children lists
-                // This is simplified; actual implementation should carefully merge relationships
                 let existing_node = new_hierarchy.type_map.get_mut(other_type).unwrap();
-                for parent in &node.parents {
-                    if !existing_node.parents.contains(parent) {
-                        existing_node.parents.push(parent.clone());
+                for other_parent in &other_node.parents {
+                    // If the parent doesn't exist or isn't already in the lineage of the inner
+                    // node, we add it
+                    if self.is_subtype_of(&existing_node.inner, other_parent) != Ok(false) {
+                        existing_node.parents.insert(other_parent.clone());
                     }
                 }
 
@@ -229,10 +229,11 @@ impl TypeHierarchy {
                 let existing_children = &mut existing_node.children;
 
                 // Iterate through the children of the node from the other hierarchy
-                for child in &node.children {
-                    // Only add the child if it does not already exist in the existing children list
-                    if !existing_children.contains(child) {
-                        existing_children.push(child.clone());
+                for other_child in &other_node.children {
+                    // If the child doesn't exist or isn't already in the lineage of the inner
+                    // node, we add it
+                    if self.is_supertype_of(&existing_node.inner, other_child) != Ok(false) {
+                        existing_children.insert(other_child.clone());
                     }
                 }
             }
@@ -287,11 +288,11 @@ impl TypeHierarchy {
     }
 }
 
-#[derive(Clone, Debug, Hash, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub struct TypeHierarchyNode {
     inner: Type,
-    parents: Vec<Type>,
-    children: Vec<Type>,
+    parents: HashSet<Type>,
+    children: HashSet<Type>,
 }
 
 #[derive(Clone, Debug, Hash, PartialEq, Eq, Serialize, Deserialize)]
