@@ -220,7 +220,7 @@ impl TypeHierarchy {
                 for other_parent in &other_node.parents {
                     // If the parent doesn't exist or isn't already in the lineage of the inner
                     // node, we add it
-                    if self.is_subtype_of(&existing_node.inner, other_parent) != Ok(false) {
+                    if self.is_subtype_of(&existing_node.inner, other_parent) != Ok(true) {
                         println!(
                             "Inserting parent {:?} into {:?}",
                             other_parent.clone(),
@@ -238,7 +238,7 @@ impl TypeHierarchy {
                 for other_child in &other_node.children {
                     // If the child doesn't exist or isn't already in the lineage of the inner
                     // node, we add it
-                    if self.is_supertype_of(&existing_node.inner, other_child) != Ok(false) {
+                    if self.is_supertype_of(&existing_node.inner, other_child) != Ok(true) {
                         println!(
                             "Inserting child {:?} into {:?}",
                             other_child.clone(),
