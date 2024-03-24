@@ -249,8 +249,34 @@ impl TypeHierarchy {
                 }
             }
         }
+        new_hierarchy.prune_redundant_relationships();
 
         Ok(new_hierarchy)
+    }
+
+    fn prune_redundant_relationships(&mut self) {
+        let mut to_remove = Vec::new();
+
+        for (t, node) in self.type_map.iter() {
+            let children = node.children.clone();
+            for child in children.iter() {
+                for sibling in children.iter() {
+                    if child != sibling && self.is_subtype_of(child, sibling).unwrap_or(false) {
+                        to_remove.push((t.clone(), child.clone()));
+                        break;
+                    }
+                }
+            }
+        }
+
+        for (parent, child) in to_remove {
+            if let Some(node) = self.type_map.get_mut(&parent) {
+                node.children.retain(|c| c != &child);
+            }
+            if let Some(node) = self.type_map.get_mut(&child) {
+                node.parents.retain(|p| p != &parent);
+            }
+        }
     }
 
     fn are_compatible_or_error(h1: &TypeHierarchy, h2: &TypeHierarchy) -> Result<(()), TypeError> {
