@@ -38,6 +38,7 @@ impl Workspace {
             .union(context.get_types())
             .map_err(|e| WorkspaceError::from(e))?;
         self.types = new_types;
+        self.transformations = context.get_transformations().clone();
         Ok(())
     }
 
