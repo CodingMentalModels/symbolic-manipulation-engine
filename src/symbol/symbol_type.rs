@@ -202,6 +202,17 @@ impl TypeHierarchy {
         }
     }
 
+    pub fn get_types(&self) -> HashSet<Type> {
+        self.type_map.iter().map(|(t, n)| t).cloned().collect()
+    }
+
+    pub fn get_shared_types(&self, other: &Self) -> HashSet<Type> {
+        self.get_types()
+            .intersection(&other.get_types())
+            .cloned()
+            .collect()
+    }
+
     pub fn union(&self, other: &TypeHierarchy) -> Result<Self, TypeError> {
         // First, check compatibility
         Self::are_compatible_or_error(self, other)?;

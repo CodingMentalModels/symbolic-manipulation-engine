@@ -33,6 +33,13 @@ impl Workspace {
     }
 
     pub fn try_import_context(&mut self, context: Context) -> Result<(), WorkspaceError> {
+        let mut shared_types = self.types.get_shared_types(context.get_types());
+        shared_types.remove(&Type::Object);
+        if shared_types.len() > 0 {
+            return Err(WorkspaceError::AttemptedToImportAmbiguousTypes(
+                shared_types,
+            ));
+        }
         let new_types = self
             .types
             .union(context.get_types())
@@ -354,14 +361,19 @@ mod test_workspace {
         assert_eq!(
             workspace.try_import_context(ambiguous_context),
             Err(WorkspaceError::AttemptedToImportAmbiguousTypes(
-                vec!["Real".into(), "Rational".into(), "Integer".into()]
-                    .into_iter()
-                    .collect()
+                vec![
+                    "Real".into(),
+                    "Rational".into(),
+                    "Integer".into(),
+                    "=".into(),
+                    "+".into(),
+                    "Operator".into()
+                ]
+                .into_iter()
+                .collect()
             ))
         );
 
         assert_eq!(workspace.transformations.len(), 2);
-
-        unimplemented!()
     }
 }
