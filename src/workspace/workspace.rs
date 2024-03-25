@@ -375,5 +375,18 @@ mod test_workspace {
         );
 
         assert_eq!(workspace.transformations.len(), 2);
+
+        let mut inverted_types =
+            TypeHierarchy::chain(vec!["Rational".into(), "Real".into()]).unwrap();
+        let conflicting_context = Context::new(inverted_types, vec![]).unwrap();
+
+        assert_eq!(
+            workspace.try_import_context(conflicting_context),
+            Err(WorkspaceError::AttemptedToImportAmbiguousTypes(
+                vec!["Real".into(), "Rational".into(),]
+                    .into_iter()
+                    .collect()
+            ))
+        );
     }
 }
