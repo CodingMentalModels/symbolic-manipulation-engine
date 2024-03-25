@@ -2,13 +2,12 @@ use std::collections::{HashMap, HashSet};
 
 use serde::{Deserialize, Serialize};
 
-use super::symbol_node::SymbolNode;
+use super::{symbol_node::SymbolNode, transformation::Transformation};
 
 pub type TypeName = String;
 
-#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
 pub struct TypeHierarchy {
-    // Using a HashMap to quickly access nodes by their Type
     type_map: HashMap<Type, TypeHierarchyNode>,
 }
 
@@ -21,8 +20,8 @@ impl TypeHierarchy {
             Type::Object,
             TypeHierarchyNode {
                 inner: Type::Object,
-                parent: None,
-                children: vec![],
+                parents: HashSet::new(),
+                children: HashSet::new(),
             },
         );
         hierarchy
@@ -56,14 +55,14 @@ impl TypeHierarchy {
             None => {
                 let node = TypeHierarchyNode {
                     inner: type_to_add.clone(),
-                    parent: Some(parent_type.clone()),
-                    children: vec![],
+                    parents: vec![parent_type.clone()].into_iter().collect(),
+                    children: HashSet::new(),
                 };
                 self.type_map.insert(type_to_add.clone(), node.clone());
 
                 match self.type_map.get_mut(&parent_type) {
                     Some(parent_node) => {
-                        parent_node.children.push(type_to_add.clone());
+                        parent_node.children.insert(type_to_add.clone());
                     }
                     None => return Err(TypeError::ParentNotFound(type_to_add)),
                 }
@@ -72,11 +71,16 @@ impl TypeHierarchy {
         }
     }
 
-    pub fn get_parent_child_pairs(&self) -> HashSet<(Option<Type>, Type)> {
-        self.type_map
-            .iter()
-            .map(|(t, n)| (n.parent.clone(), t.clone()))
-            .collect()
+    pub fn get_parent_child_pairs(&self) -> HashSet<(Type, Type)> {
+        let mut parent_child_pairs = HashSet::new();
+
+        for (child, node) in self.type_map.iter() {
+            for parent in &node.parents {
+                parent_child_pairs.insert((parent.clone(), child.clone()));
+            }
+        }
+
+        parent_child_pairs
     }
 
     pub fn generalizes(&self, left: &SymbolNode, right: &SymbolNode) -> Result<bool, TypeError> {
@@ -121,20 +125,34 @@ impl TypeHierarchy {
     pub fn is_subtype_of(&self, child: &Type, parent: &Type) -> Result<bool, TypeError> {
         self.type_exists_or_error(child)?;
         self.type_exists_or_error(parent)?;
+
         if child == parent {
             return Ok(true);
         }
-        let mut current = child;
-        while let Some(node) = self.type_map.get(current) {
-            if let Some(ref parent_type) = node.parent {
-                if parent_type == parent {
+
+        let mut visited = HashSet::new();
+        let mut queue = vec![child.clone()];
+
+        while let Some(current) = queue.pop() {
+            if visited.contains(&current) {
+                continue;
+            }
+
+            if let Some(node) = self.type_map.get(&current) {
+                if node.parents.contains(parent) {
                     return Ok(true);
                 }
-                current = parent_type;
-            } else {
-                break;
+
+                for parent_type in &node.parents {
+                    if !visited.contains(parent_type) {
+                        queue.push(parent_type.clone());
+                    }
+                }
             }
+
+            visited.insert(current);
         }
+
         Ok(false)
     }
 
@@ -159,13 +177,163 @@ impl TypeHierarchy {
                     .map(|result| acc && result)
             })
     }
+
+    pub fn binds_transformation_or_error(
+        &self,
+        transformation: &Transformation,
+    ) -> Result<(), TypeError> {
+        self.binds_statement_or_error(transformation.get_from())?;
+        self.binds_statement_or_error(transformation.get_to())
+    }
+
+    pub fn binds_statement_or_error(&self, statement: &SymbolNode) -> Result<(), TypeError> {
+        let missing_types: HashSet<_> = statement
+            .get_types()
+            .into_iter()
+            .filter(|t| !self.contains_type(t))
+            .collect();
+        if missing_types.len() == 0 {
+            Ok(())
+        } else {
+            Err(TypeError::StatementIncludesTypesNotInHierarchy(
+                missing_types,
+            ))
+        }
+    }
+
+    pub fn get_types(&self) -> HashSet<Type> {
+        self.type_map.iter().map(|(t, n)| t).cloned().collect()
+    }
+
+    pub fn get_shared_types(&self, other: &Self) -> HashSet<Type> {
+        self.get_types()
+            .intersection(&other.get_types())
+            .cloned()
+            .collect()
+    }
+
+    pub fn union(&self, other: &TypeHierarchy) -> Result<Self, TypeError> {
+        Self::are_compatible_or_error(self, other)?;
+
+        let mut new_hierarchy = self.clone();
+
+        for (other_type, other_node) in other.type_map.iter() {
+            if !new_hierarchy.type_map.contains_key(other_type) {
+                println!("Unioning in unconflicted {:?}", other_type.clone());
+                new_hierarchy
+                    .type_map
+                    .insert(other_type.clone(), other_node.clone());
+            } else {
+                let existing_node = new_hierarchy.type_map.get_mut(other_type).unwrap();
+                for other_parent in &other_node.parents {
+                    // If the parent doesn't exist or isn't already in the lineage of the inner
+                    // node, we add it
+                    if self.is_subtype_of(&existing_node.inner, other_parent) != Ok(true) {
+                        println!(
+                            "Inserting parent {:?} into {:?}",
+                            other_parent.clone(),
+                            existing_node.inner.to_string()
+                        );
+                        existing_node.parents.insert(other_parent.clone());
+                    }
+                }
+
+                let existing_node = new_hierarchy.type_map.get_mut(other_type).unwrap();
+                let existing_children = &mut existing_node.children;
+
+                for other_child in &other_node.children {
+                    // If the child doesn't exist or isn't already in the lineage of the inner
+                    // node, we add it
+                    if self.is_supertype_of(&existing_node.inner, other_child) != Ok(true) {
+                        println!(
+                            "Inserting child {:?} into {:?}",
+                            other_child.clone(),
+                            existing_node.inner.to_string()
+                        );
+                        existing_children.insert(other_child.clone());
+                    }
+                }
+            }
+        }
+        new_hierarchy.prune_redundant_relationships();
+
+        Ok(new_hierarchy)
+    }
+
+    fn prune_redundant_relationships(&mut self) {
+        let mut to_remove = Vec::new();
+
+        for (t, node) in self.type_map.iter() {
+            let children = node.children.clone();
+            for child in children.iter() {
+                for sibling in children.iter() {
+                    if child != sibling && self.is_subtype_of(child, sibling).unwrap_or(false) {
+                        to_remove.push((t.clone(), child.clone()));
+                        break;
+                    }
+                }
+            }
+        }
+
+        for (parent, child) in to_remove {
+            if let Some(node) = self.type_map.get_mut(&parent) {
+                node.children.retain(|c| c != &child);
+            }
+            if let Some(node) = self.type_map.get_mut(&child) {
+                node.parents.retain(|p| p != &parent);
+            }
+        }
+    }
+
+    fn are_compatible_or_error(h1: &TypeHierarchy, h2: &TypeHierarchy) -> Result<(()), TypeError> {
+        let left_to_right = Self::is_left_compatible_with_right(h1, h2);
+        let right_to_left = Self::is_left_compatible_with_right(h2, h1);
+
+        match (left_to_right, right_to_left) {
+            (Ok(()), Ok(())) => Ok(()),
+            (
+                Err(TypeError::IncompatibleTypeRelationships(e)),
+                Err(TypeError::IncompatibleTypeRelationships(mut f)),
+            ) => {
+                let to_return = e;
+                let to_return = to_return.union(&mut f).cloned().collect();
+                Err(TypeError::IncompatibleTypeRelationships(to_return))
+            }
+            (Err(e), _) => Err(e),
+            (_, Err(f)) => Err(f),
+        }
+    }
+
+    fn is_left_compatible_with_right(
+        h1: &TypeHierarchy,
+        h2: &TypeHierarchy,
+    ) -> Result<(), TypeError> {
+        let mut conflicts = HashSet::new();
+
+        for (child, node) in h1.type_map.iter() {
+            for parent in &node.parents {
+                if h2.type_map.contains_key(child) && h2.type_map.contains_key(parent) {
+                    let is_subtype_in_h2 = h2.is_subtype_of(child, parent).unwrap_or(false);
+                    if !is_subtype_in_h2 {
+                        conflicts.insert(child.clone());
+                    }
+                }
+            }
+        }
+
+        if conflicts.is_empty() {
+            Ok(())
+        } else {
+            Err(TypeError::IncompatibleTypeRelationships(conflicts))
+        }
+    }
 }
 
-#[derive(Clone, Debug, Hash, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub struct TypeHierarchyNode {
     inner: Type,
-    parent: Option<Type>,
-    children: Vec<Type>,
+    parents: HashSet<Type>,
+    children: HashSet<Type>,
 }
 
 #[derive(Clone, Debug, Hash, PartialEq, Eq, Serialize, Deserialize)]
@@ -207,11 +375,13 @@ impl Type {
     }
 }
 
-#[derive(Clone, Debug, Hash, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub enum TypeError {
     TypeHierarchyAlreadyIncludes(Type),
     ParentNotFound(Type),
     InvalidType(Type),
+    StatementIncludesTypesNotInHierarchy(HashSet<Type>),
+    IncompatibleTypeRelationships(HashSet<Type>),
 }
 
 #[cfg(test)]
@@ -287,16 +457,6 @@ mod test_type {
             rational.clone(),
         ])
         .unwrap();
-
-        //        assert_eq!(
-        //            type_hierarchy
-        //                .get_parent_child_pairs()
-        //                .into_iter()
-        //                .map(|(p, c)| format!("{:?} > {:?}", p, c))
-        //                .collect::<Vec<String>>()
-        //                .join("\n"),
-        //            "".to_string()
-        //        );
 
         type_hierarchy.add_child_to_parent(irrational.clone(), real.clone());
 
@@ -378,6 +538,118 @@ mod test_type {
         assert_eq!(
             type_hierarchy.is_supertype_of(&plus, &quaternion).unwrap(),
             false
+        );
+    }
+
+    #[test]
+    fn test_type_hierarchy_unions() {
+        let mut trivial = TypeHierarchy::new();
+        assert_eq!(trivial.union(&trivial), Ok(trivial.clone()));
+
+        let mut chain =
+            TypeHierarchy::chain(vec!["Real".into(), "Rational".into(), "Integer".into()]).unwrap();
+
+        assert_eq!(trivial.union(&chain), chain.union(&trivial));
+        assert_eq!(trivial.union(&chain), Ok(chain.clone()));
+
+        assert_eq!(chain.union(&chain), Ok(chain.clone()));
+
+        let mut chain_with_complex = TypeHierarchy::chain(vec![
+            "Complex".into(),
+            "Real".into(),
+            "Rational".into(),
+            "Integer".into(),
+        ])
+        .unwrap();
+
+        assert_eq!(
+            chain_with_complex.union(&chain),
+            chain.union(&chain_with_complex)
+        );
+        assert_eq!(
+            chain_with_complex.union(&chain),
+            Ok(chain_with_complex.clone())
+        );
+    }
+
+    #[test]
+    fn test_type_hierarchy_are_compatible() {
+        let mut trivial = TypeHierarchy::new();
+        assert_eq!(
+            TypeHierarchy::are_compatible_or_error(&trivial, &trivial),
+            Ok(())
+        );
+
+        let mut chain =
+            TypeHierarchy::chain(vec!["Real".into(), "Rational".into(), "Integer".into()]).unwrap();
+
+        assert_eq!(
+            TypeHierarchy::are_compatible_or_error(&chain, &chain),
+            Ok(())
+        );
+
+        assert_eq!(
+            TypeHierarchy::are_compatible_or_error(&trivial, &chain),
+            Ok(())
+        );
+
+        assert_eq!(
+            TypeHierarchy::are_compatible_or_error(&chain, &trivial),
+            Ok(())
+        );
+
+        let mut chain_with_complex = TypeHierarchy::chain(vec![
+            "Complex".into(),
+            "Real".into(),
+            "Rational".into(),
+            "Integer".into(),
+        ])
+        .unwrap();
+
+        assert_eq!(
+            TypeHierarchy::are_compatible_or_error(&chain_with_complex, &chain),
+            Ok(())
+        );
+
+        assert_eq!(
+            TypeHierarchy::are_compatible_or_error(&chain, &chain_with_complex),
+            Ok(())
+        );
+
+        let mut chain_missing_rational =
+            TypeHierarchy::chain(vec!["Real".into(), "Integer".into()]).unwrap();
+
+        assert_eq!(
+            TypeHierarchy::are_compatible_or_error(&chain_with_complex, &chain_missing_rational),
+            Ok(())
+        );
+
+        assert_eq!(
+            TypeHierarchy::are_compatible_or_error(&chain_missing_rational, &chain_with_complex),
+            Ok(())
+        );
+
+        let mut inverted_chain_missing_rational =
+            TypeHierarchy::chain(vec!["Integer".into(), "Real".into()]).unwrap();
+
+        assert_eq!(
+            TypeHierarchy::are_compatible_or_error(
+                &inverted_chain_missing_rational,
+                &chain_missing_rational
+            ),
+            Err(TypeError::IncompatibleTypeRelationships(
+                vec!["Integer".into(), "Real".into()].into_iter().collect()
+            ))
+        );
+
+        assert_eq!(
+            TypeHierarchy::are_compatible_or_error(
+                &chain_missing_rational,
+                &inverted_chain_missing_rational
+            ),
+            Err(TypeError::IncompatibleTypeRelationships(
+                vec!["Integer".into(), "Real".into()].into_iter().collect()
+            ))
         );
     }
 }

@@ -66,6 +66,15 @@ impl Interpretation {
         )
     }
 
+    pub fn singleton(name: &str, t: Type) -> Self {
+        Interpretation::new(
+            InterpretationCondition::Matches(name.into()),
+            ExpressionType::Singleton,
+            0,
+            t.into(),
+        )
+    }
+
     pub fn infix_operator(token: Token, precedence: u8) -> Self {
         Interpretation::new(
             InterpretationCondition::Matches(token.clone()),

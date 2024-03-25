@@ -2,6 +2,7 @@ use std::collections::{HashMap, HashSet};
 
 use serde::{Deserialize, Serialize};
 
+use crate::parsing::parser::Parser;
 use crate::symbol::symbol_node::{Symbol, SymbolNode, SymbolNodeError};
 use crate::symbol::symbol_type::Type;
 
@@ -17,6 +18,42 @@ pub struct Transformation {
 impl Transformation {
     pub fn new(from: SymbolNode, to: SymbolNode) -> Transformation {
         Transformation { from, to }
+    }
+
+    pub fn get_from(&self) -> &SymbolNode {
+        &self.from
+    }
+
+    pub fn get_to(&self) -> &SymbolNode {
+        &self.to
+    }
+
+    pub fn reflexivity(
+        operator_name: String,
+        operator_type: Type,
+        object_name: String,
+        object_type: Type,
+    ) -> Self {
+        let object = SymbolNode::leaf(Symbol::new(object_name, object_type));
+        let node = SymbolNode::new(
+            Symbol::new(operator_name, operator_type),
+            vec![object.clone(), object.clone()],
+        );
+        Transformation::new(node.clone(), node)
+    }
+
+    pub fn symmetry(
+        operator_name: String,
+        operator_type: Type,
+        object_names: (String, String),
+        object_type: Type,
+    ) -> Self {
+        let left = SymbolNode::leaf(Symbol::new(object_names.0, object_type.clone()));
+        let right = SymbolNode::leaf(Symbol::new(object_names.1, object_type));
+        let operator = Symbol::new(operator_name, operator_type);
+        let from = SymbolNode::new(operator.clone(), vec![left.clone(), right.clone()]);
+        let to = SymbolNode::new(operator, vec![right.clone(), left.clone()]);
+        Transformation::new(from, to)
     }
 
     pub fn to_string(&self) -> String {
@@ -161,6 +198,8 @@ pub enum TransformationError {
 
 #[cfg(test)]
 mod test_transformation {
+    use crate::parsing::{interpretation::Interpretation, tokenizer::Token};
+
     use super::*;
 
     #[test]
@@ -312,5 +351,51 @@ mod test_transformation {
 
         assert_eq!(transformed, Ok(d_equals_b));
     }
-}
 
+    #[test]
+    fn test_transformation_reflexivity() {
+        let transformation =
+            Transformation::reflexivity("=".to_string(), "=".into(), "x".to_string(), Type::Object);
+
+        let interpretations = vec![Interpretation::infix_operator(
+            Token::Object("=".to_string()),
+            3,
+        )];
+
+        let parser = Parser::new(interpretations);
+        let expected = parser
+            .parse_from_string(vec!["=".to_string()], "x=x")
+            .unwrap();
+
+        assert_eq!(transformation.from, expected);
+        assert_eq!(transformation.to, expected);
+    }
+
+    #[test]
+    fn test_transformation_symmetry() {
+        let transformation = Transformation::symmetry(
+            "+".to_string(),
+            "+".into(),
+            ("x".to_string(), "y".to_string()),
+            "Integer".into(),
+        );
+
+        let interpretations = vec![
+            Interpretation::infix_operator(Token::Object("+".to_string()), 3),
+            Interpretation::singleton("x", "Integer".into()),
+            Interpretation::singleton("y", "Integer".into()),
+        ];
+        let parser = Parser::new(interpretations);
+
+        let expected_from = parser
+            .parse_from_string(vec!["+".to_string()], "x+y")
+            .unwrap();
+
+        let expected_to = parser
+            .parse_from_string(vec!["+".to_string()], "y+x")
+            .unwrap();
+
+        assert_eq!(transformation.from, expected_from);
+        assert_eq!(transformation.to, expected_to);
+    }
+}
