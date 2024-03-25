@@ -8,7 +8,6 @@ pub type TypeName = String;
 
 #[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
 pub struct TypeHierarchy {
-    // Using a HashMap to quickly access nodes by their Type
     type_map: HashMap<Type, TypeHierarchyNode>,
 }
 

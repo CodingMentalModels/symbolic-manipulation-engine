@@ -1,12 +1,9 @@
-use crate::parsing::interpretation::{ExpressionType, Interpretation, InterpretationCondition};
+use crate::parsing::interpretation::{ExpressionType, Interpretation};
 use crate::parsing::tokenizer::{Token, Tokenizer};
-use crate::symbol::symbol_node::{Symbol, SymbolNode};
-use crate::symbol::symbol_type::Type;
+use crate::symbol::symbol_node::SymbolNode;
 
-use super::interpretation::{ExpressionPrecedence, InterpretedType};
-use super::tokenizer::{self, TokenStack};
-
-pub type ParserResult = Result<SymbolNode, ParserError>;
+use super::interpretation::ExpressionPrecedence;
+use super::tokenizer::TokenStack;
 
 #[derive(Debug, PartialEq, Eq)]
 pub struct Parser {
