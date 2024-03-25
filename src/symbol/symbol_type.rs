@@ -214,12 +214,10 @@ impl TypeHierarchy {
     }
 
     pub fn union(&self, other: &TypeHierarchy) -> Result<Self, TypeError> {
-        // First, check compatibility
         Self::are_compatible_or_error(self, other)?;
 
         let mut new_hierarchy = self.clone();
 
-        // Merge the type maps. Handle conflicts or duplicate entries appropriately
         for (other_type, other_node) in other.type_map.iter() {
             if !new_hierarchy.type_map.contains_key(other_type) {
                 println!("Unioning in unconflicted {:?}", other_type.clone());
@@ -241,11 +239,9 @@ impl TypeHierarchy {
                     }
                 }
 
-                // Merge children
                 let existing_node = new_hierarchy.type_map.get_mut(other_type).unwrap();
                 let existing_children = &mut existing_node.children;
 
-                // Iterate through the children of the node from the other hierarchy
                 for other_child in &other_node.children {
                     // If the child doesn't exist or isn't already in the lineage of the inner
                     // node, we add it
@@ -315,10 +311,8 @@ impl TypeHierarchy {
     ) -> Result<(), TypeError> {
         let mut conflicts = HashSet::new();
 
-        // Check for conflicting subtype relationships
         for (child, node) in h1.type_map.iter() {
             for parent in &node.parents {
-                // If `child` is a subtype of `parent` in h1, it must be so in h2 (if `parent` and `child` exist in h2)
                 if h2.type_map.contains_key(child) && h2.type_map.contains_key(parent) {
                     let is_subtype_in_h2 = h2.is_subtype_of(child, parent).unwrap_or(false);
                     if !is_subtype_in_h2 {
