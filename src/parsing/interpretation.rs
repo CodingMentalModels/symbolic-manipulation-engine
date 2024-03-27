@@ -72,6 +72,15 @@ impl Interpretation {
         )
     }
 
+    pub fn generated_type(condition: GeneratedTypeCondition) -> Self {
+        Self::new(
+            condition.into(),
+            ExpressionType::Singleton,
+            DEFAULT_PRECEDENCE,
+            InterpretedType::SameAsValue,
+        )
+    }
+
     pub fn infix_operator(token: Token, precedence: u8) -> Self {
         Interpretation::new(
             InterpretationCondition::Matches(token.clone()),
@@ -116,6 +125,10 @@ impl Interpretation {
             }
             InterpretedType::Delimiter => Ok(SymbolNode::new(
                 Symbol::new(token.to_string(), Type::Delimiter),
+                children,
+            )),
+            InterpretedType::SameAsValue => Ok(SymbolNode::new(
+                Symbol::new(token.to_string(), token.to_string().into()),
                 children,
             )),
             InterpretedType::Type(t) => Ok(SymbolNode::new(
@@ -202,6 +215,7 @@ impl Default for ExpressionType {
 pub enum InterpretedType {
     PassThrough,
     Delimiter,
+    SameAsValue,
     Type(Type),
 }
 

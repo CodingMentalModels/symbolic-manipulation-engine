@@ -576,11 +576,14 @@ mod test_parser {
         let plus = Interpretation::infix_operator("+".into(), 1);
         let integer_condition = GeneratedTypeCondition::IsInteger;
         let integer = Interpretation::new(
-            integer_condition.into(),
+            integer_condition.clone().into(),
             ExpressionType::Singleton,
             DEFAULT_PRECEDENCE,
-            InterpretedType::Type("Integer".into()),
+            InterpretedType::SameAsValue,
         );
+
+        let also_integer = Interpretation::generated_type(integer_condition);
+        assert_eq!(integer, also_integer);
 
         let parser = Parser::new(vec![plus, integer]);
         let two_plus_two = parser
