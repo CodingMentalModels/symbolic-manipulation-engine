@@ -58,27 +58,36 @@ impl TypeHierarchy {
         type_to_add: Type,
         parent_type: Type,
     ) -> Result<Type, TypeError> {
+        self.add_child_to_parents(type_to_add, vec![parent_type].into_iter().collect())
+    }
+
+    pub fn add_child_to_parents(
+        &mut self,
+        type_to_add: Type,
+        parent_types: HashSet<Type>,
+    ) -> Result<Type, TypeError> {
         match self.type_map.get(&type_to_add) {
             Some(_node) => Err(TypeError::TypeHierarchyAlreadyIncludes(type_to_add)),
             None => {
                 let node = TypeHierarchyNode {
                     inner: type_to_add.clone(),
-                    parents: vec![parent_type.clone()].into_iter().collect(),
+                    parents: parent_types,
                     children: HashSet::new(),
                 };
                 self.type_map.insert(type_to_add.clone(), node.clone());
 
-                match self.type_map.get_mut(&parent_type) {
-                    Some(parent_node) => {
-                        parent_node.children.insert(type_to_add.clone());
+                for parent_type in parent_types {
+                    match self.type_map.get_mut(&parent_type) {
+                        Some(parent_node) => {
+                            parent_node.children.insert(type_to_add.clone());
+                        }
+                        None => return Err(TypeError::ParentNotFound(type_to_add)),
                     }
-                    None => return Err(TypeError::ParentNotFound(type_to_add)),
                 }
                 Ok(type_to_add)
             }
         }
     }
-
     pub fn get_parent_child_pairs(&self) -> HashSet<(Type, Type)> {
         let mut parent_child_pairs = HashSet::new();
 
