@@ -1,4 +1,4 @@
-use std::collections::{HashMap, HashSet};
+use std::{collections::{HashMap, HashSet}, unimplemented};
 
 use serde::{Deserialize, Serialize};
 
@@ -343,8 +343,13 @@ pub struct GeneratedType {
 }
 
 impl GeneratedType {
+
     pub fn new(condition: GeneratedTypeCondition, parents: HashSet<Type>) -> Self {
         Self { condition, parents }
+    }
+
+    pub fn generate() -> {
+        unimplemented!()
     }
 }
 

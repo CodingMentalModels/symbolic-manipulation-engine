@@ -6,7 +6,7 @@ use crate::{
     context::context::Context,
     symbol::{
         symbol_node::{SymbolNode, SymbolNodeAddress},
-        symbol_type::{Type, TypeError, TypeHierarchy},
+        symbol_type::{GeneratedType, Type, TypeError, TypeHierarchy},
         transformation::{Transformation, TransformationError},
     },
 };
@@ -16,17 +16,19 @@ type TransformationIndex = usize;
 
 #[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Workspace {
-    statements: Vec<SymbolNode>,
     types: TypeHierarchy,
+    generated_types: Vec<GeneratedType>,
+    statements: Vec<SymbolNode>,
     transformations: Vec<Transformation>,
     provenance: Vec<Provenance>,
 }
 
 impl Workspace {
-    pub fn new(types: TypeHierarchy) -> Workspace {
+    pub fn new(types: TypeHierarchy, generated_types: Vec<GeneratedType>) -> Workspace {
         Self {
-            statements: vec![],
             types,
+            generated_types,
+            statements: vec![],
             transformations: vec![],
             provenance: vec![],
         }
@@ -53,6 +55,7 @@ impl Workspace {
         self.types
             .binds_statement_or_error(&statement)
             .map_err(|x| WorkspaceError::from(x))?;
+        self.generate_types_in_bulk(vec![statement].into_iter().collect());
         self.statements.push(statement);
         self.provenance.push(Provenance::Hypothesis);
         Ok(())
@@ -63,6 +66,14 @@ impl Workspace {
         transformation: Transformation,
     ) -> Result<(), WorkspaceError> {
         self.types.binds_transformation_or_error(&transformation)?;
+        self.generate_types_in_bulk(
+            vec![
+                transformation.get_from().clone(),
+                transformation.get_to().clone(),
+            ]
+            .into_iter()
+            .collect(),
+        );
         self.transformations.push(transformation);
         Ok(())
     }
@@ -189,6 +200,20 @@ impl Workspace {
     fn transformation_index_is_invalid(&self, index: TransformationIndex) -> bool {
         index >= self.transformations.len()
     }
+
+    fn generate_types_in_bulk(&mut self, statements: HashSet<SymbolNode>) {
+        statements
+            .into_iter()
+            .for_each(|statement| self.generate_types(statement))
+    }
+
+    fn generate_types(&mut self, statement: SymbolNode) {
+        self.generated_types.iter().map(|gt| {
+            gt.generate(statement)
+                .into_iter()
+                .for_each(|(t, parents)| self.types.add_child_to_parents(t, parents))
+        })
+    }
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
@@ -252,14 +277,14 @@ mod test_workspace {
 
     #[test]
     fn test_workspace_adds_statement_with_generated_type() {
-        let types = TypeHierarchy::chain(vec!["Real".into(), "Integer".into()]).unwrap();
-        let mut workspace = Workspace::new(types);
-
         let plus = Interpretation::infix_operator("+".into(), 1);
         let integer = GeneratedType::new(
             GeneratedTypeCondition::IsInteger,
             vec!["Integer".into()].into_iter().collect(),
         );
+
+        let types = TypeHierarchy::chain(vec!["Real".into(), "Integer".into()]).unwrap();
+        let mut workspace = Workspace::new(types, vec![integer]);
 
         let parser = Parser::new(vec![plus]);
         let two_plus_two = parser
