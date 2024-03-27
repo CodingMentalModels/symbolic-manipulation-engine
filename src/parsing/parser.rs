@@ -9,35 +9,23 @@ use super::tokenizer::TokenStack;
 #[derive(Debug, PartialEq, Eq)]
 pub struct Parser {
     interpretations: Vec<Interpretation>,
-    generated_types: Vec<GeneratedType>,
 }
 
 impl Parser {
-    pub fn new(
-        mut interpretations: Vec<Interpretation>,
-        generated_types: Vec<GeneratedType>,
-    ) -> Self {
+    pub fn new(mut interpretations: Vec<Interpretation>) -> Self {
         interpretations.push(Interpretation::parentheses());
         interpretations.push(Interpretation::any_object());
-        Self::new_raw(interpretations, generated_types)
+        Self::new_raw(interpretations)
     }
 
-    pub fn new_raw(
-        interpretations: Vec<Interpretation>,
-        generated_types: Vec<GeneratedType>,
-    ) -> Self {
-        Parser {
-            interpretations,
-            generated_types,
-        }
+    pub fn new_raw(interpretations: Vec<Interpretation>) -> Self {
+        Parser { interpretations }
     }
 
     pub fn combine(self, other: Self) -> Self {
         let mut new_interpretations = self.interpretations;
         new_interpretations.extend(other.interpretations);
-        let mut new_generated_types = self.generated_types;
-        new_generated_types.extend(other.generated_types);
-        Self::new_raw(new_interpretations, new_generated_types)
+        Self::new_raw(new_interpretations)
     }
 
     pub fn parse(&self, token_stack: &mut TokenStack) -> Result<SymbolNode, ParserError> {
@@ -188,7 +176,8 @@ pub enum ParserError {
 mod test_parser {
 
     use crate::{
-        parsing::interpretation::InterpretationCondition,
+        constants::DEFAULT_PRECEDENCE,
+        parsing::interpretation::{InterpretationCondition, InterpretedType},
         symbol::{
             symbol_node::Symbol,
             symbol_type::{GeneratedTypeCondition, Type},
@@ -216,7 +205,7 @@ mod test_parser {
             "Equals".into(),
         );
 
-        let mut parser = Parser::new(vec![plus_interpretation, equals_interpretation], vec![]);
+        let mut parser = Parser::new(vec![plus_interpretation, equals_interpretation]);
 
         let parsed = parser.parse(&mut tokens);
 
@@ -249,7 +238,7 @@ mod test_parser {
             "=>".into(),
         );
 
-        let mut parser = Parser::new(vec![implies_interpretation], vec![]);
+        let mut parser = Parser::new(vec![implies_interpretation]);
 
         let parsed = parser.parse(&mut tokens);
 
@@ -274,7 +263,7 @@ mod test_parser {
             "Function".into(),
         );
 
-        let parser = Parser::new(vec![f_interpretation], vec![]);
+        let parser = Parser::new(vec![f_interpretation]);
 
         let mut tokens = Tokenizer::new_with_tokens(vec![]).tokenize("f()");
 
@@ -327,7 +316,7 @@ mod test_parser {
             })
             .collect();
 
-        let parser = Parser::new(operators_interpretations.clone(), vec![]);
+        let parser = Parser::new(operators_interpretations.clone());
 
         let pythagorean_theorem =
             parser.parse_from_string(operator_names.clone(), "a^2 + b^2 = c^2");
@@ -384,7 +373,7 @@ mod test_parser {
             })
             .collect();
 
-        let parser = Parser::new(function_interpretations.clone(), vec![]);
+        let parser = Parser::new(function_interpretations.clone());
 
         let mut tokens = Tokenizer::new_with_tokens(
             functions
@@ -451,7 +440,7 @@ mod test_parser {
         )
         .tokenize("omega(f(g(w, x, y), h(z)))");
 
-        let parser = Parser::new(function_interpretations, vec![]);
+        let parser = Parser::new(function_interpretations);
 
         let parsed = parser.parse(&mut tokens);
 
@@ -491,7 +480,7 @@ mod test_parser {
             "Absolute Value".into(),
         );
 
-        let parser = Parser::new(vec![pipe_interpretation.clone()], vec![]);
+        let parser = Parser::new(vec![pipe_interpretation.clone()]);
 
         let parsed = parser.parse(&mut tokens);
 
@@ -513,10 +502,7 @@ mod test_parser {
             "Plus".into(),
         );
 
-        let parser = Parser::new(
-            vec![pipe_interpretation, addition_interpretation.clone()],
-            vec![],
-        );
+        let parser = Parser::new(vec![pipe_interpretation, addition_interpretation.clone()]);
         let parsed = parser.parse(&mut tokens);
 
         assert_eq!(
@@ -536,10 +522,7 @@ mod test_parser {
         let mut tokens =
             Tokenizer::new_with_tokens(vec!["|".to_string(), "+".to_string()]).tokenize("a+(b+c)");
 
-        let parser = Parser::new(
-            vec![Interpretation::parentheses(), addition_interpretation],
-            vec![],
-        );
+        let parser = Parser::new(vec![Interpretation::parentheses(), addition_interpretation]);
         let parsed = parser.parse(&mut tokens);
 
         assert_eq!(
@@ -565,7 +548,7 @@ mod test_parser {
         let mut tokens = Tokenizer::new_with_tokens(vec![]).tokenize("x");
         assert_eq!(tokens.len(), 1);
 
-        let parser = Parser::new(vec![], vec![]);
+        let parser = Parser::new(vec![]);
 
         let parsed = parser.parse(&mut tokens);
 
@@ -576,7 +559,7 @@ mod test_parser {
     fn test_parser_gets_interpretation() {
         let mut tokens = Tokenizer::new_with_tokens(vec![]).tokenize("x + y + z)");
 
-        let parser = Parser::new(vec![], vec![]);
+        let parser = Parser::new(vec![]);
         let token = tokens.pop().unwrap();
         let maybe_interpretation = parser.get_interpretation(&None, &token);
         assert!(maybe_interpretation.is_some());
@@ -591,12 +574,15 @@ mod test_parser {
     #[test]
     fn test_parser_parses_generated_type() {
         let plus = Interpretation::infix_operator("+".into(), 1);
-        let integer = GeneratedType::new(
-            GeneratedTypeCondition::IsInteger,
-            vec!["Integer".into()].into_iter().collect(),
+        let integer_condition = GeneratedTypeCondition::IsInteger;
+        let integer = Interpretation::new(
+            integer_condition.into(),
+            ExpressionType::Singleton,
+            DEFAULT_PRECEDENCE,
+            InterpretedType::Type("Integer".into()),
         );
 
-        let parser = Parser::new(vec![plus], vec![]);
+        let parser = Parser::new(vec![plus, integer]);
         let two_plus_two = parser
             .parse_from_string(vec!["+".to_string()], "2+2")
             .unwrap();

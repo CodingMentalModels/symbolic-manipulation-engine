@@ -261,7 +261,7 @@ mod test_workspace {
             vec!["Integer".into()].into_iter().collect(),
         );
 
-        let parser = Parser::new(vec![plus], vec![integer]);
+        let parser = Parser::new(vec![plus]);
         let two_plus_two = parser
             .parse_from_string(vec!["+".to_string()], "2+2")
             .unwrap();

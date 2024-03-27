@@ -362,7 +362,7 @@ mod test_transformation {
             3,
         )];
 
-        let parser = Parser::new(interpretations, vec![]);
+        let parser = Parser::new(interpretations);
         let expected = parser
             .parse_from_string(vec!["=".to_string()], "x=x")
             .unwrap();
@@ -385,7 +385,7 @@ mod test_transformation {
             Interpretation::singleton("x", "Integer".into()),
             Interpretation::singleton("y", "Integer".into()),
         ];
-        let parser = Parser::new(interpretations, vec![]);
+        let parser = Parser::new(interpretations);
 
         let expected_from = parser
             .parse_from_string(vec!["+".to_string()], "x+y")

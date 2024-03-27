@@ -5,7 +5,7 @@ use crate::{
     parsing::parser::ParserError,
     symbol::{
         symbol_node::{Symbol, SymbolNode},
-        symbol_type::Type,
+        symbol_type::{GeneratedTypeCondition, Type},
     },
 };
 
@@ -58,7 +58,7 @@ impl Interpretation {
         Interpretation::new(
             InterpretationCondition::IsObject,
             ExpressionType::Singleton,
-            1,
+            DEFAULT_PRECEDENCE,
             Type::Object.into(),
         )
     }
@@ -67,7 +67,7 @@ impl Interpretation {
         Interpretation::new(
             InterpretationCondition::Matches(name.into()),
             ExpressionType::Singleton,
-            0,
+            DEFAULT_PRECEDENCE,
             t.into(),
         )
     }
@@ -145,6 +145,22 @@ impl Interpretation {
                     return false;
                 }
             }
+            InterpretationCondition::IsInteger => {
+                if let Token::Object(n) = token {
+                    // Todo: This will fail on big enough numbers
+                    return n.parse::<i64>().is_ok();
+                } else {
+                    return false;
+                }
+            }
+            InterpretationCondition::IsNumeric => {
+                if let Token::Object(n) = token {
+                    // Todo: This will fail on big enough numbers
+                    return n.parse::<f64>().is_ok();
+                } else {
+                    return false;
+                }
+            }
         }
     }
 }
@@ -153,6 +169,17 @@ impl Interpretation {
 pub enum InterpretationCondition {
     Matches(Token),
     IsObject,
+    IsInteger,
+    IsNumeric,
+}
+
+impl From<GeneratedTypeCondition> for InterpretationCondition {
+    fn from(value: GeneratedTypeCondition) -> Self {
+        match value {
+            GeneratedTypeCondition::IsInteger => Self::IsInteger,
+            GeneratedTypeCondition::IsNumeric => Self::IsNumeric,
+        }
+    }
 }
 
 #[derive(Clone, Debug, Hash, PartialEq, Eq)]
