@@ -301,7 +301,8 @@ mod test_workspace {
             vec!["Integer".into()].into_iter().collect(),
         );
 
-        let types = TypeHierarchy::chain(vec!["Real".into(), "Integer".into()]).unwrap();
+        let mut types = TypeHierarchy::chain(vec!["Real".into(), "Integer".into()]).unwrap();
+        types.add_chain(vec!["+".into()]);
         let mut workspace = Workspace::new(types, vec![integer]);
 
         let parser = Parser::new(vec![plus]);
@@ -309,11 +310,11 @@ mod test_workspace {
             .parse_from_string(vec!["+".to_string()], "2+2")
             .unwrap();
 
-        workspace.add_statement(two_plus_two);
-        assert_eq!(
-            workspace.types,
-            TypeHierarchy::chain(vec!["Real".into(), "Integer".into(), "2".into()]).unwrap()
-        );
+        assert_eq!(workspace.add_statement(two_plus_two), Ok(()));
+        let mut expected =
+            TypeHierarchy::chain(vec!["Real".into(), "Integer".into(), "2".into()]).unwrap();
+        expected.add_chain(vec!["+".into()]);
+        assert_eq!(workspace.types, expected);
     }
 
     #[test]
