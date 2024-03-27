@@ -201,18 +201,25 @@ impl Workspace {
         index >= self.transformations.len()
     }
 
-    fn generate_types_in_bulk(&mut self, statements: HashSet<SymbolNode>) {
-        statements
+    fn generate_types_in_bulk(
+        &mut self,
+        statements: HashSet<SymbolNode>,
+    ) -> Result<(), WorkspaceError> {
+        let results = statements
             .into_iter()
-            .for_each(|statement| self.generate_types(statement))
+            .map(|statement| self.generate_types(statement))
+            .filter(|r| r.is_err())
+            .map(|e| {})
+            .collect();
     }
 
-    fn generate_types(&mut self, statement: SymbolNode) {
-        self.generated_types.iter().for_each(|gt| {
-            gt.generate(&statement)
+    fn generate_types(&mut self, statement: SymbolNode) -> Result<(), WorkspaceError> {
+        let results = self.generated_types.iter().map(|gt| {
+            gt
+                .generate(&statement)
                 .into_iter()
-                .for_each(|(t, parents)| self.types.add_child_to_parents(t, parents))
-        });
+                .map(|(t, parents)| self.types.add_child_to_parents(t, parents))
+        }).collect()
     }
 }
 
