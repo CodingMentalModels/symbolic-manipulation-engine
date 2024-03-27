@@ -1,8 +1,16 @@
-use std::{collections::{HashMap, HashSet}, unimplemented};
+use std::{
+    collections::{HashMap, HashSet},
+    unimplemented,
+};
 
 use serde::{Deserialize, Serialize};
 
-use super::{symbol_node::SymbolNode, transformation::Transformation};
+use crate::parsing::interpretation::InterpretedType;
+
+use super::{
+    symbol_node::{Symbol, SymbolNode},
+    transformation::Transformation,
+};
 
 pub type TypeName = String;
 
@@ -343,13 +351,25 @@ pub struct GeneratedType {
 }
 
 impl GeneratedType {
-
     pub fn new(condition: GeneratedTypeCondition, parents: HashSet<Type>) -> Self {
         Self { condition, parents }
     }
 
-    pub fn generate() -> {
-        unimplemented!()
+    pub fn generate(&self, statement: &SymbolNode) -> Vec<(Type, HashSet<Type>)> {
+        let mut to_return: Vec<(Type, HashSet<Type>)> = statement
+            .get_children()
+            .iter()
+            .map(|child| self.generate(child))
+            .flatten()
+            .collect();
+        if self.satisfies_condition(statement.get_symbol()) {
+            to_return.push((statement.get_symbol().get_name().into(), self.parents));
+        }
+        to_return
+    }
+
+    pub fn satisfies_condition(&self, symbol: &Symbol) -> bool {
+        self.condition.is_satisfied_by(symbol)
     }
 }
 
@@ -357,6 +377,21 @@ impl GeneratedType {
 pub enum GeneratedTypeCondition {
     IsInteger,
     IsNumeric,
+}
+
+impl GeneratedTypeCondition {
+    pub fn is_satisfied_by(&self, symbol: &Symbol) -> bool {
+        match self {
+            Self::IsInteger => {
+                // Todo: This will fail on big enough numbers
+                return symbol.get_name().parse::<i64>().is_ok();
+            }
+            Self::IsNumeric => {
+                // Todo: This will fail on big enough numbers
+                return symbol.get_name().parse::<f64>().is_ok();
+            }
+        }
+    }
 }
 
 #[derive(Clone, Debug, Hash, PartialEq, Eq, Serialize, Deserialize)]

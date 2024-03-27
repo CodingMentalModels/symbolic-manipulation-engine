@@ -208,11 +208,11 @@ impl Workspace {
     }
 
     fn generate_types(&mut self, statement: SymbolNode) {
-        self.generated_types.iter().map(|gt| {
-            gt.generate(statement)
+        self.generated_types.iter().for_each(|gt| {
+            gt.generate(&statement)
                 .into_iter()
                 .for_each(|(t, parents)| self.types.add_child_to_parents(t, parents))
-        })
+        });
     }
 }
 
