@@ -97,11 +97,14 @@ mod tests {
         let plus_interpretation = Interpretation::infix_operator("+".into(), 2);
         let times_interpretation = Interpretation::infix_operator("*".into(), 3);
 
-        let parser = Parser::new(vec![
-            equals_interpretation,
-            plus_interpretation,
-            times_interpretation,
-        ]);
+        let parser = Parser::new(
+            vec![
+                equals_interpretation,
+                plus_interpretation,
+                times_interpretation,
+            ],
+            vec![],
+        );
 
         let a_plus_b = parser
             .parse(

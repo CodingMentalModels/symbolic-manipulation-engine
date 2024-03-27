@@ -30,6 +30,10 @@ impl SymbolNode {
         SymbolNode { root, children }
     }
 
+    pub fn singleton(s: String) -> Self {
+        Self::leaf(Symbol::new(s.clone(), s.into()))
+    }
+
     pub fn leaf(root: Symbol) -> Self {
         Self::new(root, Vec::new())
     }

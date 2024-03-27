@@ -336,6 +336,24 @@ pub struct TypeHierarchyNode {
     children: HashSet<Type>,
 }
 
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+pub struct GeneratedType {
+    condition: GeneratedTypeCondition,
+    parents: HashSet<Type>,
+}
+
+impl GeneratedType {
+    pub fn new(condition: GeneratedTypeCondition, parents: HashSet<Type>) -> Self {
+        Self { condition, parents }
+    }
+}
+
+#[derive(Clone, Debug, Hash, PartialEq, Eq, Serialize, Deserialize)]
+pub enum GeneratedTypeCondition {
+    IsInteger,
+    IsNumeric,
+}
+
 #[derive(Clone, Debug, Hash, PartialEq, Eq, Serialize, Deserialize)]
 pub enum Type {
     Object,
@@ -653,33 +671,6 @@ mod test_type {
             Err(TypeError::IncompatibleTypeRelationships(
                 vec!["Integer".into(), "Real".into()].into_iter().collect()
             ))
-        );
-    }
-
-    #[test]
-    fn test_type_hierarchy_handles_generated_type() {
-        let mut hierarchy = TypeHierarchy::chain(vec!["Real".into(), "Integer".into()]);
-        hierarchy.add_generated_type_to_parent(GeneratedTypeCondition::IsInteger, "Integer".into());
-
-        let generated_type_conditions = hierarchy.get_generated_type_conditions();
-        assert_eq!(
-            generated_type_conditions,
-            vec![GeneratedTypeCondition::IsInteger]
-                .into_iter()
-                .collect()
-        );
-
-        let parser = Parser::new(
-            vec![Interpretation::infix_operator("+".into(), 1)],
-            generated_type_conditions,
-        );
-        let two_plus_three = parser.parse_from_string(vec!["+".to_string()], "2 + 3");
-        let expected = SymbolNode::new(
-            Symbol::new("+".to_string(), "+".into()),
-            vec![
-                SymbolNode::leaf(Symbol::new("2".to_string(), "2".into())),
-                SymbolNode::leaf(Symbol::new("3".to_string(), "3".into())),
-            ],
         );
     }
 }

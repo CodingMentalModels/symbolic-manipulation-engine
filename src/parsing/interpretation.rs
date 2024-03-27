@@ -9,10 +9,7 @@ use crate::{
     },
 };
 
-use super::{
-    parser::{Parser, ParserResult},
-    tokenizer::{Token, TokenStack},
-};
+use super::tokenizer::Token;
 
 pub type ExpressionPrecedence = u8;
 

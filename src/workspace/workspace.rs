@@ -228,7 +228,11 @@ mod test_workspace {
 
     use std::unimplemented;
 
-    use crate::{context::context::Context, symbol::symbol_type::TypeHierarchy};
+    use crate::{
+        context::context::Context,
+        parsing::{interpretation::Interpretation, parser::Parser},
+        symbol::symbol_type::{GeneratedType, GeneratedTypeCondition, TypeHierarchy},
+    };
 
     use super::*;
 
@@ -244,6 +248,29 @@ mod test_workspace {
         workspace.add_statement(statement);
 
         assert_eq!(workspace.statements.len(), 2);
+    }
+
+    #[test]
+    fn test_workspace_adds_statement_with_generated_type() {
+        let types = TypeHierarchy::chain(vec!["Real".into(), "Integer".into()]).unwrap();
+        let mut workspace = Workspace::new(types);
+
+        let plus = Interpretation::infix_operator("+".into(), 1);
+        let integer = GeneratedType::new(
+            GeneratedTypeCondition::IsInteger,
+            vec!["Integer".into()].into_iter().collect(),
+        );
+
+        let parser = Parser::new(vec![plus], vec![integer]);
+        let two_plus_two = parser
+            .parse_from_string(vec!["+".to_string()], "2+2")
+            .unwrap();
+
+        workspace.add_statement(two_plus_two);
+        assert_eq!(
+            workspace.types,
+            TypeHierarchy::chain(vec!["Real".into(), "Integer".into(), "2".into()]).unwrap()
+        );
     }
 
     #[test]
