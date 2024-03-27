@@ -55,7 +55,7 @@ impl Workspace {
         self.types
             .binds_statement_or_error(&statement)
             .map_err(|x| WorkspaceError::from(x))?;
-        self.generate_types_in_bulk(vec![statement].into_iter().collect());
+        self.generate_types_in_bulk(vec![statement.clone()].into_iter().collect());
         self.statements.push(statement);
         self.provenance.push(Provenance::Hypothesis);
         Ok(())
@@ -205,21 +205,32 @@ impl Workspace {
         &mut self,
         statements: HashSet<SymbolNode>,
     ) -> Result<(), WorkspaceError> {
-        let results = statements
-            .into_iter()
-            .map(|statement| self.generate_types(statement))
-            .filter(|r| r.is_err())
-            .map(|e| {})
-            .collect();
+        for statement in statements {
+            match self.generate_types(statement) {
+                Ok(()) => {}
+                Err(e) => {
+                    return Err(e.into());
+                }
+            };
+        }
+        Ok(())
     }
 
     fn generate_types(&mut self, statement: SymbolNode) -> Result<(), WorkspaceError> {
-        let results = self.generated_types.iter().map(|gt| {
-            gt
+        for generated_type in self.generated_types.iter() {
+            let result: Option<TypeError> = generated_type
                 .generate(&statement)
                 .into_iter()
                 .map(|(t, parents)| self.types.add_child_to_parents(t, parents))
-        }).collect()
+                .filter(|r| r.is_err())
+                .map(|r| r.expect_err("We just checked that it's an error."))
+                .next();
+            match result {
+                Some(e) => return Err(e.into()),
+                None => {}
+            }
+        }
+        Ok(())
     }
 }
 
@@ -271,7 +282,7 @@ mod test_workspace {
     #[test]
     fn test_workspace_adds_and_deletes_statement() {
         let types = TypeHierarchy::new();
-        let mut workspace = Workspace::new(types);
+        let mut workspace = Workspace::new(types, vec![]);
         let statement = SymbolNode::leaf_object("a".to_string());
         workspace.add_statement(statement);
         assert_eq!(workspace.statements.len(), 1);
@@ -308,7 +319,7 @@ mod test_workspace {
     #[test]
     fn test_workspace_transforms_statement_and_maintains_provenance() {
         let types = TypeHierarchy::new();
-        let mut workspace = Workspace::new(types);
+        let mut workspace = Workspace::new(types, vec![]);
         let statement = SymbolNode::leaf_object("a".to_string());
         assert_eq!(workspace.add_statement(statement), Ok(()));
         assert_eq!(workspace.statements.len(), 1);
@@ -373,7 +384,7 @@ mod test_workspace {
     #[test]
     fn test_workspace_imports_context() {
         let types = TypeHierarchy::new();
-        let mut workspace = Workspace::new(types);
+        let mut workspace = Workspace::new(types, vec![]);
 
         let mut types =
             TypeHierarchy::chain(vec!["Real".into(), "Rational".into(), "Integer".into()]).unwrap();

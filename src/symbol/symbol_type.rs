@@ -71,7 +71,7 @@ impl TypeHierarchy {
             None => {
                 let node = TypeHierarchyNode {
                     inner: type_to_add.clone(),
-                    parents: parent_types,
+                    parents: parent_types.clone(),
                     children: HashSet::new(),
                 };
                 self.type_map.insert(type_to_add.clone(), node.clone());
@@ -372,7 +372,10 @@ impl GeneratedType {
             .flatten()
             .collect();
         if self.satisfies_condition(statement.get_symbol()) {
-            to_return.push((statement.get_symbol().get_name().into(), self.parents));
+            to_return.push((
+                statement.get_symbol().get_name().into(),
+                self.parents.clone(),
+            ));
         }
         to_return
     }
