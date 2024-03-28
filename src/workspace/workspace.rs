@@ -51,7 +51,7 @@ impl Workspace {
             if self.generated_types.len() > 0
                 && &self.generated_types != context.get_generated_types()
             {
-                return Err(WorkspaceError::UnsupportedOperation("For simplicity, we don't support importing Contexts with different generated types than the workspace."));
+                return Err(WorkspaceError::UnsupportedOperation("For simplicity, we don't support importing Contexts with different generated types than the workspace.".to_string()));
             }
         }
 
