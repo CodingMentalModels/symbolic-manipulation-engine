@@ -47,7 +47,14 @@ impl Workspace {
             .union(context.get_types())
             .map_err(|e| WorkspaceError::from(e))?;
 
-        // TODO: Handle conflicting generated types
+        if context.get_generated_types().len() > 0 {
+            if self.generated_types.len() > 0
+                && &self.generated_types != context.get_generated_types()
+            {
+                return Err(WorkspaceError::UnsupportedOperation("For simplicity, we don't support importing Contexts with different generated types than the workspace."));
+            }
+        }
+
         let mut new_generated_types = self.generated_types.clone();
         new_generated_types.append(&mut context.get_generated_types().clone());
 
@@ -256,6 +263,7 @@ pub enum WorkspaceError {
     IncompatibleTypeRelationships(HashSet<Type>),
     InvalidTypeErrorTransformation(TypeError),
     AttemptedToImportAmbiguousTypes(HashSet<Type>),
+    UnsupportedOperation(String),
 }
 
 impl From<TypeError> for WorkspaceError {
