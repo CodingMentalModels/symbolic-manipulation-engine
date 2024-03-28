@@ -5,14 +5,11 @@ use crate::{
     parsing::parser::ParserError,
     symbol::{
         symbol_node::{Symbol, SymbolNode},
-        symbol_type::Type,
+        symbol_type::{GeneratedTypeCondition, Type},
     },
 };
 
-use super::{
-    parser::{Parser, ParserResult},
-    tokenizer::{Token, TokenStack},
-};
+use super::tokenizer::Token;
 
 pub type ExpressionPrecedence = u8;
 
@@ -61,7 +58,7 @@ impl Interpretation {
         Interpretation::new(
             InterpretationCondition::IsObject,
             ExpressionType::Singleton,
-            1,
+            DEFAULT_PRECEDENCE,
             Type::Object.into(),
         )
     }
@@ -70,8 +67,17 @@ impl Interpretation {
         Interpretation::new(
             InterpretationCondition::Matches(name.into()),
             ExpressionType::Singleton,
-            0,
+            DEFAULT_PRECEDENCE,
             t.into(),
+        )
+    }
+
+    pub fn generated_type(condition: GeneratedTypeCondition) -> Self {
+        Self::new(
+            condition.into(),
+            ExpressionType::Singleton,
+            DEFAULT_PRECEDENCE,
+            InterpretedType::SameAsValue,
         )
     }
 
@@ -121,6 +127,10 @@ impl Interpretation {
                 Symbol::new(token.to_string(), Type::Delimiter),
                 children,
             )),
+            InterpretedType::SameAsValue => Ok(SymbolNode::new(
+                Symbol::new(token.to_string(), token.to_string().into()),
+                children,
+            )),
             InterpretedType::Type(t) => Ok(SymbolNode::new(
                 Symbol::new(token.to_string(), t.clone()),
                 children,
@@ -148,6 +158,22 @@ impl Interpretation {
                     return false;
                 }
             }
+            InterpretationCondition::IsInteger => {
+                if let Token::Object(n) = token {
+                    // TODO: This will fail on big enough numbers
+                    return n.parse::<i64>().is_ok();
+                } else {
+                    return false;
+                }
+            }
+            InterpretationCondition::IsNumeric => {
+                if let Token::Object(n) = token {
+                    // TODO: This will fail on big enough numbers
+                    return n.parse::<f64>().is_ok();
+                } else {
+                    return false;
+                }
+            }
         }
     }
 }
@@ -156,6 +182,17 @@ impl Interpretation {
 pub enum InterpretationCondition {
     Matches(Token),
     IsObject,
+    IsInteger,
+    IsNumeric,
+}
+
+impl From<GeneratedTypeCondition> for InterpretationCondition {
+    fn from(value: GeneratedTypeCondition) -> Self {
+        match value {
+            GeneratedTypeCondition::IsInteger => Self::IsInteger,
+            GeneratedTypeCondition::IsNumeric => Self::IsNumeric,
+        }
+    }
 }
 
 #[derive(Clone, Debug, Hash, PartialEq, Eq)]
@@ -178,6 +215,7 @@ impl Default for ExpressionType {
 pub enum InterpretedType {
     PassThrough,
     Delimiter,
+    SameAsValue,
     Type(Type),
 }
 

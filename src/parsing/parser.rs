@@ -1,6 +1,7 @@
 use crate::parsing::interpretation::{ExpressionType, Interpretation};
 use crate::parsing::tokenizer::{Token, Tokenizer};
 use crate::symbol::symbol_node::SymbolNode;
+use crate::symbol::symbol_type::GeneratedType;
 
 use super::interpretation::ExpressionPrecedence;
 use super::tokenizer::TokenStack;
@@ -174,6 +175,15 @@ pub enum ParserError {
 #[cfg(test)]
 mod test_parser {
 
+    use crate::{
+        constants::DEFAULT_PRECEDENCE,
+        parsing::interpretation::{InterpretationCondition, InterpretedType},
+        symbol::{
+            symbol_node::Symbol,
+            symbol_type::{GeneratedTypeCondition, Type},
+        },
+    };
+
     use super::*;
 
     #[test]
@@ -241,7 +251,7 @@ mod test_parser {
                     SymbolNode::leaf_object("q".to_string()),
                 ]
             ))
-        )
+        );
     }
 
     #[test]
@@ -559,5 +569,34 @@ mod test_parser {
             interpretation.get_expression_type(),
             ExpressionType::Singleton
         );
+    }
+
+    #[test]
+    fn test_parser_parses_generated_type() {
+        let plus = Interpretation::infix_operator("+".into(), 1);
+        let integer_condition = GeneratedTypeCondition::IsInteger;
+        let integer = Interpretation::new(
+            integer_condition.clone().into(),
+            ExpressionType::Singleton,
+            DEFAULT_PRECEDENCE,
+            InterpretedType::SameAsValue,
+        );
+
+        let also_integer = Interpretation::generated_type(integer_condition);
+        assert_eq!(integer, also_integer);
+
+        let parser = Parser::new(vec![plus, integer]);
+        let two_plus_two = parser
+            .parse_from_string(vec!["+".to_string()], "2+2")
+            .unwrap();
+
+        let expected = SymbolNode::new(
+            Symbol::new("+".to_string(), "+".into()),
+            vec![
+                SymbolNode::singleton("2".to_string()),
+                SymbolNode::singleton("2".to_string()),
+            ],
+        );
+        assert_eq!(two_plus_two, expected);
     }
 }

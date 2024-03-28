@@ -1,8 +1,16 @@
-use std::collections::{HashMap, HashSet};
+use std::{
+    collections::{HashMap, HashSet},
+    unimplemented,
+};
 
 use serde::{Deserialize, Serialize};
 
-use super::{symbol_node::SymbolNode, transformation::Transformation};
+use crate::parsing::interpretation::InterpretedType;
+
+use super::{
+    symbol_node::{Symbol, SymbolNode},
+    transformation::Transformation,
+};
 
 pub type TypeName = String;
 
@@ -50,27 +58,36 @@ impl TypeHierarchy {
         type_to_add: Type,
         parent_type: Type,
     ) -> Result<Type, TypeError> {
+        self.add_child_to_parents(type_to_add, vec![parent_type].into_iter().collect())
+    }
+
+    pub fn add_child_to_parents(
+        &mut self,
+        type_to_add: Type,
+        parent_types: HashSet<Type>,
+    ) -> Result<Type, TypeError> {
         match self.type_map.get(&type_to_add) {
             Some(_node) => Err(TypeError::TypeHierarchyAlreadyIncludes(type_to_add)),
             None => {
                 let node = TypeHierarchyNode {
                     inner: type_to_add.clone(),
-                    parents: vec![parent_type.clone()].into_iter().collect(),
+                    parents: parent_types.clone(),
                     children: HashSet::new(),
                 };
                 self.type_map.insert(type_to_add.clone(), node.clone());
 
-                match self.type_map.get_mut(&parent_type) {
-                    Some(parent_node) => {
-                        parent_node.children.insert(type_to_add.clone());
+                for parent_type in parent_types {
+                    match self.type_map.get_mut(&parent_type) {
+                        Some(parent_node) => {
+                            parent_node.children.insert(type_to_add.clone());
+                        }
+                        None => return Err(TypeError::ParentNotFound(type_to_add)),
                     }
-                    None => return Err(TypeError::ParentNotFound(type_to_add)),
                 }
                 Ok(type_to_add)
             }
         }
     }
-
     pub fn get_parent_child_pairs(&self) -> HashSet<(Type, Type)> {
         let mut parent_child_pairs = HashSet::new();
 
@@ -336,6 +353,59 @@ pub struct TypeHierarchyNode {
     children: HashSet<Type>,
 }
 
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+pub struct GeneratedType {
+    condition: GeneratedTypeCondition,
+    parents: HashSet<Type>,
+}
+
+impl GeneratedType {
+    pub fn new(condition: GeneratedTypeCondition, parents: HashSet<Type>) -> Self {
+        Self { condition, parents }
+    }
+
+    pub fn generate(&self, statement: &SymbolNode) -> Vec<(Type, HashSet<Type>)> {
+        let mut to_return: Vec<(Type, HashSet<Type>)> = statement
+            .get_children()
+            .iter()
+            .map(|child| self.generate(child))
+            .flatten()
+            .collect();
+        if self.satisfies_condition(statement.get_symbol()) {
+            to_return.push((
+                statement.get_symbol().get_name().into(),
+                self.parents.clone(),
+            ));
+        }
+        to_return
+    }
+
+    pub fn satisfies_condition(&self, symbol: &Symbol) -> bool {
+        self.condition.is_satisfied_by(symbol)
+    }
+}
+
+#[derive(Clone, Debug, Hash, PartialEq, Eq, Serialize, Deserialize)]
+pub enum GeneratedTypeCondition {
+    IsInteger,
+    IsNumeric,
+}
+
+impl GeneratedTypeCondition {
+    pub fn is_satisfied_by(&self, symbol: &Symbol) -> bool {
+        match self {
+            Self::IsInteger => {
+                // TODO: This will fail on big enough numbers
+                return symbol.get_name().parse::<i64>().is_ok();
+            }
+            Self::IsNumeric => {
+                // TODO: This will fail on big enough numbers
+                return symbol.get_name().parse::<f64>().is_ok();
+            }
+        }
+    }
+}
+
 #[derive(Clone, Debug, Hash, PartialEq, Eq, Serialize, Deserialize)]
 pub enum Type {
     Object,
@@ -386,7 +456,10 @@ pub enum TypeError {
 
 #[cfg(test)]
 mod test_type {
-    use crate::symbol::symbol_node::Symbol;
+    use crate::{
+        parsing::{interpretation::Interpretation, parser::Parser},
+        symbol::symbol_node::Symbol,
+    };
 
     use super::*;
 
