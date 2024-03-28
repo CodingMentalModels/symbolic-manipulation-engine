@@ -395,11 +395,11 @@ impl GeneratedTypeCondition {
     pub fn is_satisfied_by(&self, symbol: &Symbol) -> bool {
         match self {
             Self::IsInteger => {
-                // Todo: This will fail on big enough numbers
+                // TODO: This will fail on big enough numbers
                 return symbol.get_name().parse::<i64>().is_ok();
             }
             Self::IsNumeric => {
-                // Todo: This will fail on big enough numbers
+                // TODO: This will fail on big enough numbers
                 return symbol.get_name().parse::<f64>().is_ok();
             }
         }

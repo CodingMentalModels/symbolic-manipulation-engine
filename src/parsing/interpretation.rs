@@ -160,7 +160,7 @@ impl Interpretation {
             }
             InterpretationCondition::IsInteger => {
                 if let Token::Object(n) = token {
-                    // Todo: This will fail on big enough numbers
+                    // TODO: This will fail on big enough numbers
                     return n.parse::<i64>().is_ok();
                 } else {
                     return false;
@@ -168,7 +168,7 @@ impl Interpretation {
             }
             InterpretationCondition::IsNumeric => {
                 if let Token::Object(n) = token {
-                    // Todo: This will fail on big enough numbers
+                    // TODO: This will fail on big enough numbers
                     return n.parse::<f64>().is_ok();
                 } else {
                     return false;

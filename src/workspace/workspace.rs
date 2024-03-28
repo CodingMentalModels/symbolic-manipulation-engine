@@ -46,7 +46,13 @@ impl Workspace {
             .types
             .union(context.get_types())
             .map_err(|e| WorkspaceError::from(e))?;
+
+        // TODO: Handle conflicting generated types
+        let mut new_generated_types = self.generated_types.clone();
+        new_generated_types.append(&mut context.get_generated_types().clone());
+
         self.types = new_types;
+        self.generated_types = new_generated_types;
         self.transformations = context.get_transformations().clone();
         Ok(())
     }
@@ -408,6 +414,7 @@ mod test_workspace {
 
         let context = Context::new(
             types.clone(),
+            vec![],
             vec![equality_reflexivity.clone(), equality_symmetry.clone()],
         )
         .unwrap();
@@ -426,8 +433,12 @@ mod test_workspace {
 
         complex_types.add_chain(vec!["Operator".into(), "=".into()]);
         complex_types.add_chain_to_parent(vec!["+".into()], "Operator".into());
-        let ambiguous_context =
-            Context::new(complex_types, vec![equality_reflexivity, equality_symmetry]).unwrap();
+        let ambiguous_context = Context::new(
+            complex_types,
+            vec![],
+            vec![equality_reflexivity, equality_symmetry],
+        )
+        .unwrap();
 
         assert_eq!(
             workspace.try_import_context(ambiguous_context),
@@ -449,7 +460,7 @@ mod test_workspace {
 
         let mut inverted_types =
             TypeHierarchy::chain(vec!["Rational".into(), "Real".into()]).unwrap();
-        let conflicting_context = Context::new(inverted_types, vec![]).unwrap();
+        let conflicting_context = Context::new(inverted_types, vec![], vec![]).unwrap();
 
         assert_eq!(
             workspace.try_import_context(conflicting_context),

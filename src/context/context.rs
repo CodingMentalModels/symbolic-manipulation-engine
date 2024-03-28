@@ -3,13 +3,14 @@ use std::collections::HashSet;
 use serde::{Deserialize, Serialize};
 
 use crate::symbol::{
-    symbol_type::{Type, TypeError, TypeHierarchy},
+    symbol_type::{GeneratedType, Type, TypeError, TypeHierarchy},
     transformation::Transformation,
 };
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Context {
     types: TypeHierarchy,
+    generated_types: Vec<GeneratedType>,
     transformations: Vec<Transformation>,
 }
 
@@ -17,12 +18,14 @@ impl Context {
     pub fn empty() -> Self {
         Self {
             types: TypeHierarchy::new(),
+            generated_types: vec![],
             transformations: vec![],
         }
     }
 
     pub fn new(
         types: TypeHierarchy,
+        generated_types: Vec<GeneratedType>,
         transformations: Vec<Transformation>,
     ) -> Result<Self, ContextError> {
         match transformations
@@ -32,6 +35,7 @@ impl Context {
         {
             None | Some(Ok(())) => Ok(Self {
                 types,
+                generated_types,
                 transformations,
             }),
             Some(Err(e)) => Err(ContextError::from(e)),
@@ -40,6 +44,10 @@ impl Context {
 
     pub fn get_types(&self) -> &TypeHierarchy {
         &self.types
+    }
+
+    pub fn get_generated_types(&self) -> &Vec<GeneratedType> {
+        &self.generated_types
     }
 
     pub fn get_transformations(&self) -> &Vec<Transformation> {
@@ -133,7 +141,7 @@ mod tests {
 
         let transformations = vec![additive_commutativity, multiplicative_commutativity];
 
-        let context = Context::new(types.clone(), transformations.clone());
+        let context = Context::new(types.clone(), vec![], transformations.clone());
 
         assert_eq!(context.clone().unwrap().get_types(), &types);
         assert_eq!(
