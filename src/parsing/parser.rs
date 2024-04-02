@@ -354,6 +354,21 @@ mod test_parser {
         );
 
         assert_eq!(pythagorean_theorem, Ok(expected));
+
+        let expected = SymbolNode::new(
+            Symbol::new("*".to_string(), "*".into()),
+            vec![
+                SymbolNode::leaf_object("g".to_string()),
+                SymbolNode::new(
+                    Symbol::new("inv".to_string(), "Operator".into()),
+                    vec![SymbolNode::leaf_object("g".to_string())],
+                ),
+            ],
+        );
+        let inverse_from = parser
+            .parse_from_string(vec!["*".to_string(), "inv".to_string()], "g*inv(g)")
+            .unwrap();
+        assert_eq!(inverse_from, expected);
     }
 
     #[test]

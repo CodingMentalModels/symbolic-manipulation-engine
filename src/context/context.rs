@@ -98,8 +98,15 @@ mod tests {
 
         let equals_interpretation = Interpretation::infix_operator("=".into(), 1);
         let times_interpretation = Interpretation::infix_operator("*".into(), 3);
+        let g_interpretation = Interpretation::singleton("g", "Group Element".into());
+        let one_interpretation = Interpretation::singleton("1", "Group Element".into());
 
-        let parser = Parser::new(vec![equals_interpretation, times_interpretation]);
+        let parser = Parser::new(vec![
+            equals_interpretation,
+            times_interpretation,
+            g_interpretation,
+            one_interpretation,
+        ]);
 
         let commutativity = Transformation::symmetry(
             "*".to_string(),
@@ -126,6 +133,7 @@ mod tests {
         let inverse_from = parser
             .parse_from_string(vec!["*".to_string()], "g*inv(g)")
             .unwrap();
+        assert!(false, "{:?}", inverse_from);
         let inverse_to = parser
             .parse_from_string(vec!["*".to_string()], "1")
             .unwrap();
