@@ -87,6 +87,39 @@ mod tests {
     use super::*;
 
     #[test]
+    fn test_context_expresses_group_theory() {
+        let context = Context::empty();
+        assert_eq!(context.get_types(), &TypeHierarchy::new());
+        assert_eq!(context.get_transformations(), &vec![]);
+
+        let mut types = TypeHierarchy::chain(vec!["GroupElement".into()]).unwrap();
+        types.add_chain(vec!["Operator".into(), "*".into()]);
+        types.add_chain(vec!["=".into()]);
+
+        let equals_interpretation = Interpretation::infix_operator("=".into(), 1);
+        let times_interpretation = Interpretation::infix_operator("*".into(), 3);
+
+        let parser = Parser::new(vec![equals_interpretation, times_interpretation]);
+
+        let commutativity = Transformation::symmetry(
+            "*".to_string(),
+            "*".into(),
+            ("a".to_string(), "b".to_string()),
+            "Group Element".into(),
+        );
+
+        let transformations = vec![commutativity];
+
+        let context = Context::new(types.clone(), vec![], transformations.clone());
+
+        assert_eq!(context.clone().unwrap().get_types(), &types);
+        assert_eq!(
+            context.clone().unwrap().get_transformations(),
+            &transformations
+        );
+    }
+
+    #[test]
     fn test_context_initializes() {
         let context = Context::empty();
         assert_eq!(context.get_types(), &TypeHierarchy::new());
