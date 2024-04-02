@@ -92,7 +92,7 @@ mod tests {
         assert_eq!(context.get_types(), &TypeHierarchy::new());
         assert_eq!(context.get_transformations(), &vec![]);
 
-        let mut types = TypeHierarchy::chain(vec!["GroupElement".into()]).unwrap();
+        let mut types = TypeHierarchy::chain(vec!["Group Element".into()]).unwrap();
         types.add_chain(vec!["Operator".into(), "*".into()]);
         types.add_chain(vec!["=".into()]);
 
@@ -108,7 +108,30 @@ mod tests {
             "Group Element".into(),
         );
 
-        let transformations = vec![commutativity];
+        let associativity = Transformation::associativity(
+            "*".to_string(),
+            "*".into(),
+            ("a".to_string(), "b".to_string(), "c".to_string()),
+            "Group Element".into(),
+        );
+
+        let identity_from = parser
+            .parse_from_string(vec!["*".to_string()], "g*1")
+            .unwrap();
+        let identity_to = parser
+            .parse_from_string(vec!["*".to_string()], "g")
+            .unwrap();
+        let identity = Transformation::new(identity_from, identity_to);
+
+        let inverse_from = parser
+            .parse_from_string(vec!["*".to_string()], "g*inv(g)")
+            .unwrap();
+        let inverse_to = parser
+            .parse_from_string(vec!["*".to_string()], "1")
+            .unwrap();
+        let inverse = Transformation::new(inverse_from, inverse_to);
+
+        let transformations = vec![commutativity, associativity, identity, inverse];
 
         let context = Context::new(types.clone(), vec![], transformations.clone());
 

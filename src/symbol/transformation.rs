@@ -56,6 +56,35 @@ impl Transformation {
         Transformation::new(from, to)
     }
 
+    pub fn commutivity(
+        operator_name: String,
+        operator_type: Type,
+        object_names: (String, String),
+        object_type: Type,
+    ) -> Self {
+        Self::symmetry(operator_name, operator_type, object_names, object_type)
+    }
+
+    pub fn associativity(
+        operator_name: String,
+        operator_type: Type,
+        object_names: (String, String, String),
+        object_type: Type,
+    ) -> Self {
+        let a = SymbolNode::leaf(Symbol::new(object_names.0, object_type.clone()));
+        let b = SymbolNode::leaf(Symbol::new(object_names.1, object_type.clone()));
+        let c = SymbolNode::leaf(Symbol::new(object_names.2, object_type));
+        let operator = Symbol::new(operator_name, operator_type);
+
+        let a_b = SymbolNode::new(operator.clone(), vec![a.clone(), b.clone()]);
+        let a_b_then_c = SymbolNode::new(operator.clone(), vec![a_b.clone(), c.clone()]);
+
+        let b_c = SymbolNode::new(operator.clone(), vec![b.clone(), c.clone()]);
+        let a_then_b_c = SymbolNode::new(operator.clone(), vec![a.clone(), b_c.clone()]);
+
+        Transformation::new(a_b_then_c, a_then_b_c)
+    }
+
     pub fn to_string(&self) -> String {
         format!("{} -> {}", self.from.to_string(), self.to.to_string())
     }
