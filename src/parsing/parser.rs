@@ -316,7 +316,13 @@ mod test_parser {
             })
             .collect();
 
-        let parser = Parser::new(operators_interpretations.clone());
+        let mut interpretations = operators_interpretations.clone();
+        interpretations.push(Interpretation::function(
+            Token::Object("inv".to_string()),
+            7,
+        ));
+
+        let parser = Parser::new(interpretations.clone());
 
         let pythagorean_theorem =
             parser.parse_from_string(operator_names.clone(), "a^2 + b^2 = c^2");
@@ -355,19 +361,21 @@ mod test_parser {
 
         assert_eq!(pythagorean_theorem, Ok(expected));
 
+        let inverse_from = parser
+            .parse_from_string(vec!["*".to_string(), "inv".to_string()], "g*inv(g)")
+            .unwrap();
+
         let expected = SymbolNode::new(
-            Symbol::new("*".to_string(), "*".into()),
+            Symbol::new("*".to_string(), "Operator".into()),
             vec![
                 SymbolNode::leaf_object("g".to_string()),
                 SymbolNode::new(
-                    Symbol::new("inv".to_string(), "Operator".into()),
+                    Symbol::new("inv".to_string(), "inv".into()),
                     vec![SymbolNode::leaf_object("g".to_string())],
                 ),
             ],
         );
-        let inverse_from = parser
-            .parse_from_string(vec!["*".to_string(), "inv".to_string()], "g*inv(g)")
-            .unwrap();
+
         assert_eq!(inverse_from, expected);
     }
 
