@@ -1,7 +1,7 @@
 use clap::ArgMatches;
 
 use crate::{
-    cli::filesystem::FileSystem, config::STATE_DIRECTORY_RELATIVE_PATH,
+    cli::filesystem::FileSystem, config::STATE_DIRECTORY_RELATIVE_PATH, parsing::parser::Parser,
     workspace::workspace::Workspace,
 };
 
@@ -78,6 +78,26 @@ impl Cli {
     }
 
     pub fn ls(&self) -> Result<String, String> {
+        self.load_workspace().map(|w| w.to_string())
+    }
+
+    pub fn derive(&self, sub_matches: &ArgMatches) -> Result<String, String> {
+        let workspace = self.load_workspace()?;
+        match sub_matches.get_one("statement") {
+            None => return Err("No statement provided to derive".to_string()),
+            Some(statement) => {
+                let tree = workspace.parse_from_string(tree);
+                match workspace.try_transform_into(tree) {
+                    Err(e) => return Err(e),
+                    Ok(()) => {
+                        return Ok(format!("Successfully derived {}", tree.to_string()).to_string())
+                    }
+                }
+            }
+        }
+    }
+
+    fn load_workspace(&self) -> Result<Workspace, String> {
         if !self.filesystem.path_exists(STATE_DIRECTORY_RELATIVE_PATH) {
             return Err("No workspace exists in this directory".to_string());
         }
@@ -87,7 +107,7 @@ impl Cli {
             .read_file(STATE_DIRECTORY_RELATIVE_PATH, "workspace.toml")
         {
             Ok(contents) => match Workspace::deserialize(&contents) {
-                Ok(workspace) => workspace,
+                Ok(workspace) => return Ok(workspace),
                 Err(e) => {
                     return Err(format!("Couldn't deserialize workspace.toml: {}", e));
                 }
@@ -96,8 +116,6 @@ impl Cli {
                 return Err("Couldn't read workspace.toml".to_string());
             }
         };
-
-        return Ok(workspace.to_string());
     }
 }
 
@@ -105,4 +123,3 @@ impl Cli {
 mod test_cli {
     use super::*;
 }
-
