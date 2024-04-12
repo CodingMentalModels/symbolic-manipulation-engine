@@ -346,6 +346,11 @@ mod test_workspace {
     use super::*;
 
     #[test]
+    fn test_workspace_try_transform_into() {
+        unimplemented!();
+    }
+
+    #[test]
     fn test_workspace_adds_and_deletes_statement() {
         let types = TypeHierarchy::new();
         let mut workspace = Workspace::new(types, vec![], vec![]);
