@@ -122,9 +122,17 @@ impl Workspace {
 
     pub fn try_transform_into(
         &mut self,
-        statement: SymbolNode,
+        desired: SymbolNode,
     ) -> Result<SymbolNode, WorkspaceError> {
-        unimplemented!()
+        for statement in self.statements.iter() {
+            for transform in self.transformations.iter() {
+                match transform.try_transform_into(&statement, &desired) {
+                    Ok(output) => return Ok(output),
+                    Err(e) => {}
+                }
+            }
+        }
+        return Err(WorkspaceError::NoTransformationsPossible);
     }
 
     pub fn transform_all(
@@ -142,7 +150,7 @@ impl Workspace {
         let transformation = self.transformations[transformation_index].clone();
         let statement = self.statements[statement_index].clone();
         let (transformed_statement, transformed_addresses) = transformation
-            .transform_all(statement, substitutions)
+            .transform_all(&statement, &substitutions)
             .map_err(|e| WorkspaceError::TransformationError(e))?;
 
         self.statements.push(transformed_statement.clone());
@@ -170,7 +178,7 @@ impl Workspace {
         let transformation = self.transformations[transformation_index].clone();
         let statement = self.statements[statement_index].clone();
         let transformed_statement = transformation
-            .transform_at(statement, address.clone())
+            .transform_at(&statement, address.clone())
             .map_err(|_| WorkspaceError::InvalidTransformationAddress)?;
 
         self.statements.push(transformed_statement.clone());
@@ -298,6 +306,7 @@ pub enum WorkspaceError {
     TransformationError(TransformationError),
     StatementContainsTypesNotInHierarchy(HashSet<Type>),
     IncompatibleTypeRelationships(HashSet<Type>),
+    NoTransformationsPossible,
     InvalidTypeErrorTransformation(TypeError),
     AttemptedToImportAmbiguousTypes(HashSet<Type>),
     UnsupportedOperation(String),

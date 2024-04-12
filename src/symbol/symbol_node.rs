@@ -275,15 +275,15 @@ impl SymbolNode {
         }
     }
 
-    pub fn relabel(&self, old_label: String, new_label: String) -> Self {
+    pub fn relabel(&self, old_label: &str, new_label: &str) -> Self {
         self.relabel_and_get_addresses_if(old_label, new_label, Vec::new(), &|x| true)
             .0
     }
 
     fn relabel_and_get_addresses_if(
         &self,
-        old_label: String,
-        new_label: String,
+        old_label: &str,
+        new_label: &str,
         current_address: SymbolNodeAddress,
         condition: &dyn Fn((Self, SymbolNodeAddress)) -> bool,
     ) -> (Self, HashSet<SymbolNodeAddress>) {
@@ -317,7 +317,7 @@ impl SymbolNode {
             addresses.insert(current_address);
             (
                 Self::new(
-                    Symbol::new(new_label, self.root.get_evaluates_to_type()),
+                    Symbol::new(new_label.to_string(), self.root.get_evaluates_to_type()),
                     new_children,
                 ),
                 addresses,
@@ -330,7 +330,7 @@ impl SymbolNode {
         }
     }
 
-    pub fn relabel_all(&self, relabelling: HashSet<(String, String)>) -> Self {
+    pub fn relabel_all(&self, relabelling: &HashSet<(String, String)>) -> Self {
         relabelling
             .into_iter()
             .fold(
@@ -532,7 +532,7 @@ mod test_statement {
             ],
         );
 
-        let x_equals_b_plus_c = a_equals_b_plus_c.relabel("a".to_string(), "x".to_string());
+        let x_equals_b_plus_c = a_equals_b_plus_c.relabel("a", "x");
         let expected = SymbolNode::new(
             "=".into(),
             vec![
@@ -548,9 +548,7 @@ mod test_statement {
         );
         assert_eq!(x_equals_b_plus_c, expected);
 
-        let x_equals_y_plus_y = x_equals_b_plus_c
-            .relabel("b".to_string(), "y".to_string())
-            .relabel("c".to_string(), "y".to_string());
+        let x_equals_y_plus_y = x_equals_b_plus_c.relabel("b", "y").relabel("c", "y");
         let expected = SymbolNode::new(
             "=".into(),
             vec![
@@ -566,7 +564,7 @@ mod test_statement {
         );
         assert_eq!(x_equals_y_plus_y, expected);
 
-        let x_equals_x_plus_x = x_equals_y_plus_y.relabel("y".to_string(), "x".to_string());
+        let x_equals_x_plus_x = x_equals_y_plus_y.relabel("y", "x");
         let expected = SymbolNode::new(
             "=".into(),
             vec![
@@ -583,7 +581,7 @@ mod test_statement {
         assert_eq!(x_equals_x_plus_x, expected);
 
         let also_x_equals_x_plus_x = a_equals_b_plus_c.relabel_all(
-            vec![
+            &vec![
                 ("b".to_string(), "x".to_string()),
                 ("c".to_string(), "x".to_string()),
                 ("a".to_string(), "x".to_string()),
@@ -595,7 +593,7 @@ mod test_statement {
         assert_eq!(x_equals_x_plus_x, also_x_equals_x_plus_x);
 
         let a_equals_c_plus_b = a_equals_b_plus_c.relabel_all(
-            vec![
+            &vec![
                 ("b".to_string(), "c".to_string()),
                 ("c".to_string(), "b".to_string()),
             ]

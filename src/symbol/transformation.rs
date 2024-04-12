@@ -95,9 +95,17 @@ impl Transformation {
         variables.into_iter().map(|s| s.get_name()).collect()
     }
 
+    pub fn try_transform_into(
+        &self,
+        from: &SymbolNode,
+        to: &SymbolNode,
+    ) -> Result<SymbolNode, TransformationError> {
+        unimplemented!()
+    }
+
     pub fn transform_at(
         &self,
-        statement: SymbolNode,
+        statement: &SymbolNode,
         address: SymbolNodeAddress,
     ) -> Result<SymbolNode, TransformationError> {
         let substatement_to_transform = statement.get_node(address.clone()).ok_or_else(|| {
@@ -106,7 +114,7 @@ impl Transformation {
         match self.from.get_relabelling(&substatement_to_transform) {
             Ok(substitutions) => {
                 let transformed_substatement =
-                    self.transform(substatement_to_transform, substitutions)?;
+                    self.transform(&substatement_to_transform, &substitutions)?;
                 match statement.replace_node(address, transformed_substatement) {
                     Ok(transformed_statement) => Ok(transformed_statement),
                     Err(e) => Err(TransformationError::InvalidSymbolNode(e)),
@@ -118,16 +126,16 @@ impl Transformation {
 
     pub fn transform_all(
         &self,
-        statement: SymbolNode,
-        substitutions: HashMap<String, String>,
+        statement: &SymbolNode,
+        substitutions: &HashMap<String, String>,
     ) -> Result<(SymbolNode, Vec<SymbolNodeAddress>), TransformationError> {
         self.transform_all_from_address(statement, substitutions, Vec::new())
     }
 
     pub fn transform_all_from_address(
         &self,
-        statement: SymbolNode,
-        substitutions: HashMap<String, String>,
+        statement: &SymbolNode,
+        substitutions: &HashMap<String, String>,
         address: SymbolNodeAddress,
     ) -> Result<(SymbolNode, Vec<SymbolNodeAddress>), TransformationError> {
         let children_transformation_result = statement
@@ -137,7 +145,7 @@ impl Transformation {
             .map(|(i, c)| {
                 let mut child_address = address.clone();
                 child_address.push(i);
-                self.transform_all_from_address(c.clone(), substitutions.clone(), child_address)
+                self.transform_all_from_address(c, substitutions, child_address)
             })
             .collect::<Result<Vec<(SymbolNode, Vec<SymbolNodeAddress>)>, TransformationError>>()?;
         let (transformed_children, transformed_children_addresses) = children_transformation_result
@@ -150,7 +158,7 @@ impl Transformation {
 
         let new_statement = SymbolNode::new(statement.get_symbol().clone(), transformed_children);
 
-        match self.try_transform(new_statement, substitutions) {
+        match self.try_transform(&new_statement, substitutions) {
             Ok((transformed, true)) => {
                 let children_addresses: Vec<SymbolNodeAddress> = transformed_children_addresses
                     .into_iter()
@@ -171,20 +179,20 @@ impl Transformation {
 
     pub fn try_transform(
         &self,
-        statement: SymbolNode,
-        substitutions: HashMap<String, String>,
+        statement: &SymbolNode,
+        substitutions: &HashMap<String, String>,
     ) -> Result<(SymbolNode, bool), TransformationError> {
-        match self.transform(statement.clone(), substitutions) {
+        match self.transform(statement, substitutions) {
             Ok(transformed) => Ok((transformed, true)),
-            Err(TransformationError::StatementDoesNotMatch) => Ok((statement, false)),
+            Err(TransformationError::StatementDoesNotMatch) => Ok((statement.clone(), false)),
             Err(e) => Err(e),
         }
     }
 
     pub fn transform_strict(
         &self,
-        statement: SymbolNode,
-        substitutions: HashMap<String, String>,
+        statement: &SymbolNode,
+        substitutions: &HashMap<String, String>,
     ) -> Result<SymbolNode, TransformationError> {
         if self.get_variables() != substitutions.keys().cloned().collect() {
             return Err(TransformationError::SubstitutionKeysMismatch);
@@ -195,8 +203,8 @@ impl Transformation {
 
     pub fn transform(
         &self,
-        statement: SymbolNode,
-        substitutions: HashMap<String, String>,
+        statement: &SymbolNode,
+        substitutions: &HashMap<String, String>,
     ) -> Result<SymbolNode, TransformationError> {
         statement
             .validate()
@@ -204,8 +212,10 @@ impl Transformation {
 
         let substituted_from = self
             .from
-            .relabel_all(substitutions.clone().into_iter().collect());
-        let substituted_to = self.to.relabel_all(substitutions.into_iter().collect());
+            .relabel_all(&substitutions.clone().into_iter().collect());
+        let substituted_to = self
+            .to
+            .relabel_all(&substitutions.clone().into_iter().collect());
 
         // Check that we aren't substituting something illegal
         let empty_hierarchy = TypeHierarchy::new();
@@ -241,8 +251,8 @@ mod test_transformation {
         let statement = SymbolNode::leaf_object("c".to_string());
 
         let transformed = transformation.transform_strict(
-            statement,
-            vec![
+            &statement,
+            &vec![
                 ("a".to_string(), "c".to_string()),
                 ("b".to_string(), "d".to_string()),
             ]
@@ -277,8 +287,8 @@ mod test_transformation {
         );
 
         let transformed = transformation.transform_strict(
-            self_equals_statement.clone(),
-            vec![
+            &self_equals_statement,
+            &vec![
                 ("a".to_string(), "a".to_string()),
                 ("b".to_string(), "a".to_string()),
                 ("=".to_string(), "=".to_string()),
@@ -324,8 +334,8 @@ mod test_transformation {
 
         let (transformed, addresses) = commutativity
             .transform_all(
-                statement.clone(),
-                vec![
+                &statement,
+                &vec![
                     ("a".to_string(), "a".to_string()),
                     ("b".to_string(), "b".to_string()),
                     ("c".to_string(), "c".to_string()),
@@ -376,7 +386,7 @@ mod test_transformation {
             ],
         );
 
-        let transformed = transformation.transform_at(a_equals_b.clone(), vec![0]);
+        let transformed = transformation.transform_at(&a_equals_b, vec![0]);
 
         assert_eq!(transformed, Ok(d_equals_b));
     }
