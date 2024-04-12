@@ -100,7 +100,43 @@ impl Transformation {
         from: &SymbolNode,
         to: &SymbolNode,
     ) -> Result<SymbolNode, TransformationError> {
-        unimplemented!()
+        let valid_transformations = self.get_valid_transformations(from);
+        if valid_transformations.contains(to) {
+            Ok(to.clone())
+        } else {
+            Err(TransformationError::NoValidTransformations)
+        }
+    }
+
+    pub fn get_valid_transformations(&self, statement: &SymbolNode) -> Vec<SymbolNode> {
+        let mut to_return = vec![];
+        for child in statement.get_children() {
+            to_return.append(&mut self.get_valid_transformations(child));
+        }
+        match self.transform_at(statement, vec![]) {
+            Ok(result) => {
+                to_return.push(result);
+            }
+            _ => {}
+        };
+        return to_return;
+    }
+
+    pub fn get_valid_transformation_addresses(
+        &self,
+        statement: &SymbolNode,
+    ) -> Vec<SymbolNodeAddress> {
+        let mut to_return = vec![];
+        for child in statement.get_children() {
+            to_return.append(&mut self.get_valid_transformation_addresses(child));
+        }
+        match self.transform_at(statement, vec![]) {
+            Ok(_) => {
+                to_return.push(vec![]);
+            }
+            _ => {}
+        };
+        return to_return;
     }
 
     pub fn transform_at(
@@ -233,6 +269,7 @@ pub enum TransformationError {
     SubstitutionKeysMismatch,
     StatementDoesNotMatch,
     StatementTypesDoNotMatch,
+    NoValidTransformations,
 }
 
 #[cfg(test)]
@@ -240,6 +277,17 @@ mod test_transformation {
     use crate::parsing::{interpretation::Interpretation, tokenizer::Token};
 
     use super::*;
+
+    #[test]
+    fn test_transformation_gets_valid_transformations() {
+        let transformation = Transformation::commutivity(
+            "+".to_string(),
+            "+".into(),
+            ("a".to_string(), "b".to_string()),
+            "Integer".into(),
+        );
+        unimplemented!();
+    }
 
     #[test]
     fn test_transformation_transforms() {
