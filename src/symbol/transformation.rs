@@ -286,7 +286,20 @@ mod test_transformation {
             ("a".to_string(), "b".to_string()),
             "Integer".into(),
         );
-        unimplemented!();
+        let interpretations = vec![Interpretation::infix_operator("=".into(), 1)];
+        let parser = Parser::new(interpretations);
+
+        let custom_tokens = vec!["=".to_string()];
+        let x_equals_y = parser
+            .parse_from_string(custom_tokens.clone(), "x=y")
+            .unwrap();
+        let expected = vec![parser
+            .parse_from_string(custom_tokens.clone(), "y = x")
+            .unwrap()];
+        assert_eq!(
+            transformation.get_valid_transformations(&x_equals_y),
+            expected
+        )
     }
 
     #[test]
