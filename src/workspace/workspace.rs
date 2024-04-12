@@ -4,6 +4,10 @@ use serde::{Deserialize, Serialize};
 
 use crate::{
     context::context::Context,
+    parsing::{
+        interpretation::Interpretation,
+        parser::{Parser, ParserError},
+    },
     symbol::{
         symbol_node::{SymbolNode, SymbolNodeAddress},
         symbol_type::{GeneratedType, Type, TypeError, TypeHierarchy},
@@ -18,16 +22,22 @@ type TransformationIndex = usize;
 pub struct Workspace {
     types: TypeHierarchy,
     generated_types: Vec<GeneratedType>,
+    interpretations: Vec<Interpretation>,
     statements: Vec<SymbolNode>,
     transformations: Vec<Transformation>,
     provenance: Vec<Provenance>,
 }
 
 impl Workspace {
-    pub fn new(types: TypeHierarchy, generated_types: Vec<GeneratedType>) -> Workspace {
+    pub fn new(
+        types: TypeHierarchy,
+        generated_types: Vec<GeneratedType>,
+        interpretations: Vec<Interpretation>,
+    ) -> Workspace {
         Self {
             types,
             generated_types,
+            interpretations,
             statements: vec![],
             transformations: vec![],
             provenance: vec![],
@@ -64,6 +74,13 @@ impl Workspace {
         Ok(())
     }
 
+    pub fn parse_from_string(&mut self, s: &str) -> Result<SymbolNode, WorkspaceError> {
+        let parser = Parser::new(self.interpretations.clone());
+        parser
+            .parse_from_string(parser.get_interpretation_custom_tokens(), s)
+            .map_err(|e| e.into())
+    }
+
     pub fn add_statement(&mut self, statement: SymbolNode) -> Result<(), WorkspaceError> {
         self.types
             .binds_statement_or_error(&statement)
@@ -89,6 +106,13 @@ impl Workspace {
         );
         self.transformations.push(transformation);
         Ok(())
+    }
+
+    pub fn try_transform_into(
+        &mut self,
+        statement: SymbolNode,
+    ) -> Result<SymbolNode, WorkspaceError> {
+        unimplemented!()
     }
 
     pub fn transform_all(
@@ -258,12 +282,19 @@ pub enum WorkspaceError {
     InvalidStatementIndex,
     InvalidTransformationIndex,
     InvalidTransformationAddress,
+    ParserError(ParserError),
     TransformationError(TransformationError),
     StatementContainsTypesNotInHierarchy(HashSet<Type>),
     IncompatibleTypeRelationships(HashSet<Type>),
     InvalidTypeErrorTransformation(TypeError),
     AttemptedToImportAmbiguousTypes(HashSet<Type>),
     UnsupportedOperation(String),
+}
+
+impl From<ParserError> for WorkspaceError {
+    fn from(value: ParserError) -> Self {
+        Self::ParserError(value)
+    }
 }
 
 impl From<TypeError> for WorkspaceError {
@@ -296,7 +327,7 @@ mod test_workspace {
     #[test]
     fn test_workspace_adds_and_deletes_statement() {
         let types = TypeHierarchy::new();
-        let mut workspace = Workspace::new(types, vec![]);
+        let mut workspace = Workspace::new(types, vec![], vec![]);
         let statement = SymbolNode::leaf_object("a".to_string());
         workspace.add_statement(statement);
         assert_eq!(workspace.statements.len(), 1);
@@ -317,7 +348,7 @@ mod test_workspace {
 
         let mut types = TypeHierarchy::chain(vec!["Real".into(), "Integer".into()]).unwrap();
         types.add_chain(vec!["+".into()]);
-        let mut workspace = Workspace::new(types, vec![integer]);
+        let mut workspace = Workspace::new(types, vec![integer], vec![]);
 
         let parser = Parser::new(vec![plus]);
         let two_plus_two = parser
@@ -334,7 +365,7 @@ mod test_workspace {
     #[test]
     fn test_workspace_transforms_statement_and_maintains_provenance() {
         let types = TypeHierarchy::new();
-        let mut workspace = Workspace::new(types, vec![]);
+        let mut workspace = Workspace::new(types, vec![], vec![]);
         let statement = SymbolNode::leaf_object("a".to_string());
         assert_eq!(workspace.add_statement(statement), Ok(()));
         assert_eq!(workspace.statements.len(), 1);
@@ -399,7 +430,7 @@ mod test_workspace {
     #[test]
     fn test_workspace_imports_context() {
         let types = TypeHierarchy::new();
-        let mut workspace = Workspace::new(types, vec![]);
+        let mut workspace = Workspace::new(types, vec![], vec![]);
 
         let mut types =
             TypeHierarchy::chain(vec!["Real".into(), "Rational".into(), "Integer".into()]).unwrap();

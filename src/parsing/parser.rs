@@ -3,7 +3,7 @@ use crate::parsing::tokenizer::{Token, Tokenizer};
 use crate::symbol::symbol_node::SymbolNode;
 use crate::symbol::symbol_type::GeneratedType;
 
-use super::interpretation::ExpressionPrecedence;
+use super::interpretation::{ExpressionPrecedence, InterpretationCondition};
 use super::tokenizer::TokenStack;
 
 #[derive(Debug, PartialEq, Eq)]
@@ -158,6 +158,16 @@ impl Parser {
         }
 
         return None;
+    }
+
+    pub fn get_interpretation_custom_tokens(&self) -> Vec<String> {
+        self.interpretations
+            .iter()
+            .filter_map(|interpretation| match interpretation.get_condition() {
+                InterpretationCondition::Matches(t) => Some(t.to_string()),
+                _ => None,
+            })
+            .collect()
     }
 }
 

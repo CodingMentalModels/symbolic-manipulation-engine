@@ -82,17 +82,17 @@ impl Cli {
     }
 
     pub fn derive(&self, sub_matches: &ArgMatches) -> Result<String, String> {
-        let workspace = self.load_workspace()?;
-        match sub_matches.get_one("statement") {
+        let mut workspace = self.load_workspace()?;
+        match sub_matches.get_one::<String>("statement") {
             None => return Err("No statement provided to derive".to_string()),
             Some(statement) => {
-                let tree = workspace.parse_from_string(tree);
-                match workspace.try_transform_into(tree) {
-                    Err(e) => return Err(e),
-                    Ok(()) => {
-                        return Ok(format!("Successfully derived {}", tree.to_string()).to_string())
-                    }
-                }
+                let tree = workspace
+                    .parse_from_string(statement)
+                    .map_err(|e| format!("Parser Error: {:?}", e).to_string())?;
+                return workspace
+                    .try_transform_into(tree)
+                    .map_err(|e| format!("Workspace error: {:?}", e))
+                    .map(|statement| statement.to_string());
             }
         }
     }
