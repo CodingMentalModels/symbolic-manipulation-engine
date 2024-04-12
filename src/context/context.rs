@@ -2,15 +2,19 @@ use std::collections::HashSet;
 
 use serde::{Deserialize, Serialize};
 
-use crate::symbol::{
-    symbol_type::{GeneratedType, Type, TypeError, TypeHierarchy},
-    transformation::Transformation,
+use crate::{
+    parsing::interpretation::Interpretation,
+    symbol::{
+        symbol_type::{GeneratedType, Type, TypeError, TypeHierarchy},
+        transformation::Transformation,
+    },
 };
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Context {
     types: TypeHierarchy,
     generated_types: Vec<GeneratedType>,
+    interpretations: Vec<Interpretation>,
     transformations: Vec<Transformation>,
 }
 
@@ -19,6 +23,7 @@ impl Context {
         Self {
             types: TypeHierarchy::new(),
             generated_types: vec![],
+            interpretations: vec![],
             transformations: vec![],
         }
     }
@@ -26,6 +31,7 @@ impl Context {
     pub fn new(
         types: TypeHierarchy,
         generated_types: Vec<GeneratedType>,
+        interpretations: Vec<Interpretation>,
         transformations: Vec<Transformation>,
     ) -> Result<Self, ContextError> {
         match transformations
@@ -36,6 +42,7 @@ impl Context {
             None | Some(Ok(())) => Ok(Self {
                 types,
                 generated_types,
+                interpretations,
                 transformations,
             }),
             Some(Err(e)) => Err(ContextError::from(e)),
@@ -48,6 +55,10 @@ impl Context {
 
     pub fn get_generated_types(&self) -> &Vec<GeneratedType> {
         &self.generated_types
+    }
+
+    pub fn get_interpretations(&self) -> &Vec<Interpretation> {
+        &self.interpretations
     }
 
     pub fn get_transformations(&self) -> &Vec<Transformation> {
@@ -142,7 +153,7 @@ mod tests {
 
         let transformations = vec![commutativity, associativity, identity, inverse];
 
-        let context = Context::new(types.clone(), vec![], transformations.clone());
+        let context = Context::new(types.clone(), vec![], vec![], transformations.clone());
 
         assert_eq!(context.clone().unwrap().get_types(), &types);
         assert_eq!(
@@ -206,7 +217,7 @@ mod tests {
 
         let transformations = vec![additive_commutativity, multiplicative_commutativity];
 
-        let context = Context::new(types.clone(), vec![], transformations.clone());
+        let context = Context::new(types.clone(), vec![], vec![], transformations.clone());
 
         assert_eq!(context.clone().unwrap().get_types(), &types);
         assert_eq!(
