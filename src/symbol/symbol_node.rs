@@ -353,7 +353,8 @@ impl SymbolNode {
             return Err(SymbolNodeError::DifferentNumberOfArguments);
         }
         let mut to_return = vec![(self.root.get_name(), other.root.get_name())];
-        for (i, (child, other_child)) in self.children.iter().zip(other.children.iter()).enumerate()
+        for (_i, (child, other_child)) in
+            self.children.iter().zip(other.children.iter()).enumerate()
         {
             let child_relabelling = child.get_relabelling(other_child)?;
             for (old_label, new_label) in child_relabelling {
@@ -472,6 +473,8 @@ impl Symbol {
 
 #[cfg(test)]
 mod test_statement {
+    use crate::parsing::{interpretation::Interpretation, parser::Parser};
+
     use super::*;
 
     #[test]
@@ -514,6 +517,37 @@ mod test_statement {
             SymbolNode::new("=".into(), vec![n_factorial, n_factorial_definition]);
 
         assert_eq!(factorial_definition.get_depth(), 3);
+    }
+
+    #[test]
+    fn test_symbol_node_gets_relabelling() {
+        let interpretations = vec![
+            Interpretation::infix_operator("=".into(), 1),
+            Interpretation::singleton("a", "Integer".into()),
+            Interpretation::singleton("b", "Integer".into()),
+            Interpretation::singleton("x", "Integer".into()),
+            Interpretation::singleton("y", "Integer".into()),
+        ];
+        let parser = Parser::new(interpretations);
+
+        let custom_tokens = vec!["=".to_string()];
+        let a_equals_b = parser
+            .parse_from_string(custom_tokens.clone(), "a=b")
+            .unwrap();
+        let x_equals_y = parser
+            .parse_from_string(custom_tokens.clone(), "x=y")
+            .unwrap();
+        let expected = vec![
+            ("a".to_string(), "x".to_string()),
+            ("b".to_string(), "y".to_string()),
+            ("=".to_string(), "=".to_string()),
+        ]
+        .into_iter()
+        .collect::<HashMap<_, _>>();
+        assert_eq!(
+            a_equals_b.get_relabelling(&x_equals_y),
+            Ok(expected.clone())
+        );
     }
 
     #[test]

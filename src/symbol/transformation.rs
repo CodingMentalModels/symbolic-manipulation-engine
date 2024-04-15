@@ -220,7 +220,7 @@ impl Transformation {
     ) -> Result<(SymbolNode, bool), TransformationError> {
         match self.transform(statement, substitutions) {
             Ok(transformed) => Ok((transformed, true)),
-            Err(TransformationError::StatementDoesNotMatch) => Ok((statement.clone(), false)),
+            Err(TransformationError::StatementDoesNotMatch(_, _)) => Ok((statement.clone(), false)),
             Err(e) => Err(e),
         }
     }
@@ -253,12 +253,13 @@ impl Transformation {
             .to
             .relabel_all(&substitutions.clone().into_iter().collect());
 
-        // Check that we aren't substituting something illegal
-        let empty_hierarchy = TypeHierarchy::new();
-        if empty_hierarchy.is_generalized_by(&statement, &substituted_from) == Ok(true) {
+        if statement == &substituted_from {
             Ok(substituted_to)
         } else {
-            Err(TransformationError::StatementDoesNotMatch)
+            Err(TransformationError::StatementDoesNotMatch(
+                statement.clone(),
+                substituted_from,
+            ))
         }
     }
 }
@@ -267,7 +268,7 @@ impl Transformation {
 pub enum TransformationError {
     InvalidSymbolNode(SymbolNodeError),
     SubstitutionKeysMismatch,
-    StatementDoesNotMatch,
+    StatementDoesNotMatch(SymbolNode, SymbolNode),
     StatementTypesDoNotMatch,
     NoValidTransformations,
 }
@@ -281,24 +282,32 @@ mod test_transformation {
     #[test]
     fn test_transformation_gets_valid_transformations() {
         let transformation = Transformation::commutivity(
-            "+".to_string(),
-            "+".into(),
+            "=".to_string(),
+            "=".into(),
             ("a".to_string(), "b".to_string()),
             "Integer".into(),
         );
-        let interpretations = vec![Interpretation::infix_operator("=".into(), 1)];
+        let interpretations = vec![
+            Interpretation::infix_operator("=".into(), 1),
+            Interpretation::singleton("x", "Integer".into()),
+            Interpretation::singleton("y", "Integer".into()),
+        ];
         let parser = Parser::new(interpretations);
 
         let custom_tokens = vec!["=".to_string()];
         let x_equals_y = parser
             .parse_from_string(custom_tokens.clone(), "x=y")
             .unwrap();
-        let expected = vec![parser
+        let expected = parser
             .parse_from_string(custom_tokens.clone(), "y = x")
-            .unwrap()];
+            .unwrap();
+        assert_eq!(
+            transformation.transform_at(&x_equals_y, vec![]),
+            Ok(expected.clone())
+        );
         assert_eq!(
             transformation.get_valid_transformations(&x_equals_y),
-            expected
+            vec![expected]
         )
     }
 

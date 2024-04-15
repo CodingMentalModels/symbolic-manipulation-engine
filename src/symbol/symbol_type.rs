@@ -505,13 +505,36 @@ mod test_type {
             ],
         );
 
+        assert!(type_hierarchy
+            .generalizes(&a_equals_b_integers, &a_equals_b_integers)
+            .unwrap());
         assert!(!type_hierarchy
             .generalizes(&a_equals_b_integers, &a_equals_b)
             .unwrap());
         assert!(type_hierarchy
             .generalizes(&a_equals_b, &a_equals_b_integers)
             .unwrap());
+
+        let mut type_hierarchy = TypeHierarchy::chain(vec!["=".into()]).unwrap();
+        type_hierarchy.add_chain(vec!["Integer".into()]);
+        let x_equals_y_integers = SymbolNode::new(
+            Symbol::new("y".to_string(), Type::new("=".to_string())),
+            vec![
+                SymbolNode::leaf(Symbol::new(
+                    "x".to_string(),
+                    Type::new("Integer".to_string()),
+                )),
+                SymbolNode::leaf(Symbol::new(
+                    "y".to_string(),
+                    Type::new("Integer".to_string()),
+                )),
+            ],
+        );
+        assert!(type_hierarchy
+            .generalizes(&x_equals_y_integers, &x_equals_y_integers)
+            .unwrap());
     }
+
     #[test]
     fn test_type_hierarchy_is_supertype_of() {
         let quaternion = Type::new("Quaternion".to_string());
