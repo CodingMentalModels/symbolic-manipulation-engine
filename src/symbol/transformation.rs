@@ -110,9 +110,19 @@ impl Transformation {
 
     pub fn get_valid_transformations(&self, statement: &SymbolNode) -> Vec<SymbolNode> {
         let mut to_return = vec![];
+        let mut transformed_children = vec![];
         for child in statement.get_children() {
-            to_return.append(&mut self.get_valid_transformations(child));
+            transformed_children.append(
+                &mut self
+                    .get_valid_transformations(child)
+                    .into_iter()
+                    .map(|e| (child.clone(), e))
+                    .collect(),
+            );
         }
+        // TODO: Pull the possible indexes of transformed children and generate all combinations
+        todo!();
+
         match self.transform_at(statement, vec![]) {
             Ok(result) => {
                 to_return.push(result);
@@ -291,6 +301,7 @@ mod test_transformation {
             Interpretation::infix_operator("=".into(), 1),
             Interpretation::singleton("x", "Integer".into()),
             Interpretation::singleton("y", "Integer".into()),
+            Interpretation::singleton("z", "Integer".into()),
         ];
         let parser = Parser::new(interpretations);
 
@@ -308,7 +319,23 @@ mod test_transformation {
         assert_eq!(
             transformation.get_valid_transformations(&x_equals_y),
             vec![expected]
-        )
+        );
+
+        let x_equals_y_equals_z = parser
+            .parse_from_string(custom_tokens.clone(), "x=y=z")
+            .unwrap();
+        let expected = vec![
+            parser
+                .parse_from_string(custom_tokens.clone(), "y=x=z")
+                .unwrap(),
+            parser
+                .parse_from_string(custom_tokens.clone(), "x=z=y")
+                .unwrap(),
+        ];
+        assert_eq!(
+            transformation.get_valid_transformations(&x_equals_y_equals_z),
+            expected
+        );
     }
 
     #[test]
