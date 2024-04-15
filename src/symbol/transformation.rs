@@ -109,27 +109,43 @@ impl Transformation {
     }
 
     pub fn get_valid_transformations(&self, statement: &SymbolNode) -> Vec<SymbolNode> {
-        let mut to_return = vec![];
-        let mut transformed_children = vec![];
-        for child in statement.get_children() {
-            transformed_children.append(
-                &mut self
-                    .get_valid_transformations(child)
-                    .into_iter()
-                    .map(|e| (child.clone(), e))
-                    .collect(),
-            );
-        }
-        // TODO: Pull the possible indexes of transformed children and generate all combinations
-        todo!();
-
+        let mut base_case = vec![statement.clone()];
         match self.transform_at(statement, vec![]) {
             Ok(result) => {
-                to_return.push(result);
+                base_case.push(result);
             }
             _ => {}
         };
-        return to_return;
+
+        let mut to_return = base_case.clone();
+        for potentially_transformed in base_case {
+            let mut transformed_children = HashMap::new();
+            for child in potentially_transformed.get_children() {
+                let mut child_transformations = self.get_valid_transformations(child);
+                transformed_children.insert(child, child_transformations);
+            }
+            let n_subsets = 1 << transformed_children.len();
+            for bitmask in 0..n_subsets {
+                // Bitmask indicates whether to take the child or its transformed versions
+                // TODO: There's a massive opportunity for optimization here by eliminating the cases where
+                // there are no transformations
+                let mut new_statements = vec![];
+                // TODO: This isn't quite right.  We need to propogate the changes out
+                for (i, (child, transformed)) in transformed_children.iter().enumerate() {
+                    if bitmask & (1 << i) != 0 {
+                        let mut statements_with_child_transformed = transformed
+                            .into_iter()
+                            .map(|c| potentially_transformed.clone().replace_child(i, c))
+                            .collect();
+                        new_statements.append(&mut statements_with_child_transformed);
+                    } else {
+                        // Do nothing; child is fine as is
+                    }
+                }
+            }
+        }
+
+        return base_case;
     }
 
     pub fn get_valid_transformation_addresses(
