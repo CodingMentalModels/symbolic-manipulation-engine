@@ -108,15 +108,18 @@ impl Transformation {
         }
     }
 
-    pub fn get_valid_transformations(&self, statement: &SymbolNode) -> Vec<SymbolNode> {
-        let mut base_case = vec![statement.clone()];
+    pub fn get_valid_transformations(&self, statement: &SymbolNode) -> HashSet<SymbolNode> {
+        let mut base_case = vec![statement.clone()].into_iter().collect::<HashSet<_>>();
         match self.transform_at(statement, vec![]) {
             Ok(result) => {
-                base_case.push(result);
+                base_case.insert(result);
             }
             _ => {}
         };
 
+        // For each base case element (the original statement and maybe the one with the root transformed)
+        // Loop through all the subsets of children to transform and transform them to each
+        // potential option
         let mut to_return = base_case.clone();
         for potentially_transformed in base_case {
             let mut transformed_children = HashMap::new();
@@ -129,15 +132,28 @@ impl Transformation {
                 // Bitmask indicates whether to take the child or its transformed versions
                 // TODO: There's a massive opportunity for optimization here by eliminating the cases where
                 // there are no transformations
-                let mut new_statements = vec![];
-                // TODO: This isn't quite right.  We need to propogate the changes out
-                for (i, (child, transformed)) in transformed_children.iter().enumerate() {
+
+                let mut new_statements = vec![potentially_transformed.clone()]
+                    .into_iter()
+                    .collect::<HashSet<_>>();
+
+                for (i, child) in potentially_transformed.get_children().iter().enumerate() {
                     if bitmask & (1 << i) != 0 {
-                        let mut statements_with_child_transformed = transformed
-                            .into_iter()
-                            .map(|c| potentially_transformed.clone().replace_child(i, c))
-                            .collect();
-                        new_statements.append(&mut statements_with_child_transformed);
+                        let mut updated_statements = HashSet::new();
+                        for statement_to_transform in &new_statements {
+                            let transformed_children_set = transformed_children
+                                .get(child)
+                                .expect("We constructed the map from the same vector.");
+
+                            for c in transformed_children_set {
+                                let transformed_statement = statement_to_transform
+                                    .clone()
+                                    .with_child_replaced(i, c.clone())
+                                    .expect("Child index is guaranteed to be in range.");
+                                updated_statements.insert(transformed_statement);
+                            }
+                        }
+                        new_statements = updated_statements;
                     } else {
                         // Do nothing; child is fine as is
                     }
@@ -145,7 +161,7 @@ impl Transformation {
             }
         }
 
-        return base_case;
+        return to_return;
     }
 
     pub fn get_valid_transformation_addresses(
@@ -325,22 +341,23 @@ mod test_transformation {
         let x_equals_y = parser
             .parse_from_string(custom_tokens.clone(), "x=y")
             .unwrap();
-        let expected = parser
+        let y_equals_x = parser
             .parse_from_string(custom_tokens.clone(), "y = x")
             .unwrap();
         assert_eq!(
             transformation.transform_at(&x_equals_y, vec![]),
-            Ok(expected.clone())
+            Ok(y_equals_x.clone())
         );
         assert_eq!(
             transformation.get_valid_transformations(&x_equals_y),
-            vec![expected]
+            vec![x_equals_y, y_equals_x].into_iter().collect()
         );
 
         let x_equals_y_equals_z = parser
             .parse_from_string(custom_tokens.clone(), "x=y=z")
             .unwrap();
         let expected = vec![
+            x_equals_y_equals_z.clone(),
             parser
                 .parse_from_string(custom_tokens.clone(), "y=x=z")
                 .unwrap(),
@@ -350,7 +367,7 @@ mod test_transformation {
         ];
         assert_eq!(
             transformation.get_valid_transformations(&x_equals_y_equals_z),
-            expected
+            expected.into_iter().collect()
         );
     }
 

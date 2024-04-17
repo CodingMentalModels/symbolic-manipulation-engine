@@ -14,6 +14,7 @@ pub type SymbolNodeAddress = Vec<usize>;
 pub enum SymbolNodeError {
     ConflictingTypes(String, Type, Type),
     ConflictingSymbolArities(Symbol),
+    ChildIndexOutOfRange,
     DifferentNumberOfArguments,
     RelabellingNotInjective,
     InvalidAddress,
@@ -73,6 +74,19 @@ impl SymbolNode {
 
     pub fn push_child(&mut self, child: SymbolNode) {
         self.children.push(child)
+    }
+
+    pub fn with_child_replaced(
+        mut self,
+        i: usize,
+        new_child: SymbolNode,
+    ) -> Result<Self, SymbolNodeError> {
+        if i >= self.get_n_children() {
+            return Err(SymbolNodeError::ChildIndexOutOfRange);
+        }
+
+        self.children[i] = new_child;
+        Ok(self)
     }
 
     pub fn get_symbol(&self) -> &Symbol {
