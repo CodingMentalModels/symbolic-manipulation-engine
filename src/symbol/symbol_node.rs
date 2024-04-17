@@ -26,6 +26,12 @@ pub struct SymbolNode {
     children: Vec<SymbolNode>,
 }
 
+impl From<Symbol> for SymbolNode {
+    fn from(value: Symbol) -> Self {
+        Self::leaf(value)
+    }
+}
+
 impl SymbolNode {
     pub fn new(root: Symbol, children: Vec<SymbolNode>) -> Self {
         SymbolNode { root, children }
