@@ -589,6 +589,45 @@ mod test_transformation {
         let transformed = transformation.transform_at(&a_equals_b_equals_c, vec![0, 1]);
 
         assert_eq!(transformed, Ok(a_equals_d_equals_c));
+
+        let interpretations = vec![
+            Interpretation::infix_operator("=".into(), 1),
+            Interpretation::singleton("x", "Integer".into()),
+            Interpretation::singleton("y", "Integer".into()),
+            Interpretation::singleton("z", "Integer".into()),
+        ];
+        let parser = Parser::new(interpretations);
+
+        let custom_tokens = vec!["=".to_string()];
+
+        let transformation = Transformation::symmetry(
+            "=".to_string(),
+            "=".into(),
+            ("a".to_string(), "b".to_string()),
+            "Integer".into(),
+        );
+
+        let x_equals_y_equals_z = parser
+            .parse_from_string(custom_tokens.clone(), "(x=y)=z")
+            .unwrap();
+
+        let z_equals_x_equals_y = parser
+            .parse_from_string(custom_tokens.clone(), "z=(x=y)")
+            .unwrap();
+
+        assert_eq!(
+            transformation.transform_at(&x_equals_y_equals_z, vec![]),
+            Ok(z_equals_x_equals_y)
+        );
+
+        let y_equals_x_equals_z = parser
+            .parse_from_string(custom_tokens.clone(), "(y=x)=z")
+            .unwrap();
+
+        assert_eq!(
+            transformation.transform_at(&x_equals_y_equals_z, vec![0]),
+            Ok(y_equals_x_equals_z)
+        );
     }
 
     #[test]

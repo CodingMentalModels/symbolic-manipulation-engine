@@ -15,7 +15,7 @@ pub enum SymbolNodeError {
     ConflictingTypes(String, Type, Type),
     ConflictingSymbolArities(Symbol),
     ChildIndexOutOfRange,
-    DifferentNumberOfArguments,
+    DifferentNumberOfArguments(Symbol, usize, Symbol, usize),
     RelabellingNotInjective,
     InvalidAddress,
 }
@@ -370,7 +370,12 @@ impl SymbolNode {
         other: &Self,
     ) -> Result<HashMap<String, String>, SymbolNodeError> {
         if self.children.len() != other.children.len() {
-            return Err(SymbolNodeError::DifferentNumberOfArguments);
+            return Err(SymbolNodeError::DifferentNumberOfArguments(
+                self.root.clone(),
+                self.children.len(),
+                other.root.clone(),
+                other.children.len(),
+            ));
         }
         let mut to_return = vec![(self.root.get_name(), other.root.get_name())];
         for (_i, (child, other_child)) in
