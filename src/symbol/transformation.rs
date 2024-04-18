@@ -169,13 +169,14 @@ impl Transformation {
         }
 
         println!(
-            "End get_valid_transformations({}).  Returning:\n{:?}",
+            "End get_valid_transformations({}).  Returning {} results:\n{:?}",
             statement.to_string(),
+            to_return.len(),
             to_return
                 .iter()
                 .map(|n| n.to_string())
                 .collect::<Vec<_>>()
-                .join("\n")
+                .join("; ")
         );
         return to_return;
     }
@@ -557,6 +558,37 @@ mod test_transformation {
         let transformed = transformation.transform_at(&a_equals_b, vec![0]);
 
         assert_eq!(transformed, Ok(d_equals_b));
+
+        let a_equals_b_equals_c = SymbolNode::new(
+            "=".into(),
+            vec![
+                SymbolNode::new(
+                    "=".into(),
+                    vec![
+                        SymbolNode::leaf_object("a".to_string()),
+                        SymbolNode::leaf_object("b".to_string()),
+                    ],
+                ),
+                SymbolNode::leaf_object("c".to_string()),
+            ],
+        );
+
+        let a_equals_d_equals_c = SymbolNode::new(
+            "=".into(),
+            vec![
+                SymbolNode::new(
+                    "=".into(),
+                    vec![
+                        SymbolNode::leaf_object("a".to_string()),
+                        SymbolNode::leaf_object("d".to_string()),
+                    ],
+                ),
+                SymbolNode::leaf_object("c".to_string()),
+            ],
+        );
+        let transformed = transformation.transform_at(&a_equals_b_equals_c, vec![0, 1]);
+
+        assert_eq!(transformed, Ok(a_equals_d_equals_c));
     }
 
     #[test]
