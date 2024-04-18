@@ -78,6 +78,10 @@ impl SymbolNode {
         self.children.len()
     }
 
+    pub fn has_children(&self) -> bool {
+        self.children.len() > 0
+    }
+
     pub fn push_child(&mut self, child: SymbolNode) {
         self.children.push(child)
     }
@@ -363,6 +367,36 @@ impl SymbolNode {
                 },
             )
             .0
+    }
+
+    pub fn get_leaf_substitutions(
+        &self,
+        other: &Self,
+    ) -> Result<HashMap<Symbol, Self>, SymbolNodeError> {
+        if self.get_evaluates_to_type() != other.get_evaluates_to_type() {
+            return Err(SymbolNodeError::ConflictingTypes(
+                self.get_root_name(),
+                self.get_evaluates_to_type(),
+                other.get_evaluates_to_type(),
+            ));
+        }
+        return if !self.has_children() {
+            Ok(vec![(self.get_symbol().clone(), other.clone())]
+                .into_iter()
+                .collect())
+        } else {
+            self.get_children()
+                .iter()
+                .zip(other.get_children())
+                .try_fold(HashMap::new(), |mut acc, (i, j)| {
+                    i.get_leaf_substitutions(j).map(|new_subs| {
+                        new_subs.iter().for_each(|(s, n)| {
+                            acc.insert(s.clone(), n.clone());
+                        });
+                        new_subs
+                    })
+                })
+        };
     }
 
     pub fn get_relabelling(

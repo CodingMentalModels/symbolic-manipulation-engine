@@ -15,6 +15,18 @@ pub struct Transformation {
     pub to: SymbolNode,
 }
 
+impl From<(SymbolNode, SymbolNode)> for Transformation {
+    fn from(value: (SymbolNode, SymbolNode)) -> Self {
+        Self::new(value.0, value.1)
+    }
+}
+
+impl From<(Symbol, SymbolNode)> for Transformation {
+    fn from(value: (Symbol, SymbolNode)) -> Self {
+        Self::new(value.0.into(), value.1)
+    }
+}
+
 impl Transformation {
     pub fn new(from: SymbolNode, to: SymbolNode) -> Transformation {
         Transformation { from, to }
@@ -189,6 +201,7 @@ impl Transformation {
         let substatement_to_transform = statement.get_node(address.clone()).ok_or_else(|| {
             TransformationError::InvalidSymbolNode(SymbolNodeError::InvalidAddress)
         })?;
+        let generalized_transform = self.generalize_to_fit(&substatement_to_transform)?;
         match self.from.get_relabelling(&substatement_to_transform) {
             Ok(substitutions) => {
                 let transformed_substatement =
@@ -200,6 +213,21 @@ impl Transformation {
             }
             Err(e) => Err(TransformationError::InvalidSymbolNode(e)),
         }
+    }
+
+    fn generalize_to_fit(&self, statement: &SymbolNode) -> Result<Self, TransformationError> {
+        let substitutions = self
+            .from
+            .get_leaf_substitutions(statement)
+            .map_err(|e| Into::<TransformationError>::into(e))?;
+        let mut new_from = self.from.clone();
+        let mut new_to = self.to.clone();
+        for substitution in substitutions {
+            let substitution_transformation: Transformation = substitution.into();
+            new_from = substitution_transformation.transform(&self.from, &HashMap::new())?;
+            new_to = substitution_transformation.transform(&self.to, &HashMap::new())?;
+        }
+        Ok(Self::new(new_from, new_to))
     }
 
     pub fn transform_all(
@@ -313,6 +341,12 @@ pub enum TransformationError {
     StatementDoesNotMatch(SymbolNode, SymbolNode),
     StatementTypesDoNotMatch,
     NoValidTransformations,
+}
+
+impl From<SymbolNodeError> for TransformationError {
+    fn from(value: SymbolNodeError) -> Self {
+        Self::InvalidSymbolNode(value)
+    }
 }
 
 #[cfg(test)]
