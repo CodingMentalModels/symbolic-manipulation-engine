@@ -208,6 +208,23 @@ impl SymbolNode {
         Some(current_node)
     }
 
+    pub fn replace_all(&self, from: &Symbol, to: &SymbolNode) -> Result<Self, SymbolNodeError> {
+        if self.get_symbol() == from {
+            Ok(to.clone())
+        } else {
+            let children = self.get_children().iter().try_fold(
+                Vec::new(),
+                |mut acc: Vec<SymbolNode>, child: &SymbolNode| {
+                    child
+                        .replace_all(from, to)
+                        .map(|new_child: SymbolNode| acc.push(new_child))?;
+                    Ok(acc)
+                },
+            )?;
+            Ok(Self::new(self.get_symbol().clone(), children))
+        }
+    }
+
     pub fn replace_node(
         &self,
         address: SymbolNodeAddress,
@@ -590,7 +607,7 @@ mod test_statement {
     #[test]
     fn test_symbol_node_gets_relabelling() {
         let interpretations = vec![
-            Interpretation::infix_operator("=".into(), 1),
+            Interpretation::infix_operator("=".into(), 1, "Integer".into()),
             Interpretation::singleton("a", "Integer".into()),
             Interpretation::singleton("b", "Integer".into()),
             Interpretation::singleton("x", "Integer".into()),

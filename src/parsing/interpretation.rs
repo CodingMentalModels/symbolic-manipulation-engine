@@ -83,12 +83,12 @@ impl Interpretation {
         )
     }
 
-    pub fn infix_operator(token: Token, precedence: u8) -> Self {
+    pub fn infix_operator(token: Token, precedence: u8, evaluates_to_type: Type) -> Self {
         Interpretation::new(
             InterpretationCondition::Matches(token.clone()),
             ExpressionType::Infix,
             precedence,
-            token.to_string().into(),
+            evaluates_to_type.into(),
         )
     }
 

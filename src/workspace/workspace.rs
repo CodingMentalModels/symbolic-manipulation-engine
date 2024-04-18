@@ -366,7 +366,7 @@ mod test_workspace {
 
     #[test]
     fn test_workspace_adds_statement_with_generated_type() {
-        let plus = Interpretation::infix_operator("+".into(), 1);
+        let plus = Interpretation::infix_operator("+".into(), 1, "Integer".into());
         let integer = GeneratedType::new(
             GeneratedTypeCondition::IsInteger,
             vec!["Integer".into()].into_iter().collect(),

@@ -223,15 +223,17 @@ impl Transformation {
             .from
             .get_relabelling_and_leaf_substitutions(statement)
             .map_err(|e| Into::<TransformationError>::into(e))?;
+        println!(
+            "generalize_to_fit with ({:?}, {:?})",
+            relabelling, substitutions
+        );
         let mut new_from = self.from.clone();
         let mut new_to = self.to.clone();
-        for substitution in substitutions {
-            let substitution_transformation: Transformation = substitution.into();
-            new_from = substitution_transformation.transform(&self.from, &relabelling)?;
-            new_to = substitution_transformation
-                .transform(&self.to, &relabelling)
-                .unwrap_or(new_to); // Substitution need not apply to the result
+        for (sub_from, sub_to) in substitutions {
+            new_from = new_from.replace_all(&sub_from, &sub_to)?;
+            new_to = new_to.replace_all(&sub_from, &sub_to)?;
         }
+        println!("generalized to {:?} => {:?}", new_from, new_to);
         Ok(Self::new(new_from, new_to))
     }
 
@@ -363,7 +365,7 @@ mod test_transformation {
     #[test]
     fn test_transformation_gets_valid_transformations() {
         let interpretations = vec![
-            Interpretation::infix_operator("=".into(), 1),
+            Interpretation::infix_operator("=".into(), 1, "Integer".into()),
             Interpretation::singleton("x", "Integer".into()),
             Interpretation::singleton("y", "Integer".into()),
             Interpretation::singleton("z", "Integer".into()),
@@ -573,27 +575,63 @@ mod test_transformation {
 
     #[test]
     fn test_transformation_generalizes_to_fit() {
-        let transformation = Transformation::new(
+        let trivial_t = Transformation::new(
             SymbolNode::leaf_object("c".to_string()),
             SymbolNode::leaf_object("d".to_string()),
         );
 
         let trivial = SymbolNode::leaf_object("c".to_string());
-        assert_eq!(
-            transformation.generalize_to_fit(&trivial).unwrap(),
-            transformation
+        assert_eq!(trivial_t.generalize_to_fit(&trivial).unwrap(), trivial_t);
+
+        let different_t = Transformation::new(
+            SymbolNode::leaf_object("a".to_string()),
+            SymbolNode::leaf_object("d".to_string()),
         );
 
         let different_name = SymbolNode::leaf_object("a".to_string());
         assert_eq!(
-            transformation.generalize_to_fit(&different_name).unwrap(),
-            transformation
+            different_t.generalize_to_fit(&different_name).unwrap(),
+            different_t
         );
 
+        let overloaded_t = Transformation::new(
+            SymbolNode::leaf_object("d".to_string()),
+            SymbolNode::leaf_object("d".to_string()),
+        );
         let overloaded_name = SymbolNode::leaf_object("d".to_string());
         assert_eq!(
-            transformation.generalize_to_fit(&overloaded_name).unwrap(),
-            transformation
+            overloaded_t.generalize_to_fit(&overloaded_name).unwrap(),
+            overloaded_t
+        );
+
+        let interpretations = vec![
+            Interpretation::infix_operator("=".into(), 1, "Integer".into()),
+            Interpretation::singleton("x", "Integer".into()),
+            Interpretation::singleton("y", "Integer".into()),
+            Interpretation::singleton("z", "Integer".into()),
+        ];
+        let parser = Parser::new(interpretations);
+
+        let custom_tokens = vec!["=".to_string()];
+
+        let symmetry = Transformation::symmetry(
+            "=".to_string(),
+            "Integer".into(),
+            ("a".to_string(), "b".to_string()),
+            "Integer".into(),
+        );
+
+        let x_equals_y_equals_z = parser
+            .parse_from_string(custom_tokens.clone(), "(x=y)=z")
+            .unwrap();
+
+        let z_equals_x_equals_y = parser
+            .parse_from_string(custom_tokens.clone(), "z=(x=y)")
+            .unwrap();
+
+        assert_eq!(
+            symmetry.generalize_to_fit(&x_equals_y_equals_z).unwrap(),
+            Transformation::new(x_equals_y_equals_z, z_equals_x_equals_y)
         );
     }
 
@@ -656,7 +694,7 @@ mod test_transformation {
         assert_eq!(transformed, Ok(a_equals_d_equals_c));
 
         let interpretations = vec![
-            Interpretation::infix_operator("=".into(), 1),
+            Interpretation::infix_operator("=".into(), 1, "Integer".into()),
             Interpretation::singleton("x", "Integer".into()),
             Interpretation::singleton("y", "Integer".into()),
             Interpretation::singleton("z", "Integer".into()),
@@ -697,12 +735,17 @@ mod test_transformation {
 
     #[test]
     fn test_transformation_reflexivity() {
-        let transformation =
-            Transformation::reflexivity("=".to_string(), "=".into(), "x".to_string(), Type::Object);
+        let transformation = Transformation::reflexivity(
+            "=".to_string(),
+            "Rational".into(),
+            "x".to_string(),
+            Type::Object,
+        );
 
         let interpretations = vec![Interpretation::infix_operator(
             Token::Object("=".to_string()),
             3,
+            "Rational".into(),
         )];
 
         let parser = Parser::new(interpretations);
@@ -718,15 +761,15 @@ mod test_transformation {
     fn test_transformation_symmetry() {
         let transformation = Transformation::symmetry(
             "+".to_string(),
-            "+".into(),
+            "Complex".into(),
             ("x".to_string(), "y".to_string()),
-            "Integer".into(),
+            "Complex".into(),
         );
 
         let interpretations = vec![
-            Interpretation::infix_operator(Token::Object("+".to_string()), 3),
-            Interpretation::singleton("x", "Integer".into()),
-            Interpretation::singleton("y", "Integer".into()),
+            Interpretation::infix_operator(Token::Object("+".to_string()), 3, "Complex".into()),
+            Interpretation::singleton("x", "Complex".into()),
+            Interpretation::singleton("y", "Complex".into()),
         ];
         let parser = Parser::new(interpretations);
 

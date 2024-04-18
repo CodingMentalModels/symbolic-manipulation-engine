@@ -107,8 +107,8 @@ mod tests {
         types.add_chain(vec!["Operator".into(), "*".into()]);
         types.add_chain(vec!["=".into()]);
 
-        let equals_interpretation = Interpretation::infix_operator("=".into(), 1);
-        let times_interpretation = Interpretation::infix_operator("*".into(), 3);
+        let equals_interpretation = Interpretation::infix_operator("=".into(), 1, "Integer".into());
+        let times_interpretation = Interpretation::infix_operator("*".into(), 3, "Integer".into());
         let inverse_interpretation = Interpretation::function("inv".into(), 90);
         let g_interpretation = Interpretation::singleton("g", "Group Element".into());
         let one_interpretation = Interpretation::singleton("1", "Group Element".into());
@@ -177,9 +177,9 @@ mod tests {
         .unwrap();
         types.add_chain(vec!["Operator".into(), "+".into()]);
         types.add_child_to_parent("*".into(), "Operator".into());
-        let equals_interpretation = Interpretation::infix_operator("=".into(), 1);
-        let plus_interpretation = Interpretation::infix_operator("+".into(), 2);
-        let times_interpretation = Interpretation::infix_operator("*".into(), 3);
+        let equals_interpretation = Interpretation::infix_operator("=".into(), 1, "Integer".into());
+        let plus_interpretation = Interpretation::infix_operator("+".into(), 2, "Integer".into());
+        let times_interpretation = Interpretation::infix_operator("*".into(), 3, "Integer".into());
 
         let parser = Parser::new(vec![
             equals_interpretation,

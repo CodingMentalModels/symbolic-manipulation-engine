@@ -606,7 +606,7 @@ mod test_parser {
 
     #[test]
     fn test_parser_parses_generated_type() {
-        let plus = Interpretation::infix_operator("+".into(), 1);
+        let plus = Interpretation::infix_operator("+".into(), 1, "+".into());
         let integer_condition = GeneratedTypeCondition::IsInteger;
         let integer = Interpretation::new(
             integer_condition.clone().into(),
