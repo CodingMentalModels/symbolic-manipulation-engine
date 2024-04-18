@@ -202,10 +202,13 @@ impl Transformation {
             TransformationError::InvalidSymbolNode(SymbolNodeError::InvalidAddress)
         })?;
         let generalized_transform = self.generalize_to_fit(&substatement_to_transform)?;
-        match self.from.get_relabelling(&substatement_to_transform) {
-            Ok(substitutions) => {
+        match generalized_transform
+            .from
+            .get_relabelling(&substatement_to_transform)
+        {
+            Ok(relabellings) => {
                 let transformed_substatement =
-                    self.transform(&substatement_to_transform, &substitutions)?;
+                    generalized_transform.transform(&substatement_to_transform, &relabellings)?;
                 match statement.replace_node(address, transformed_substatement) {
                     Ok(transformed_statement) => Ok(transformed_statement),
                     Err(e) => Err(TransformationError::InvalidSymbolNode(e)),
@@ -216,16 +219,18 @@ impl Transformation {
     }
 
     fn generalize_to_fit(&self, statement: &SymbolNode) -> Result<Self, TransformationError> {
-        let substitutions = self
+        let (relabelling, substitutions) = self
             .from
-            .get_leaf_substitutions(statement)
+            .get_relabelling_and_leaf_substitutions(statement)
             .map_err(|e| Into::<TransformationError>::into(e))?;
         let mut new_from = self.from.clone();
         let mut new_to = self.to.clone();
         for substitution in substitutions {
             let substitution_transformation: Transformation = substitution.into();
-            new_from = substitution_transformation.transform(&self.from, &HashMap::new())?;
-            new_to = substitution_transformation.transform(&self.to, &HashMap::new())?;
+            new_from = substitution_transformation.transform(&self.from, &relabelling)?;
+            new_to = substitution_transformation
+                .transform(&self.to, &relabelling)
+                .unwrap_or(new_to); // Substitution need not apply to the result
         }
         Ok(Self::new(new_from, new_to))
     }
@@ -564,6 +569,32 @@ mod test_transformation {
         );
         assert_eq!(transformed, expected);
         assert_eq!(addresses, vec![vec![0]]);
+    }
+
+    #[test]
+    fn test_transformation_generalizes_to_fit() {
+        let transformation = Transformation::new(
+            SymbolNode::leaf_object("c".to_string()),
+            SymbolNode::leaf_object("d".to_string()),
+        );
+
+        let trivial = SymbolNode::leaf_object("c".to_string());
+        assert_eq!(
+            transformation.generalize_to_fit(&trivial).unwrap(),
+            transformation
+        );
+
+        let different_name = SymbolNode::leaf_object("a".to_string());
+        assert_eq!(
+            transformation.generalize_to_fit(&different_name).unwrap(),
+            transformation
+        );
+
+        let overloaded_name = SymbolNode::leaf_object("d".to_string());
+        assert_eq!(
+            transformation.generalize_to_fit(&overloaded_name).unwrap(),
+            transformation
+        );
     }
 
     #[test]

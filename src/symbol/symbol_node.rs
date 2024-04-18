@@ -369,10 +369,10 @@ impl SymbolNode {
             .0
     }
 
-    pub fn get_leaf_substitutions(
+    pub fn get_relabelling_and_leaf_substitutions(
         &self,
         other: &Self,
-    ) -> Result<HashMap<Symbol, Self>, SymbolNodeError> {
+    ) -> Result<(HashMap<String, String>, HashMap<Symbol, Self>), SymbolNodeError> {
         if self.get_evaluates_to_type() != other.get_evaluates_to_type() {
             return Err(SymbolNodeError::ConflictingTypes(
                 self.get_root_name(),
@@ -380,21 +380,30 @@ impl SymbolNode {
                 other.get_evaluates_to_type(),
             ));
         }
+        let relabelling = vec![(self.get_root_name(), other.get_root_name())]
+            .into_iter()
+            .collect();
         return if !self.has_children() {
-            Ok(vec![(self.get_symbol().clone(), other.clone())]
+            let substitutions = vec![(self.get_symbol().clone(), other.clone())]
                 .into_iter()
-                .collect())
+                .collect();
+            Ok((relabelling, substitutions))
         } else {
             self.get_children()
                 .iter()
                 .zip(other.get_children())
-                .try_fold(HashMap::new(), |mut acc, (i, j)| {
-                    i.get_leaf_substitutions(j).map(|new_subs| {
-                        new_subs.iter().for_each(|(s, n)| {
-                            acc.insert(s.clone(), n.clone());
-                        });
-                        new_subs
-                    })
+                .try_fold((relabelling, HashMap::new()), |mut acc, (i, j)| {
+                    i.get_relabelling_and_leaf_substitutions(j).map(
+                        |(new_relabelling, new_subs)| {
+                            new_relabelling.iter().for_each(|(from, to)| {
+                                acc.0.insert(from.clone(), to.clone());
+                            });
+                            new_subs.iter().for_each(|(s, n)| {
+                                acc.1.insert(s.clone(), n.clone());
+                            });
+                            acc
+                        },
+                    )
                 })
         };
     }
