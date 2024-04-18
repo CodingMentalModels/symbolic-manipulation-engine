@@ -705,7 +705,7 @@ mod test_transformation {
 
         let transformation = Transformation::symmetry(
             "=".to_string(),
-            "=".into(),
+            "Integer".into(),
             ("a".to_string(), "b".to_string()),
             "Integer".into(),
         );
