@@ -240,21 +240,17 @@ impl Transformation {
         let new_from = hierarchy
             .instantiate(&self.from, statement)
             .map_err(|e| Into::<TransformationError>::into(e))?;
-        let (relabelling, substitutions) = self
+        let substitutions = self
             .from
-            .get_typed_relabelling_and_leaf_substitutions(hierarchy, &new_from)
+            .get_typed_relabelling(hierarchy, &new_from)
             .map_err(|e| Into::<TransformationError>::into(e))?;
         println!(
-            "typed_generalize_to_fit_with:\nRelabelling: {:?}\nSubstitutions: {:?}",
-            relabelling, substitutions
+            "typed_generalize_to_fit_with:\nSubstitutions: {:?}",
+            substitutions
         );
         let mut new_to = self.to.clone();
-        for (f, t) in relabelling {
-            new_to = new_to.replace_symbol(&f, &t)?;
-            new_to = new_to.replace_name(&f.get_name(), &t.get_name())?;
-        }
         for (f, t) in substitutions {
-            new_to = new_to.replace_all(&f, &t)?;
+            new_to = new_to.replace_by_name(&f, &t)?;
         }
         Ok(Self::new(new_from, new_to))
     }

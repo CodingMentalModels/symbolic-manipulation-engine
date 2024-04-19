@@ -210,6 +210,20 @@ impl SymbolNode {
         Some(current_node)
     }
 
+    pub fn replace_by_name(&self, from: &str, to: &Self) -> Result<Self, SymbolNodeError> {
+        if self.get_root_name() == from {
+            return Ok(to.clone());
+        };
+        let new_children = self
+            .children
+            .iter()
+            .try_fold(Vec::new(), |mut acc, child| {
+                child.replace_by_name(from, to).map(|c| acc.push(c))?;
+                Ok(acc)
+            })?;
+        Ok(Self::new(self.get_symbol().clone(), new_children))
+    }
+
     pub fn replace_name(&self, from: &str, to: &str) -> Result<Self, SymbolNodeError> {
         let new_root = if self.get_root_name() == from {
             Symbol::new(from.to_string(), self.get_evaluates_to_type())
@@ -420,11 +434,11 @@ impl SymbolNode {
             .0
     }
 
-    pub fn get_typed_relabelling_and_leaf_substitutions(
+    pub fn get_typed_relabelling(
         &self,
         hierarchy: &TypeHierarchy,
         other: &Self,
-    ) -> Result<(HashMap<Symbol, Symbol>, HashMap<Symbol, Self>), SymbolNodeError> {
+    ) -> Result<HashMap<String, Self>, SymbolNodeError> {
         if !(hierarchy.generalizes(self, other).is_ok()) {
             return Err(SymbolNodeError::ConflictingTypes(
                 self.get_root_name(),
@@ -432,15 +446,11 @@ impl SymbolNode {
                 other.get_evaluates_to_type(),
             ));
         }
-        let relabelling: HashMap<_, _> =
-            vec![(self.get_symbol().clone(), other.get_symbol().clone())]
-                .into_iter()
-                .collect();
         return if !self.has_children() {
-            let substitutions = vec![(self.get_symbol().clone(), other.clone())]
+            let substitutions = vec![(self.get_root_name().clone(), other.clone())]
                 .into_iter()
                 .collect();
-            Ok((HashMap::new(), substitutions))
+            Ok(substitutions)
         } else {
             if self.get_n_children() != other.get_n_children() {
                 return Err(SymbolNodeError::DifferentNumberOfArguments(
@@ -453,17 +463,13 @@ impl SymbolNode {
             self.get_children()
                 .iter()
                 .zip(other.get_children())
-                .try_fold((relabelling, HashMap::new()), |mut acc, (i, j)| {
-                    i.get_typed_relabelling_and_leaf_substitutions(hierarchy, j)
-                        .map(|(new_relabelling, new_subs)| {
-                            new_relabelling.iter().for_each(|(from, to)| {
-                                acc.0.insert(from.clone(), to.clone());
-                            });
-                            new_subs.iter().for_each(|(s, n)| {
-                                acc.1.insert(s.clone(), n.clone());
-                            });
-                            acc
-                        })
+                .try_fold(HashMap::new(), |mut acc, (i, j)| {
+                    i.get_typed_relabelling(hierarchy, j).map(|new_subs| {
+                        new_subs.iter().for_each(|(s, n)| {
+                            acc.insert(s.clone(), n.clone());
+                        });
+                        acc
+                    })
                 })
         };
     }
