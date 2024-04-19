@@ -488,6 +488,14 @@ impl SymbolNode {
                 .collect();
             Ok((relabelling, substitutions))
         } else {
+            if self.get_n_children() != other.get_n_children() {
+                return Err(SymbolNodeError::DifferentNumberOfArguments(
+                    self.get_symbol().clone(),
+                    self.get_n_children(),
+                    other.get_symbol().clone(),
+                    other.get_n_children(),
+                ));
+            }
             self.get_children()
                 .iter()
                 .zip(other.get_children())
