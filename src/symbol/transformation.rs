@@ -762,7 +762,8 @@ mod test_transformation {
 
     #[test]
     fn test_transformation_typed_transforms_at() {
-        let hierarchy = TypeHierarchy::chain(vec!["Integer".into(), "=".into()]).unwrap();
+        let hierarchy =
+            TypeHierarchy::chain(vec!["Real".into(), "Integer".into(), "=".into()]).unwrap();
         let transformation = Transformation::new(
             SymbolNode::leaf_object("c".to_string()),
             SymbolNode::leaf_object("d".to_string()),
@@ -857,6 +858,21 @@ mod test_transformation {
         assert_eq!(
             transformation.typed_transform_at(&hierarchy, &x_equals_y_equals_z, vec![0]),
             Ok(y_equals_x_equals_z)
+        );
+
+        let conversion = Transformation::new(
+            Symbol::new("x".to_string(), "Integer".into()).into(),
+            Symbol::new("x".to_string(), "Real".into()).into(),
+        );
+        assert_eq!(
+            conversion
+                .typed_transform_at(
+                    &hierarchy,
+                    &Symbol::new("1".to_string(), "Integer".into()).into(),
+                    vec![],
+                )
+                .unwrap(),
+            Symbol::new("1".to_string(), "Real".into()).into(),
         );
     }
 
