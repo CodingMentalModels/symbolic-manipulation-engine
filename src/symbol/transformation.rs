@@ -251,6 +251,7 @@ impl Transformation {
         let mut new_to = self.to.clone();
         for (f, t) in relabelling {
             new_to = new_to.replace_symbol(&f, &t)?;
+            new_to = new_to.replace_name(&f.get_name(), &t.get_name())?;
         }
         for (f, t) in substitutions {
             new_to = new_to.replace_all(&f, &t)?;

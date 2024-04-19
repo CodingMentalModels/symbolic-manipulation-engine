@@ -210,6 +210,22 @@ impl SymbolNode {
         Some(current_node)
     }
 
+    pub fn replace_name(&self, from: &str, to: &str) -> Result<Self, SymbolNodeError> {
+        let new_root = if self.get_root_name() == from {
+            Symbol::new(from.to_string(), self.get_evaluates_to_type())
+        } else {
+            self.root.clone()
+        };
+        let new_children = self
+            .children
+            .iter()
+            .try_fold(Vec::new(), |mut acc, child| {
+                child.replace_name(from, to).map(|c| acc.push(c))?;
+                Ok(acc)
+            })?;
+        Ok(Self::new(new_root, new_children))
+    }
+
     pub fn replace_symbol(&self, from: &Symbol, to: &Symbol) -> Result<Self, SymbolNodeError> {
         let new_root = if self.get_symbol() == from {
             to.clone()
