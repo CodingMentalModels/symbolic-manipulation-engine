@@ -240,15 +240,15 @@ impl Transformation {
     pub fn transform_all(
         &self,
         statement: &SymbolNode,
-        substitutions: &HashMap<String, String>,
+        relabellings: &HashMap<String, String>,
     ) -> Result<(SymbolNode, Vec<SymbolNodeAddress>), TransformationError> {
-        self.transform_all_from_address(statement, substitutions, Vec::new())
+        self.transform_all_from_address(statement, relabellings, Vec::new())
     }
 
     pub fn transform_all_from_address(
         &self,
         statement: &SymbolNode,
-        substitutions: &HashMap<String, String>,
+        relabellings: &HashMap<String, String>,
         address: SymbolNodeAddress,
     ) -> Result<(SymbolNode, Vec<SymbolNodeAddress>), TransformationError> {
         let children_transformation_result = statement
@@ -258,7 +258,7 @@ impl Transformation {
             .map(|(i, c)| {
                 let mut child_address = address.clone();
                 child_address.push(i);
-                self.transform_all_from_address(c, substitutions, child_address)
+                self.transform_all_from_address(c, relabellings, child_address)
             })
             .collect::<Result<Vec<(SymbolNode, Vec<SymbolNodeAddress>)>, TransformationError>>()?;
         let (transformed_children, transformed_children_addresses) = children_transformation_result
@@ -271,7 +271,7 @@ impl Transformation {
 
         let new_statement = SymbolNode::new(statement.get_symbol().clone(), transformed_children);
 
-        match self.try_transform(&new_statement, substitutions) {
+        match self.try_transform(&new_statement, relabellings) {
             Ok((transformed, true)) => {
                 let children_addresses: Vec<SymbolNodeAddress> = transformed_children_addresses
                     .into_iter()
@@ -293,9 +293,9 @@ impl Transformation {
     pub fn try_transform(
         &self,
         statement: &SymbolNode,
-        substitutions: &HashMap<String, String>,
+        relabelling: &HashMap<String, String>,
     ) -> Result<(SymbolNode, bool), TransformationError> {
-        match self.transform(statement, substitutions) {
+        match self.transform(statement, relabelling) {
             Ok(transformed) => Ok((transformed, true)),
             Err(TransformationError::StatementDoesNotMatch(_, _)) => Ok((statement.clone(), false)),
             Err(e) => Err(e),
@@ -305,37 +305,37 @@ impl Transformation {
     pub fn transform_strict(
         &self,
         statement: &SymbolNode,
-        substitutions: &HashMap<String, String>,
+        relabellings: &HashMap<String, String>,
     ) -> Result<SymbolNode, TransformationError> {
-        if self.get_variables() != substitutions.keys().cloned().collect() {
-            return Err(TransformationError::SubstitutionKeysMismatch);
+        if self.get_variables() != relabellings.keys().cloned().collect() {
+            return Err(TransformationError::RelabellingsKeysMismatch);
         }
 
-        self.transform(statement, substitutions)
+        self.transform(statement, relabellings)
     }
 
     pub fn transform(
         &self,
         statement: &SymbolNode,
-        substitutions: &HashMap<String, String>,
+        relabellings: &HashMap<String, String>,
     ) -> Result<SymbolNode, TransformationError> {
         statement
             .validate()
             .map_err(|e| TransformationError::InvalidSymbolNode(e))?;
 
-        let substituted_from = self
+        let relabelled_from = self
             .from
-            .relabel_all(&substitutions.clone().into_iter().collect());
-        let substituted_to = self
+            .relabel_all(&relabellings.clone().into_iter().collect());
+        let relabelled_to = self
             .to
-            .relabel_all(&substitutions.clone().into_iter().collect());
+            .relabel_all(&relabellings.clone().into_iter().collect());
 
-        if statement == &substituted_from {
-            Ok(substituted_to)
+        if statement == &relabelled_from {
+            Ok(relabelled_to)
         } else {
             Err(TransformationError::StatementDoesNotMatch(
                 statement.clone(),
-                substituted_from,
+                relabelled_from,
             ))
         }
     }
@@ -344,7 +344,7 @@ impl Transformation {
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum TransformationError {
     InvalidSymbolNode(SymbolNodeError),
-    SubstitutionKeysMismatch,
+    RelabellingsKeysMismatch,
     StatementDoesNotMatch(SymbolNode, SymbolNode),
     StatementTypesDoNotMatch,
     NoValidTransformations,
