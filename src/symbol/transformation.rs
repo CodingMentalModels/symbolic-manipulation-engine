@@ -228,11 +228,18 @@ impl Transformation {
             .map_err(|e| Into::<TransformationError>::into(e))?;
         let (relabelling, substitutions) = self
             .from
-            .get_relabelling_and_leaf_substitutions(&new_from)
+            .get_typed_relabelling_and_leaf_substitutions(hierarchy, &new_from)
             .map_err(|e| Into::<TransformationError>::into(e))?;
+        println!(
+            "typed_generalize_to_fit_with:\nRelabelling: {:?}\nSubstitutions: {:?}",
+            relabelling, substitutions
+        );
         let mut new_to = self.to.clone();
+        for (f, t) in relabelling {
+            new_to = new_to.replace_symbol(&f, &t)?;
+        }
         for (f, t) in substitutions {
-            new_to.replace_all(&f, &t)?;
+            new_to = new_to.replace_all(&f, &t)?;
         }
         Ok(Self::new(new_from, new_to))
     }
@@ -669,7 +676,13 @@ mod test_transformation {
             symmetry
                 .typed_generalize_to_fit(&hierarchy, &x_equals_y_equals_z)
                 .unwrap(),
-            Transformation::new(x_equals_y_equals_z, z_equals_x_equals_y)
+            Transformation::new(x_equals_y_equals_z.clone(), z_equals_x_equals_y.clone()),
+            "\n\n{} \nvs. \n{}",
+            symmetry
+                .typed_generalize_to_fit(&hierarchy, &x_equals_y_equals_z)
+                .unwrap()
+                .to_string(),
+            Transformation::new(x_equals_y_equals_z, z_equals_x_equals_y.clone()).to_string(),
         );
     }
 

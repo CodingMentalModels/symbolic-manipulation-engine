@@ -7,6 +7,8 @@ use serde::{Deserialize, Serialize};
 
 use crate::symbol::symbol_type::Type;
 
+use super::symbol_type::TypeHierarchy;
+
 pub type SymbolName = String;
 pub type SymbolNodeAddress = Vec<usize>;
 
@@ -208,6 +210,22 @@ impl SymbolNode {
         Some(current_node)
     }
 
+    pub fn replace_symbol(&self, from: &Symbol, to: &Symbol) -> Result<Self, SymbolNodeError> {
+        let new_root = if self.get_symbol() == from {
+            to.clone()
+        } else {
+            self.root.clone()
+        };
+        let new_children = self
+            .children
+            .iter()
+            .try_fold(Vec::new(), |mut acc, child| {
+                child.replace_symbol(from, to).map(|c| acc.push(c))?;
+                Ok(acc)
+            })?;
+        Ok(Self::new(new_root, new_children))
+    }
+
     pub fn replace_all(&self, from: &Symbol, to: &SymbolNode) -> Result<Self, SymbolNodeError> {
         if self.get_symbol() == from {
             Ok(to.clone())
@@ -384,6 +402,46 @@ impl SymbolNode {
                 },
             )
             .0
+    }
+
+    pub fn get_typed_relabelling_and_leaf_substitutions(
+        &self,
+        hierarchy: &TypeHierarchy,
+        other: &Self,
+    ) -> Result<(HashMap<Symbol, Symbol>, HashMap<Symbol, Self>), SymbolNodeError> {
+        if !(hierarchy.generalizes(self, other).is_ok()) {
+            return Err(SymbolNodeError::ConflictingTypes(
+                self.get_root_name(),
+                self.get_evaluates_to_type(),
+                other.get_evaluates_to_type(),
+            ));
+        }
+        let relabelling: HashMap<_, _> =
+            vec![(self.get_symbol().clone(), other.get_symbol().clone())]
+                .into_iter()
+                .collect();
+        return if !self.has_children() {
+            let substitutions = vec![(self.get_symbol().clone(), other.clone())]
+                .into_iter()
+                .collect();
+            Ok((HashMap::new(), substitutions))
+        } else {
+            self.get_children()
+                .iter()
+                .zip(other.get_children())
+                .try_fold((relabelling, HashMap::new()), |mut acc, (i, j)| {
+                    i.get_typed_relabelling_and_leaf_substitutions(hierarchy, j)
+                        .map(|(new_relabelling, new_subs)| {
+                            new_relabelling.iter().for_each(|(from, to)| {
+                                acc.0.insert(from.clone(), to.clone());
+                            });
+                            new_subs.iter().for_each(|(s, n)| {
+                                acc.1.insert(s.clone(), n.clone());
+                            });
+                            acc
+                        })
+                })
+        };
     }
 
     pub fn get_relabelling_and_leaf_substitutions(
