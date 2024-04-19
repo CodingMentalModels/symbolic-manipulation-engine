@@ -509,6 +509,144 @@ mod test_type {
     use super::*;
 
     #[test]
+    fn test_type_hierarchy_instantiates() {
+        let interpretations = vec![
+            Interpretation::infix_operator("=".into(), 1, "Integer".into()),
+            Interpretation::singleton("x", "Integer".into()),
+            Interpretation::singleton("y", "Integer".into()),
+            Interpretation::singleton("z", "Integer".into()),
+        ];
+        let parser = Parser::new(interpretations);
+
+        let custom_tokens = vec!["=".to_string()];
+
+        let symmetry = Transformation::symmetry(
+            "=".to_string(),
+            "=".into(),
+            ("a".to_string(), "b".to_string()),
+            "Integer".into(),
+        );
+
+        let x_equals_y_equals_z = parser
+            .parse_from_string(custom_tokens.clone(), "(x=y)=z")
+            .unwrap();
+
+        let trivial_hierarchy = TypeHierarchy::new();
+
+        assert_eq!(
+            trivial_hierarchy.instantiate(
+                &SymbolNode::leaf_object("x".to_string()),
+                &SymbolNode::leaf_object("x".to_string()),
+            ),
+            Ok(SymbolNode::leaf_object("x".to_string()))
+        );
+
+        assert_eq!(
+            trivial_hierarchy.instantiate(
+                &SymbolNode::leaf_object("y".to_string()),
+                &SymbolNode::leaf_object("x".to_string()),
+            ),
+            Ok(SymbolNode::leaf_object("x".to_string()))
+        );
+
+        assert_eq!(
+            trivial_hierarchy.instantiate(
+                &SymbolNode::leaf_object("y".to_string()),
+                &SymbolNode::new(
+                    Symbol::new("op".to_string(), Type::Object),
+                    vec![
+                        SymbolNode::leaf_object("x".to_string()),
+                        SymbolNode::leaf_object("y".to_string())
+                    ]
+                ),
+            ),
+            Ok(SymbolNode::new(
+                Symbol::new("op".to_string(), Type::Object),
+                vec![
+                    SymbolNode::leaf_object("x".to_string()),
+                    SymbolNode::leaf_object("y".to_string())
+                ]
+            ),)
+        );
+
+        let interpretations = vec![
+            Interpretation::infix_operator("=".into(), 1, "=".into()),
+            Interpretation::infix_operator("=_real".into(), 1, "=_real".into()),
+            Interpretation::singleton("x", "Integer".into()),
+            Interpretation::singleton("y", "Integer".into()),
+            Interpretation::singleton("z", "Integer".into()),
+            Interpretation::singleton("r", "Real".into()),
+            Interpretation::singleton("s", "Real".into()),
+            Interpretation::singleton("t", "Real".into()),
+        ];
+        let parser = Parser::new(interpretations);
+
+        let custom_tokens = vec!["=_real".to_string(), "=".to_string()];
+
+        let symmetry = Transformation::symmetry(
+            "=".to_string(),
+            "=".into(),
+            ("a".to_string(), "b".to_string()),
+            "Integer".into(),
+        );
+
+        let x_equals_y_equals_z = parser
+            .parse_from_string(custom_tokens.clone(), "(x=y)=z")
+            .unwrap();
+
+        assert_eq!(
+            trivial_hierarchy.instantiate(symmetry.get_from(), &x_equals_y_equals_z),
+            Err(TypeError::InvalidType("=".into()))
+        );
+
+        let hierarchy = TypeHierarchy::chain(vec!["Integer".into(), "=".into()]).unwrap();
+        assert_eq!(
+            hierarchy.instantiate(symmetry.get_from(), &x_equals_y_equals_z),
+            Ok(x_equals_y_equals_z.clone())
+        );
+
+        let mut longer_hierarchy = TypeHierarchy::chain(vec![
+            "Real".into(),
+            "Rational".into(),
+            "Integer".into(),
+            "=".into(),
+        ])
+        .unwrap();
+        longer_hierarchy
+            .add_child_to_parent("=_real".into(), "Real".into())
+            .unwrap();
+
+        assert_eq!(
+            longer_hierarchy.instantiate(symmetry.get_from(), &x_equals_y_equals_z),
+            Ok(x_equals_y_equals_z.clone())
+        );
+
+        let r_equals_s_equals_t = parser
+            .parse_from_string(custom_tokens.clone(), "(r=_reals)=_realt")
+            .unwrap();
+
+        assert_eq!(
+            longer_hierarchy.instantiate(symmetry.get_from(), &r_equals_s_equals_t),
+            Err(TypeError::FailsToGeneralize(
+                symmetry.get_from().clone(),
+                r_equals_s_equals_t.clone()
+            ))
+        );
+
+        let real_symmetry = Transformation::symmetry(
+            "=_real".to_string(),
+            "=_real".into(),
+            ("a".to_string(), "b".to_string()),
+            "Real".into(),
+        );
+
+        assert_eq!(
+            longer_hierarchy.instantiate(real_symmetry.get_from(), &r_equals_s_equals_t),
+            Ok(r_equals_s_equals_t.clone())
+        );
+    }
+
+    #[test]
     fn test_type_to_string() {
         assert_eq!(Type::Object.to_string(), "Object".to_string());
 

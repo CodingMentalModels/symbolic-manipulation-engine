@@ -4,7 +4,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::parsing::parser::Parser;
 use crate::symbol::symbol_node::{Symbol, SymbolNode, SymbolNodeError};
-use crate::symbol::symbol_type::Type;
+use crate::symbol::symbol_type::{Type, TypeError};
 
 use super::symbol_node::SymbolNodeAddress;
 use super::symbol_type::TypeHierarchy;
@@ -223,6 +223,18 @@ impl Transformation {
         hierarchy: &TypeHierarchy,
         statement: &SymbolNode,
     ) -> Result<Self, TransformationError> {
+        let new_from = hierarchy
+            .instantiate(&self.from, statement)
+            .map_err(|e| Into::<TransformationError>::into(e))?;
+        let (relabelling, substitutions) = self
+            .from
+            .get_relabelling_and_leaf_substitutions(&new_from)
+            .map_err(|e| Into::<TransformationError>::into(e))?;
+        let mut new_to = self.to.clone();
+        for (f, t) in substitutions {
+            new_to.replace_all(&f, &t)?;
+        }
+        Ok(Self::new(new_from, new_to))
     }
 
     fn generalize_to_fit(&self, statement: &SymbolNode) -> Result<Self, TransformationError> {
@@ -351,6 +363,7 @@ impl Transformation {
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum TransformationError {
     InvalidSymbolNode(SymbolNodeError),
+    InvalidTypes(TypeError),
     RelabellingsKeysMismatch,
     StatementDoesNotMatch(SymbolNode, SymbolNode),
     StatementTypesDoNotMatch,
@@ -360,6 +373,12 @@ pub enum TransformationError {
 impl From<SymbolNodeError> for TransformationError {
     fn from(value: SymbolNodeError) -> Self {
         Self::InvalidSymbolNode(value)
+    }
+}
+
+impl From<TypeError> for TransformationError {
+    fn from(value: TypeError) -> Self {
+        Self::InvalidTypes(value)
     }
 }
 
@@ -582,7 +601,7 @@ mod test_transformation {
 
     #[test]
     fn test_transformation_typed_generalizes_to_fit() {
-        let hierarchy = TypeHierarchy::chain(vec!["Integer".into(), "=".into()]);
+        let hierarchy = TypeHierarchy::chain(vec!["Integer".into(), "=".into()]).unwrap();
         let trivial_t = Transformation::new(
             SymbolNode::leaf_object("c".to_string()),
             SymbolNode::leaf_object("d".to_string()),
@@ -622,7 +641,7 @@ mod test_transformation {
         );
 
         let interpretations = vec![
-            Interpretation::infix_operator("=".into(), 1, "Integer".into()),
+            Interpretation::infix_operator("=".into(), 1, "=".into()),
             Interpretation::singleton("x", "Integer".into()),
             Interpretation::singleton("y", "Integer".into()),
             Interpretation::singleton("z", "Integer".into()),
@@ -648,7 +667,7 @@ mod test_transformation {
 
         assert_eq!(
             symmetry
-                .typed_generalize_to_fit(&x_equals_y_equals_z)
+                .typed_generalize_to_fit(&hierarchy, &x_equals_y_equals_z)
                 .unwrap(),
             Transformation::new(x_equals_y_equals_z, z_equals_x_equals_y)
         );
