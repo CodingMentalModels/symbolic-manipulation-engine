@@ -100,6 +100,14 @@ impl TypeHierarchy {
         parent_child_pairs
     }
 
+    pub fn instantiates(
+        &self,
+        general: &SymbolNode,
+        specific: &SymbolNode,
+    ) -> Result<SymbolNode, TypeError> {
+        unimplemented!()
+    }
+
     pub fn generalizes(&self, left: &SymbolNode, right: &SymbolNode) -> Result<bool, TypeError> {
         let root_generalizes = left.get_root_name() == right.get_root_name()
             && self.is_supertype_of(
