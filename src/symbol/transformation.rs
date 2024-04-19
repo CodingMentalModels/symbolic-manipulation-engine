@@ -109,10 +109,11 @@ impl Transformation {
 
     pub fn try_transform_into(
         &self,
+        hierarchy: &TypeHierarchy,
         from: &SymbolNode,
         to: &SymbolNode,
     ) -> Result<SymbolNode, TransformationError> {
-        let valid_transformations = self.get_valid_transformations(from);
+        let valid_transformations = self.get_valid_transformations(hierarchy, from);
         if valid_transformations.contains(to) {
             Ok(to.clone())
         } else {
@@ -120,10 +121,13 @@ impl Transformation {
         }
     }
 
-    pub fn get_valid_transformations(&self, statement: &SymbolNode) -> HashSet<SymbolNode> {
-        println!("get_valid_transformations({})", statement.to_string());
+    pub fn get_valid_transformations(
+        &self,
+        hierarchy: &TypeHierarchy,
+        statement: &SymbolNode,
+    ) -> HashSet<SymbolNode> {
         let mut base_case = vec![statement.clone()].into_iter().collect::<HashSet<_>>();
-        match self.transform_at(statement, vec![]) {
+        match self.typed_transform_at(hierarchy, statement, vec![]) {
             Ok(result) => {
                 base_case.insert(result);
             }
@@ -141,7 +145,7 @@ impl Transformation {
             );
             let mut transformed_children = HashMap::new();
             for child in potentially_transformed.get_children() {
-                let child_transformations = self.get_valid_transformations(child);
+                let child_transformations = self.get_valid_transformations(hierarchy, child);
                 transformed_children.insert(child, child_transformations);
             }
             let n_subsets = 1 << transformed_children.len();
@@ -193,6 +197,20 @@ impl Transformation {
         return to_return;
     }
 
+    pub fn typed_transform_at(
+        &self,
+        hierarchy: &TypeHierarchy,
+        statement: &SymbolNode,
+        address: SymbolNodeAddress,
+    ) -> Result<SymbolNode, TransformationError> {
+        let substatement_to_transform = statement.get_node(address.clone()).ok_or_else(|| {
+            TransformationError::InvalidSymbolNode(SymbolNodeError::InvalidAddress)
+        })?;
+        let generalized_transform =
+            self.typed_generalize_to_fit(hierarchy, &substatement_to_transform)?;
+        generalized_transform.transform_at(statement, address)
+    }
+
     pub fn transform_at(
         &self,
         statement: &SymbolNode,
@@ -201,14 +219,10 @@ impl Transformation {
         let substatement_to_transform = statement.get_node(address.clone()).ok_or_else(|| {
             TransformationError::InvalidSymbolNode(SymbolNodeError::InvalidAddress)
         })?;
-        let generalized_transform = self.generalize_to_fit(&substatement_to_transform)?;
-        match generalized_transform
-            .from
-            .get_relabelling(&substatement_to_transform)
-        {
+        match self.from.get_relabelling(&substatement_to_transform) {
             Ok(relabellings) => {
                 let transformed_substatement =
-                    generalized_transform.transform(&substatement_to_transform, &relabellings)?;
+                    self.transform(&substatement_to_transform, &relabellings)?;
                 match statement.replace_node(address, transformed_substatement) {
                     Ok(transformed_statement) => Ok(transformed_statement),
                     Err(e) => Err(TransformationError::InvalidSymbolNode(e)),
@@ -397,8 +411,10 @@ mod test_transformation {
 
     #[test]
     fn test_transformation_gets_valid_transformations() {
+        let hierarchy =
+            TypeHierarchy::chain(vec!["Real".into(), "Integer".into(), "=".into()]).unwrap();
         let interpretations = vec![
-            Interpretation::infix_operator("=".into(), 1, "Integer".into()),
+            Interpretation::infix_operator("=".into(), 1, "=".into()),
             Interpretation::singleton("x", "Integer".into()),
             Interpretation::singleton("y", "Integer".into()),
             Interpretation::singleton("z", "Integer".into()),
@@ -419,7 +435,7 @@ mod test_transformation {
             .unwrap();
 
         assert_eq!(
-            irrelevant_transform.get_valid_transformations(&x_equals_y),
+            irrelevant_transform.get_valid_transformations(&hierarchy, &x_equals_y),
             vec![x_equals_y.clone()].into_iter().collect()
         );
         let transformation = Transformation::commutivity(
@@ -436,7 +452,7 @@ mod test_transformation {
             Ok(y_equals_x.clone())
         );
         assert_eq!(
-            transformation.get_valid_transformations(&x_equals_y),
+            transformation.get_valid_transformations(&hierarchy, &x_equals_y),
             vec![x_equals_y.clone(), y_equals_x.clone()]
                 .into_iter()
                 .collect()
@@ -447,8 +463,10 @@ mod test_transformation {
             Symbol::new("x".to_string(), "Real".into()).into(),
         );
         assert_eq!(
-            conversion
-                .get_valid_transformations(&Symbol::new("1".to_string(), "Integer".into()).into()),
+            conversion.get_valid_transformations(
+                &hierarchy,
+                &Symbol::new("1".to_string(), "Integer".into()).into()
+            ),
             vec![
                 Symbol::new("1".to_string(), "Integer".into()).into(),
                 Symbol::new("1".to_string(), "Real".into()).into(),
@@ -458,7 +476,7 @@ mod test_transformation {
         );
         assert_eq!(
             conversion
-                .get_valid_transformations(&x_equals_y.clone())
+                .get_valid_transformations(&hierarchy, &x_equals_y.clone())
                 .len(),
             4
         );
@@ -479,7 +497,7 @@ mod test_transformation {
                 .unwrap(),
         ];
         assert_eq!(
-            transformation.get_valid_transformations(&x_equals_y_equals_z),
+            transformation.get_valid_transformations(&hierarchy, &x_equals_y_equals_z),
             expected.into_iter().collect()
         );
     }
@@ -743,6 +761,106 @@ mod test_transformation {
     }
 
     #[test]
+    fn test_transformation_typed_transforms_at() {
+        let hierarchy = TypeHierarchy::chain(vec!["Integer".into(), "=".into()]).unwrap();
+        let transformation = Transformation::new(
+            SymbolNode::leaf_object("c".to_string()),
+            SymbolNode::leaf_object("d".to_string()),
+        );
+
+        let a_equals_b = SymbolNode::new(
+            "=".into(),
+            vec![
+                SymbolNode::leaf_object("a".to_string()),
+                SymbolNode::leaf_object("b".to_string()),
+            ],
+        );
+
+        let d_equals_b = SymbolNode::new(
+            "=".into(),
+            vec![
+                SymbolNode::leaf_object("d".to_string()),
+                SymbolNode::leaf_object("b".to_string()),
+            ],
+        );
+
+        let transformed = transformation.typed_transform_at(&hierarchy, &a_equals_b, vec![0]);
+
+        assert_eq!(transformed, Ok(d_equals_b));
+
+        let a_equals_b_equals_c = SymbolNode::new(
+            "=".into(),
+            vec![
+                SymbolNode::new(
+                    "=".into(),
+                    vec![
+                        SymbolNode::leaf_object("a".to_string()),
+                        SymbolNode::leaf_object("b".to_string()),
+                    ],
+                ),
+                SymbolNode::leaf_object("c".to_string()),
+            ],
+        );
+
+        let a_equals_d_equals_c = SymbolNode::new(
+            "=".into(),
+            vec![
+                SymbolNode::new(
+                    "=".into(),
+                    vec![
+                        SymbolNode::leaf_object("a".to_string()),
+                        SymbolNode::leaf_object("d".to_string()),
+                    ],
+                ),
+                SymbolNode::leaf_object("c".to_string()),
+            ],
+        );
+        let transformed =
+            transformation.typed_transform_at(&hierarchy, &a_equals_b_equals_c, vec![0, 1]);
+
+        assert_eq!(transformed, Ok(a_equals_d_equals_c));
+
+        let interpretations = vec![
+            Interpretation::infix_operator("=".into(), 1, "=".into()),
+            Interpretation::singleton("x", "Integer".into()),
+            Interpretation::singleton("y", "Integer".into()),
+            Interpretation::singleton("z", "Integer".into()),
+        ];
+        let parser = Parser::new(interpretations);
+
+        let custom_tokens = vec!["=".to_string()];
+
+        let transformation = Transformation::symmetry(
+            "=".to_string(),
+            "=".into(),
+            ("a".to_string(), "b".to_string()),
+            "Integer".into(),
+        );
+
+        let x_equals_y_equals_z = parser
+            .parse_from_string(custom_tokens.clone(), "(x=y)=z")
+            .unwrap();
+
+        let z_equals_x_equals_y = parser
+            .parse_from_string(custom_tokens.clone(), "z=(x=y)")
+            .unwrap();
+
+        assert_eq!(
+            transformation.typed_transform_at(&hierarchy, &x_equals_y_equals_z, vec![]),
+            Ok(z_equals_x_equals_y)
+        );
+
+        let y_equals_x_equals_z = parser
+            .parse_from_string(custom_tokens.clone(), "(y=x)=z")
+            .unwrap();
+
+        assert_eq!(
+            transformation.typed_transform_at(&hierarchy, &x_equals_y_equals_z, vec![0]),
+            Ok(y_equals_x_equals_z)
+        );
+    }
+
+    #[test]
     fn test_transformation_transforms_at() {
         let transformation = Transformation::new(
             SymbolNode::leaf_object("c".to_string()),
@@ -799,45 +917,6 @@ mod test_transformation {
         let transformed = transformation.transform_at(&a_equals_b_equals_c, vec![0, 1]);
 
         assert_eq!(transformed, Ok(a_equals_d_equals_c));
-
-        let interpretations = vec![
-            Interpretation::infix_operator("=".into(), 1, "Integer".into()),
-            Interpretation::singleton("x", "Integer".into()),
-            Interpretation::singleton("y", "Integer".into()),
-            Interpretation::singleton("z", "Integer".into()),
-        ];
-        let parser = Parser::new(interpretations);
-
-        let custom_tokens = vec!["=".to_string()];
-
-        let transformation = Transformation::symmetry(
-            "=".to_string(),
-            "Integer".into(),
-            ("a".to_string(), "b".to_string()),
-            "Integer".into(),
-        );
-
-        let x_equals_y_equals_z = parser
-            .parse_from_string(custom_tokens.clone(), "(x=y)=z")
-            .unwrap();
-
-        let z_equals_x_equals_y = parser
-            .parse_from_string(custom_tokens.clone(), "z=(x=y)")
-            .unwrap();
-
-        assert_eq!(
-            transformation.transform_at(&x_equals_y_equals_z, vec![]),
-            Ok(z_equals_x_equals_y)
-        );
-
-        let y_equals_x_equals_z = parser
-            .parse_from_string(custom_tokens.clone(), "(y=x)=z")
-            .unwrap();
-
-        assert_eq!(
-            transformation.transform_at(&x_equals_y_equals_z, vec![0]),
-            Ok(y_equals_x_equals_z)
-        );
     }
 
     #[test]

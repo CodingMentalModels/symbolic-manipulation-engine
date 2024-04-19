@@ -44,6 +44,10 @@ impl Workspace {
         }
     }
 
+    pub fn get_types(&self) -> &TypeHierarchy {
+        &self.types
+    }
+
     pub fn try_import_context(&mut self, context: Context) -> Result<(), WorkspaceError> {
         let mut shared_types = self.types.get_shared_types(context.get_types());
         shared_types.remove(&Type::Object);
@@ -126,7 +130,7 @@ impl Workspace {
     ) -> Result<SymbolNode, WorkspaceError> {
         for statement in self.statements.iter() {
             for transform in self.transformations.iter() {
-                match transform.try_transform_into(&statement, &desired) {
+                match transform.try_transform_into(self.get_types(), &statement, &desired) {
                     Ok(output) => return Ok(output),
                     Err(e) => {}
                 }

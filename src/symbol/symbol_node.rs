@@ -18,7 +18,7 @@ pub enum SymbolNodeError {
     ConflictingSymbolArities(Symbol),
     ChildIndexOutOfRange,
     DifferentNumberOfArguments(Symbol, usize, Symbol, usize),
-    RelabellingNotInjective,
+    RelabellingNotInjective(Vec<(String, String)>),
     InvalidAddress,
 }
 
@@ -505,14 +505,20 @@ impl SymbolNode {
             }
         }
 
-        if to_return
+        let to_return_keys = to_return
             .iter()
             .map(|x| x.0.clone())
-            .collect::<HashSet<_>>()
-            .len()
-            != to_return.len()
-        {
-            return Err(SymbolNodeError::RelabellingNotInjective);
+            .collect::<HashSet<_>>();
+
+        let to_return_key_values = to_return
+            .iter()
+            .map(|x| (x.0.clone(), x.1.clone()))
+            .collect::<HashSet<_>>();
+
+        if to_return_keys.len() != to_return_key_values.len() {
+            return Err(SymbolNodeError::RelabellingNotInjective(
+                to_return_key_values.into_iter().collect(),
+            ));
         }
 
         Ok(to_return.into_iter().collect())
