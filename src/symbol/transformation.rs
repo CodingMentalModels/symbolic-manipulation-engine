@@ -703,6 +703,23 @@ mod test_transformation {
                 .to_string(),
             Transformation::new(x_equals_y_equals_z, z_equals_x_equals_y.clone()).to_string(),
         );
+
+        let conversion = Transformation::new(
+            Symbol::new("x".to_string(), "Integer".into()).into(),
+            Symbol::new("x".to_string(), "Real".into()).into(),
+        );
+        assert_eq!(
+            conversion
+                .typed_generalize_to_fit(
+                    &hierarchy,
+                    &Symbol::new("1".to_string(), "Integer".into()).into(),
+                )
+                .unwrap(),
+            Transformation::new(
+                Symbol::new("1".to_string(), "Integer".into()).into(),
+                Symbol::new("1".to_string(), "Real".into()).into(),
+            )
+        );
     }
 
     #[test]
