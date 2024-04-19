@@ -100,12 +100,48 @@ impl TypeHierarchy {
         parent_child_pairs
     }
 
-    pub fn instantiates(
+    pub fn instantiate(
         &self,
         general: &SymbolNode,
         specific: &SymbolNode,
     ) -> Result<SymbolNode, TypeError> {
-        unimplemented!()
+        let fails_to_generalize = !self.is_supertype_of(
+            &general.get_evaluates_to_type(),
+            &specific.get_evaluates_to_type(),
+        )?;
+        if fails_to_generalize {
+            return Err(TypeError::FailsToGeneralize(
+                general.clone(),
+                specific.clone(),
+            ));
+        }
+
+        if !general.has_children() {
+            // In this case, types generalize but there are no children
+            return Ok(specific.clone());
+        }
+
+        if general.get_n_children() != specific.get_n_children() {
+            return Err(TypeError::FailsToGeneralize(
+                general.clone(),
+                specific.clone(),
+            ));
+        }
+
+        let new_root = specific.get_symbol().clone();
+        let new_children = general
+            .get_children()
+            .iter()
+            .zip(specific.get_children())
+            .try_fold(Vec::new(), |mut acc, (general_child, specific_child)| {
+                self.instantiate(general_child, specific_child)
+                    .map(|new_child| {
+                        acc.push(new_child);
+                    });
+                Ok(acc)
+            })?;
+
+        Ok(SymbolNode::new(new_root, new_children))
     }
 
     pub fn generalizes(&self, left: &SymbolNode, right: &SymbolNode) -> Result<bool, TypeError> {
@@ -460,6 +496,7 @@ pub enum TypeError {
     InvalidType(Type),
     StatementIncludesTypesNotInHierarchy(HashSet<Type>),
     IncompatibleTypeRelationships(HashSet<Type>),
+    FailsToGeneralize(SymbolNode, SymbolNode),
 }
 
 #[cfg(test)]
