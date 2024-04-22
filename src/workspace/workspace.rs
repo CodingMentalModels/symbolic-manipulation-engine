@@ -389,7 +389,7 @@ mod test_workspace {
             Interpretation::singleton("b".into(), "Integer".into()),
             Interpretation::singleton("c".into(), "Integer".into()),
         ];
-        let mut workspace = Workspace::new(types.clone(), vec![], interpretations);
+        let mut workspace = Workspace::new(types.clone(), vec![], interpretations.clone());
         workspace
             .add_transformation(Transformation::symmetry(
                 "+".to_string(),
@@ -422,6 +422,7 @@ mod test_workspace {
             expected
         );
         assert!(workspace.get_statements().contains(&expected));
+
         let expected = workspace.parse_from_string("a+(c+b)").unwrap();
         assert_eq!(
             workspace.try_transform_into_parsed("a+(c+b)").unwrap(),
