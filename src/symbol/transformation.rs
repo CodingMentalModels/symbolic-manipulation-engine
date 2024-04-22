@@ -498,6 +498,34 @@ mod test_transformation {
             transformation.get_valid_transformations(&hierarchy, &x_equals_y_equals_z),
             expected.into_iter().collect()
         );
+
+        // Using overloaded names shouldn't matter
+        let transformation = Transformation::commutivity(
+            "=".to_string(),
+            "=".into(),
+            ("x".to_string(), "y".to_string()),
+            "Integer".into(),
+        );
+
+        let x_equals_y_equals_z = parser
+            .parse_from_string(custom_tokens.clone(), "x=y=z") // ((x=y)=z)
+            .unwrap();
+        let expected = vec![
+            x_equals_y_equals_z.clone(),
+            parser
+                .parse_from_string(custom_tokens.clone(), "y=x=z") // ((x=y)=z) => ((y=x)=z)
+                .unwrap(),
+            parser
+                .parse_from_string(custom_tokens.clone(), "z=(x=y)") // ((x=y)=z) => (z=(x=y))
+                .unwrap(),
+            parser
+                .parse_from_string(custom_tokens.clone(), "z=(y=x)") // ((x=y)=z) => (z=(y=x))
+                .unwrap(),
+        ];
+        assert_eq!(
+            transformation.get_valid_transformations(&hierarchy, &x_equals_y_equals_z),
+            expected.into_iter().collect()
+        );
     }
 
     #[test]
