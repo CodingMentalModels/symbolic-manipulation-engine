@@ -707,6 +707,64 @@ mod test_statement {
     }
 
     #[test]
+    fn test_symbol_node_with_child_replaced() {
+        let interpretations = vec![
+            Interpretation::infix_operator("=".into(), 1, "Integer".into()),
+            Interpretation::singleton("a", "Integer".into()),
+            Interpretation::singleton("b", "Integer".into()),
+            Interpretation::singleton("x", "Integer".into()),
+            Interpretation::singleton("y", "Integer".into()),
+        ];
+        let parser = Parser::new(interpretations);
+
+        let custom_tokens = vec!["=".to_string()];
+        let a_equals_b = parser
+            .parse_from_string(custom_tokens.clone(), "a=b")
+            .unwrap();
+        let q_equals_b = parser
+            .parse_from_string(custom_tokens.clone(), "q=b")
+            .unwrap();
+        let a_equals_q = parser
+            .parse_from_string(custom_tokens.clone(), "a=q")
+            .unwrap();
+        let x_equals_y = parser
+            .parse_from_string(custom_tokens.clone(), "x=y")
+            .unwrap();
+        let a_equals_x_equals_y = parser
+            .parse_from_string(custom_tokens.clone(), "a=(x=y)")
+            .unwrap();
+
+        assert_eq!(
+            a_equals_b
+                .clone()
+                .with_child_replaced(0, Symbol::new_object("q".to_string()).into())
+                .unwrap(),
+            q_equals_b
+        );
+        assert_eq!(
+            a_equals_b
+                .clone()
+                .with_child_replaced(1, Symbol::new_object("q".to_string()).into())
+                .unwrap(),
+            a_equals_q
+        );
+        assert_eq!(
+            a_equals_b
+                .clone()
+                .with_child_replaced(2, Symbol::new_object("q".to_string()).into()),
+            Err(SymbolNodeError::ChildIndexOutOfRange),
+        );
+
+        assert_eq!(
+            a_equals_b
+                .clone()
+                .with_child_replaced(1, x_equals_y)
+                .unwrap(),
+            a_equals_x_equals_y,
+        );
+    }
+
+    #[test]
     fn test_symbol_node_gets_relabelling() {
         let interpretations = vec![
             Interpretation::infix_operator("=".into(), 1, "Integer".into()),
