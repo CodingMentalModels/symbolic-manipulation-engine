@@ -383,8 +383,13 @@ mod test_workspace {
             Interpretation::infix_operator("+".into(), 6, "+".into()),
             Interpretation::singleton("x".into(), "Real".into()),
             Interpretation::singleton("y".into(), "Real".into()),
+            Interpretation::singleton("j".into(), "Integer".into()),
+            Interpretation::singleton("k".into(), "Integer".into()),
+            Interpretation::singleton("a".into(), "Integer".into()),
+            Interpretation::singleton("b".into(), "Integer".into()),
+            Interpretation::singleton("c".into(), "Integer".into()),
         ];
-        let mut workspace = Workspace::new(types, vec![], interpretations);
+        let mut workspace = Workspace::new(types.clone(), vec![], interpretations);
         workspace
             .add_transformation(Transformation::symmetry(
                 "+".to_string(),
@@ -393,10 +398,33 @@ mod test_workspace {
                 "Real".into(),
             ))
             .unwrap();
+
         workspace.add_parsed_statement("x+y").unwrap();
         let expected = workspace.parse_from_string("y+x").unwrap();
         assert_eq!(
             workspace.try_transform_into_parsed("y+x").unwrap(),
+            expected
+        );
+        assert!(workspace.get_statements().contains(&expected));
+
+        workspace.add_parsed_statement("j+k").unwrap();
+        let expected = workspace.parse_from_string("k+j").unwrap();
+        assert_eq!(
+            workspace.try_transform_into_parsed("k+j").unwrap(),
+            expected
+        );
+        assert!(workspace.get_statements().contains(&expected));
+
+        workspace.add_parsed_statement("a+(b+c)").unwrap();
+        let expected = workspace.parse_from_string("(b+c)+a").unwrap();
+        assert_eq!(
+            workspace.try_transform_into_parsed("(b+c)+a").unwrap(),
+            expected
+        );
+        assert!(workspace.get_statements().contains(&expected));
+        let expected = workspace.parse_from_string("a+(c+b)").unwrap();
+        assert_eq!(
+            workspace.try_transform_into_parsed("a+(c+b)").unwrap(),
             expected
         );
         assert!(workspace.get_statements().contains(&expected));
