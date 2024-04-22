@@ -90,11 +90,21 @@ impl Workspace {
         Ok(())
     }
 
-    pub fn parse_from_string(&mut self, s: &str) -> Result<SymbolNode, WorkspaceError> {
+    pub fn add_parsed_statement(&mut self, s: &str) -> Result<SymbolNode, WorkspaceError> {
+        let parsed = self.parse_from_string(s)?;
+        self.add_statement(parsed.clone())?;
+        Ok(parsed)
+    }
+
+    pub fn parse_from_string(&self, s: &str) -> Result<SymbolNode, WorkspaceError> {
         let parser = Parser::new(self.interpretations.clone());
         parser
             .parse_from_string(parser.get_interpretation_custom_tokens(), s)
             .map_err(|e| e.into())
+    }
+
+    pub fn get_statements(&self) -> &Vec<SymbolNode> {
+        &self.statements
     }
 
     pub fn add_statement(&mut self, statement: SymbolNode) -> Result<(), WorkspaceError> {
@@ -124,6 +134,13 @@ impl Workspace {
         Ok(())
     }
 
+    pub fn try_transform_into_parsed(
+        &mut self,
+        desired: &str,
+    ) -> Result<SymbolNode, WorkspaceError> {
+        self.try_transform_into(self.parse_from_string(desired)?)
+    }
+
     pub fn try_transform_into(
         &mut self,
         desired: SymbolNode,
@@ -131,7 +148,10 @@ impl Workspace {
         for statement in self.statements.iter() {
             for transform in self.transformations.iter() {
                 match transform.try_transform_into(self.get_types(), &statement, &desired) {
-                    Ok(output) => return Ok(output),
+                    Ok(output) => {
+                        self.add_statement(output.clone())?;
+                        return Ok(output);
+                    }
                     Err(e) => {}
                 }
             }
@@ -349,10 +369,34 @@ mod test_workspace {
 
     use super::*;
 
-    //    #[test]
-    //    fn test_workspace_try_transform_into() {
-    //        unimplemented!();
-    //    }
+    #[test]
+    fn test_workspace_try_transform_into() {
+        let mut types = TypeHierarchy::chain(vec!["Real".into(), "Integer".into()]).unwrap();
+        types.add_child_to_parent("=".into(), "Real".into());
+        types.add_child_to_parent("+".into(), "Real".into());
+        let interpretations = vec![
+            Interpretation::infix_operator("=".into(), 1, "=".into()),
+            Interpretation::infix_operator("+".into(), 6, "+".into()),
+            Interpretation::singleton("x".into(), "Real".into()),
+            Interpretation::singleton("y".into(), "Real".into()),
+        ];
+        let mut workspace = Workspace::new(types, vec![], interpretations);
+        workspace
+            .add_transformation(Transformation::symmetry(
+                "+".to_string(),
+                "+".into(),
+                ("a".to_string(), "b".to_string()),
+                "Real".into(),
+            ))
+            .unwrap();
+        workspace.add_parsed_statement("x+y").unwrap();
+        let expected = workspace.parse_from_string("y+x").unwrap();
+        assert_eq!(
+            workspace.try_transform_into_parsed("y+x").unwrap(),
+            expected
+        );
+        assert!(workspace.get_statements().contains(&expected));
+    }
 
     #[test]
     fn test_workspace_adds_and_deletes_statement() {
