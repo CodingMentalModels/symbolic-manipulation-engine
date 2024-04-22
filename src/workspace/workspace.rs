@@ -372,8 +372,12 @@ mod test_workspace {
     #[test]
     fn test_workspace_try_transform_into() {
         let mut types = TypeHierarchy::chain(vec!["Real".into(), "Integer".into()]).unwrap();
-        types.add_child_to_parent("=".into(), "Real".into());
-        types.add_child_to_parent("+".into(), "Real".into());
+        types
+            .add_child_to_parent("=".into(), "Real".into())
+            .unwrap();
+        types
+            .add_child_to_parent("+".into(), "Real".into())
+            .unwrap();
         let interpretations = vec![
             Interpretation::infix_operator("=".into(), 1, "=".into()),
             Interpretation::infix_operator("+".into(), 6, "+".into()),
@@ -403,11 +407,11 @@ mod test_workspace {
         let types = TypeHierarchy::new();
         let mut workspace = Workspace::new(types, vec![], vec![]);
         let statement = SymbolNode::leaf_object("a".to_string());
-        workspace.add_statement(statement);
+        workspace.add_statement(statement).unwrap();
         assert_eq!(workspace.statements.len(), 1);
 
         let statement = SymbolNode::leaf_object("b".to_string());
-        workspace.add_statement(statement);
+        workspace.add_statement(statement).unwrap();
 
         assert_eq!(workspace.statements.len(), 2);
     }
@@ -421,7 +425,7 @@ mod test_workspace {
         );
 
         let mut types = TypeHierarchy::chain(vec!["Real".into(), "Integer".into()]).unwrap();
-        types.add_chain(vec!["+".into()]);
+        types.add_chain(vec!["+".into()]).unwrap();
         let mut workspace = Workspace::new(types, vec![integer], vec![]);
 
         let parser = Parser::new(vec![plus]);
@@ -432,7 +436,7 @@ mod test_workspace {
         assert_eq!(workspace.add_statement(two_plus_two), Ok(()));
         let mut expected =
             TypeHierarchy::chain(vec!["Real".into(), "Integer".into(), "2".into()]).unwrap();
-        expected.add_chain(vec!["+".into()]);
+        expected.add_chain(vec!["+".into()]).unwrap();
         assert_eq!(workspace.types, expected);
     }
 
@@ -448,7 +452,7 @@ mod test_workspace {
             SymbolNode::leaf_object("a".to_string()),
             SymbolNode::leaf_object("b".to_string()),
         );
-        workspace.add_transformation(transformation);
+        workspace.add_transformation(transformation).unwrap();
         assert_eq!(workspace.transformations.len(), 1);
 
         let _transformed = workspace.transform_all(0, 0, HashMap::new());
@@ -479,10 +483,12 @@ mod test_workspace {
             ])
         );
 
-        workspace.add_transformation(Transformation::new(
-            SymbolNode::leaf_object("b".to_string()),
-            SymbolNode::leaf_object("=".to_string()),
-        ));
+        workspace
+            .add_transformation(Transformation::new(
+                SymbolNode::leaf_object("b".to_string()),
+                SymbolNode::leaf_object("=".to_string()),
+            ))
+            .unwrap();
 
         let _transformed = workspace.transform_at(1, 1, vec![]);
         assert_eq!(workspace.statements.len(), 3);
@@ -508,8 +514,12 @@ mod test_workspace {
 
         let mut types =
             TypeHierarchy::chain(vec!["Real".into(), "Rational".into(), "Integer".into()]).unwrap();
-        types.add_chain(vec!["Operator".into(), "=".into()]);
-        types.add_chain_to_parent(vec!["+".into()], "Operator".into());
+        types
+            .add_chain(vec!["Operator".into(), "=".into()])
+            .unwrap();
+        types
+            .add_chain_to_parent(vec!["+".into()], "Operator".into())
+            .unwrap();
 
         let equality_reflexivity = Transformation::reflexivity(
             "=".to_string(),
@@ -545,8 +555,12 @@ mod test_workspace {
         ])
         .unwrap();
 
-        complex_types.add_chain(vec!["Operator".into(), "=".into()]);
-        complex_types.add_chain_to_parent(vec!["+".into()], "Operator".into());
+        complex_types
+            .add_chain(vec!["Operator".into(), "=".into()])
+            .unwrap();
+        complex_types
+            .add_chain_to_parent(vec!["+".into()], "Operator".into())
+            .unwrap();
         let ambiguous_context = Context::new(
             complex_types,
             vec![],
@@ -573,8 +587,7 @@ mod test_workspace {
 
         assert_eq!(workspace.transformations.len(), 2);
 
-        let mut inverted_types =
-            TypeHierarchy::chain(vec!["Rational".into(), "Real".into()]).unwrap();
+        let inverted_types = TypeHierarchy::chain(vec!["Rational".into(), "Real".into()]).unwrap();
         let conflicting_context = Context::new(inverted_types, vec![], vec![], vec![]).unwrap();
 
         assert_eq!(
