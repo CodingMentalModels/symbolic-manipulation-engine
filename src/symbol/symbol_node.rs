@@ -702,6 +702,65 @@ mod test_statement {
     use super::*;
 
     #[test]
+    fn test_symbol_node_relabelling_relabels() {
+        let interpretations = vec![
+            Interpretation::infix_operator("=".into(), 1, "Integer".into()),
+            Interpretation::singleton("a", "Integer".into()),
+            Interpretation::singleton("b", "Integer".into()),
+            Interpretation::singleton("x", "Integer".into()),
+            Interpretation::singleton("y", "Integer".into()),
+        ];
+        let parser = Parser::new(interpretations);
+
+        let custom_tokens = vec!["=".to_string()];
+        let b = parser
+            .parse_from_string(custom_tokens.clone(), "b")
+            .unwrap();
+        let y = parser
+            .parse_from_string(custom_tokens.clone(), "y")
+            .unwrap();
+        let a_equals_b = parser
+            .parse_from_string(custom_tokens.clone(), "a=b")
+            .unwrap();
+        let x_equals_y = parser
+            .parse_from_string(custom_tokens.clone(), "a=b")
+            .unwrap();
+        let x_equals_y_equals_b = parser
+            .parse_from_string(custom_tokens.clone(), "(x=y)=b")
+            .unwrap();
+        let x_equals_y_equals_y = parser
+            .parse_from_string(custom_tokens.clone(), "(x=y)=y")
+            .unwrap();
+        let x_equals_y_equals_x_equals_y = parser
+            .parse_from_string(custom_tokens.clone(), "(x=y)=(x=y)")
+            .unwrap();
+
+        let relabelling = Relabelling::new(
+            vec![("a".to_string(), x_equals_y), ("b".to_string(), b)]
+                .into_iter()
+                .collect(),
+        );
+        assert_eq!(relabelling.relabel(a_equals_b), x_equals_y_equals_b);
+
+        let relabelling = Relabelling::new(
+            vec![("a", x_equals_y), ("b", x_equals_y)]
+                .into_iter()
+                .collect(),
+        );
+        assert_eq!(
+            relabelling.relabel(a_equals_b),
+            x_equals_y_equals_x_equals_y
+        );
+
+        let relabelling = Relabelling::new(
+            vec![("x".to_string(), x_equals_y), ("y".to_string(), y)]
+                .into_iter()
+                .collect(),
+        );
+        assert_eq!(relabelling.relabel(x_equals_y), x_equals_y_equals_y);
+    }
+
+    #[test]
     fn test_symbol_node_initializes() {
         let a_equals_b_plus_c = SymbolNode::new(
             "=".into(),
