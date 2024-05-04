@@ -522,10 +522,8 @@ mod test_transformation {
                 .parse_from_string(custom_tokens.clone(), "z=(y=x)") // ((x=y)=z) => (z=(y=x))
                 .unwrap(),
         ];
-        assert_eq!(
-            transformation.get_valid_transformations(&hierarchy, &x_equals_y_equals_z),
-            expected.into_iter().collect()
-        );
+        let actual = transformation.get_valid_transformations(&hierarchy, &x_equals_y_equals_z);
+        assert_eq!(actual, expected.into_iter().collect());
     }
 
     #[test]
