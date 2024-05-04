@@ -137,18 +137,14 @@ impl Transformation {
             }
             _ => {}
         };
+        println!(
+            "{} has {} base cases.",
+            statement.to_string(),
+            base_case.len()
+        );
 
-        println!("Base case: {:?}", base_case);
-
-        // For each base case element (the original statement and maybe the one with the root transformed)
-        // Loop through all the subsets of children to transform and transform them to each
-        // potential option
         let mut to_return = base_case.clone();
         for potentially_transformed in base_case.iter() {
-            println!(
-                "Transforming children of Potentially Transformed: {:?}",
-                potentially_transformed
-            );
             let new_statements =
                 self.get_valid_child_transformations(hierarchy, potentially_transformed);
             to_return = to_return.union(&new_statements).cloned().collect();
@@ -922,7 +918,7 @@ mod test_transformation {
 
         assert_eq!(
             transformation.typed_transform_at(&hierarchy, &x_equals_y_equals_z, vec![]),
-            Ok(z_equals_x_equals_y)
+            Ok(z_equals_x_equals_y.clone())
         );
 
         let y_equals_x_equals_z = parser
@@ -932,6 +928,18 @@ mod test_transformation {
         assert_eq!(
             transformation.typed_transform_at(&hierarchy, &x_equals_y_equals_z, vec![0]),
             Ok(y_equals_x_equals_z)
+        );
+
+        let transformation = Transformation::symmetry(
+            "=".to_string(),
+            "=".into(),
+            ("x".to_string(), "y".to_string()),
+            "Integer".into(),
+        );
+
+        assert_eq!(
+            transformation.typed_transform_at(&hierarchy, &x_equals_y_equals_z, vec![]),
+            Ok(z_equals_x_equals_y)
         );
 
         // TODO: Figure out if we think this needs to work
