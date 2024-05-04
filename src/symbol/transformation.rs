@@ -126,6 +126,10 @@ impl Transformation {
         hierarchy: &TypeHierarchy,
         statement: &SymbolNode,
     ) -> HashSet<SymbolNode> {
+        println!(
+            "Begin get_valid_transformations({:?})",
+            statement.to_string()
+        );
         let mut base_case = vec![statement.clone()].into_iter().collect::<HashSet<_>>();
         match self.typed_transform_at(hierarchy, statement, vec![]) {
             Ok(result) => {
@@ -133,6 +137,8 @@ impl Transformation {
             }
             _ => {}
         };
+
+        println!("Base case: {:?}", base_case);
 
         // For each base case element (the original statement and maybe the one with the root transformed)
         // Loop through all the subsets of children to transform and transform them to each
