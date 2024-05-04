@@ -144,50 +144,14 @@ impl Transformation {
         // Loop through all the subsets of children to transform and transform them to each
         // potential option
         let mut to_return = base_case.clone();
-        for potentially_transformed in base_case {
+        for potentially_transformed in base_case.iter() {
             println!(
                 "Transforming children of Potentially Transformed: {:?}",
                 potentially_transformed
             );
-            let mut transformed_children = HashMap::new();
-            for child in potentially_transformed.get_children() {
-                let child_transformations = self.get_valid_transformations(hierarchy, child);
-                transformed_children.insert(child, child_transformations);
-            }
-            let n_subsets = 1 << transformed_children.len();
-            for bitmask in 0..n_subsets {
-                // Bitmask indicates whether to take the child or its transformed versions
-                // TODO: There's a massive opportunity for optimization here by eliminating the cases where
-                // there are no transformations
-                println!("Bitmask: {:#018b}", bitmask);
-
-                let mut new_statements = vec![potentially_transformed.clone()]
-                    .into_iter()
-                    .collect::<HashSet<_>>();
-
-                for (i, child) in potentially_transformed.get_children().iter().enumerate() {
-                    if bitmask & (1 << i) != 0 {
-                        let mut updated_statements = HashSet::new();
-                        for statement_to_transform in &new_statements {
-                            let transformed_children_set = transformed_children
-                                .get(child)
-                                .expect("We constructed the map from the same vector.");
-
-                            for c in transformed_children_set {
-                                let transformed_statement = statement_to_transform
-                                    .clone()
-                                    .with_child_replaced(i, c.clone())
-                                    .expect("Child index is guaranteed to be in range.");
-                                updated_statements.insert(transformed_statement);
-                            }
-                        }
-                        new_statements = updated_statements;
-                    } else {
-                        // Do nothing; child is fine as is
-                    }
-                }
-                to_return = to_return.union(&new_statements).cloned().collect();
-            }
+            let new_statements =
+                self.get_valid_child_transformations(hierarchy, potentially_transformed);
+            to_return = to_return.union(&new_statements).cloned().collect();
         }
 
         println!(
@@ -201,6 +165,50 @@ impl Transformation {
                 .join("; ")
         );
         return to_return;
+    }
+
+    fn get_valid_child_transformations(
+        &self,
+        hierarchy: &TypeHierarchy,
+        statement: &SymbolNode,
+    ) -> HashSet<SymbolNode> {
+        println!(
+            "Begin get_valid_child_transformations({:?})",
+            statement.to_string()
+        );
+        let mut child_to_valid_transformations = HashMap::new();
+        for child in statement.get_children() {
+            let possible_transformations = self.get_valid_transformations(hierarchy, child);
+            child_to_valid_transformations.insert(child, possible_transformations);
+        }
+        let mut new_statements = vec![statement.clone()].into_iter().collect::<HashSet<_>>();
+
+        let n_subsets = 1 << child_to_valid_transformations.len();
+        for bitmask in 0..n_subsets {
+            // Bitmask indicates whether to take the child or its transformed versions
+            // TODO: There's a massive opportunity for optimization here by eliminating the cases where
+            // there are no transformations
+            println!("Bitmask: {:#018b}", bitmask);
+
+            for (i, child) in statement.get_children().iter().enumerate() {
+                let should_transform_ith_child = bitmask & (1 << i) != 0;
+                if should_transform_ith_child {
+                    let transformed_children_set = child_to_valid_transformations
+                        .get(child)
+                        .expect("We constructed the map from the same vector.");
+                    let mut new_statement = statement.clone();
+                    for c in transformed_children_set {
+                        new_statement = new_statement
+                            .with_child_replaced(i, c.clone())
+                            .expect("Child index is guaranteed to be in range.");
+                    }
+                    new_statements.insert(new_statement);
+                } else {
+                    // Do nothing; child is fine as is
+                }
+            }
+        }
+        new_statements
     }
 
     pub fn typed_transform_at(
@@ -513,9 +521,25 @@ mod test_transformation {
             "Integer".into(),
         );
 
+        let x_equals_y = parser
+            .parse_from_string(custom_tokens.clone(), "x=y")
+            .unwrap();
+
+        let expected = vec![
+            x_equals_y.clone(),
+            parser
+                .parse_from_string(custom_tokens.clone(), "y=x")
+                .unwrap(),
+        ];
+
+        let actual = transformation.get_valid_transformations(&hierarchy, &x_equals_y);
+
+        assert_eq!(actual, expected.into_iter().collect());
+
         let x_equals_y_equals_z = parser
             .parse_from_string(custom_tokens.clone(), "x=y=z") // ((x=y)=z)
             .unwrap();
+
         let expected = vec![
             x_equals_y_equals_z.clone(),
             parser
@@ -528,7 +552,9 @@ mod test_transformation {
                 .parse_from_string(custom_tokens.clone(), "z=(y=x)") // ((x=y)=z) => (z=(y=x))
                 .unwrap(),
         ];
+
         let actual = transformation.get_valid_transformations(&hierarchy, &x_equals_y_equals_z);
+
         assert_eq!(actual, expected.into_iter().collect());
     }
 
