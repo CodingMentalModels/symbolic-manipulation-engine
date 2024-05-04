@@ -755,6 +755,26 @@ mod test_transformation {
             Transformation::new(x_equals_y_equals_z, z_equals_x_equals_y.clone()).to_string(),
         );
 
+        let symmetry = Transformation::symmetry(
+            "=".to_string(),
+            "=".into(),
+            ("x".to_string(), "y".to_string()),
+            "Integer".into(),
+        );
+
+        assert_eq!(
+            symmetry
+                .typed_generalize_to_fit(&hierarchy, &x_equals_y_equals_z)
+                .unwrap(),
+            Transformation::new(x_equals_y_equals_z.clone(), z_equals_x_equals_y.clone()),
+            "\n\n{} \nvs. \n{}",
+            symmetry
+                .typed_generalize_to_fit(&hierarchy, &x_equals_y_equals_z)
+                .unwrap()
+                .to_string(),
+            Transformation::new(x_equals_y_equals_z, z_equals_x_equals_y.clone()).to_string(),
+        );
+
         // TODO: Figure out whether this needs to work
         //        let conversion = Transformation::new(
         //            Symbol::new("x".to_string(), "Integer".into()).into(),
