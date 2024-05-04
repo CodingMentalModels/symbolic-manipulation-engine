@@ -39,11 +39,12 @@ impl From<Symbol> for SymbolNode {
 impl Debug for SymbolNode {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let string_representation = self.to_string();
+        let line = "--------".to_string();
 
         write!(
             f,
-            "\nSymbolNode.to_string(): {}\nIndented:\n--------\n",
-            string_representation
+            "\nSymbolNode.to_string(): {}\nIndented:\n{}\n",
+            string_representation, line,
         )?;
 
         fn format_children(
@@ -64,7 +65,7 @@ impl Debug for SymbolNode {
         }
 
         let to_return = format_children(self, f, 0);
-        write!(f, "--------\n")?;
+        write!(f, "{}\n", line)?;
 
         to_return
     }
