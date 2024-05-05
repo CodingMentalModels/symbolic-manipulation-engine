@@ -204,6 +204,16 @@ impl Transformation {
                 }
             }
         }
+        println!(
+            "End get_valid_child_transformations({}).  Returning {} results:\n{:?}",
+            statement.to_string(),
+            new_statements.len(),
+            new_statements
+                .iter()
+                .map(|n| n.to_string())
+                .collect::<Vec<_>>()
+                .join("; ")
+        );
         new_statements
     }
 
@@ -254,10 +264,6 @@ impl Transformation {
             .from
             .get_typed_relabelling(hierarchy, &new_from)
             .map_err(|e| Into::<TransformationError>::into(e))?;
-        println!(
-            "typed_generalize_to_fit_with:\nSubstitutions: {:?}",
-            substitutions
-        );
         let new_to = substitutions.substitute(&self.to);
         Ok(Self::new(new_from, new_to))
     }
@@ -489,6 +495,19 @@ mod test_transformation {
         let x_equals_y_equals_z = parser
             .parse_from_string(custom_tokens.clone(), "x=y=z") // ((x=y)=z)
             .unwrap();
+
+        let expected = vec![
+            x_equals_y_equals_z.clone(),
+            parser
+                .parse_from_string(custom_tokens.clone(), "y=x=z") // ((x=y)=z) => ((y=x)=z)
+                .unwrap(),
+        ];
+
+        assert_eq!(
+            transformation.get_valid_child_transformations(&hierarchy, &x_equals_y_equals_z),
+            expected.into_iter().collect()
+        );
+
         let expected = vec![
             x_equals_y_equals_z.clone(),
             parser
