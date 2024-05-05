@@ -423,6 +423,17 @@ mod test_workspace {
         );
         assert!(workspace.get_statements().contains(&expected));
 
+        let mut workspace = Workspace::new(types.clone(), vec![], interpretations);
+        workspace
+            .add_transformation(Transformation::symmetry(
+                "+".to_string(),
+                "+".into(),
+                ("a".to_string(), "b".to_string()),
+                "Real".into(),
+            ))
+            .unwrap();
+
+        workspace.add_parsed_statement("a+(b+c)").unwrap();
         let expected = workspace.parse_from_string("a+(c+b)").unwrap();
         assert_eq!(
             workspace.try_transform_into_parsed("a+(c+b)").unwrap(),

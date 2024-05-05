@@ -649,6 +649,38 @@ impl SymbolNode {
 }
 
 #[derive(Clone, Debug, Default, Hash, PartialEq, Eq, Serialize, Deserialize)]
+pub struct Relabelling {
+    relabelling: HashMap<String, SymbolNode>,
+}
+
+impl Relabelling {
+    fn relabel(&self, statement: &SymbolNode) -> SymbolNode {
+        let mut locations_to_subs = self
+            .relabelling
+            .iter()
+            .map(|(from, to)| {
+                statement
+                    .find_symbol_name(from)
+                    .into_iter()
+                    .map(|x| (x, to))
+                    .collect::<Vec<_>>()
+            })
+            .flatten()
+            .collect::<Vec<_>>();
+
+        // Sort decreasing in order to capture the deepest addresses first so they don't stomp each
+        // other
+        locations_to_subs.sort_by(|a, b| a.0.len().cmp(&b.0.len()).reverse());
+
+        let mut to_return = statement.clone();
+        locations_to_subs
+            .iter()
+            .for_each(|(x, s)| to_return.replace_node(x, s));
+        to_return
+    }
+}
+
+#[derive(Clone, Debug, Default, Hash, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Symbol {
     name: SymbolName,
     evaluates_to_type: Type,
