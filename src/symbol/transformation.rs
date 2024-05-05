@@ -258,10 +258,7 @@ impl Transformation {
             "typed_generalize_to_fit_with:\nSubstitutions: {:?}",
             substitutions
         );
-        let mut new_to = self.to.clone();
-        for (f, t) in substitutions {
-            new_to = new_to.replace_by_name(&f, &t)?;
-        }
+        let new_to = substitutions.substitute(&self.to);
         Ok(Self::new(new_from, new_to))
     }
 

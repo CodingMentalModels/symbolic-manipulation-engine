@@ -475,7 +475,7 @@ impl SymbolNode {
         &self,
         hierarchy: &TypeHierarchy,
         other: &Self,
-    ) -> Result<HashMap<String, Self>, SymbolNodeError> {
+    ) -> Result<Substitution, SymbolNodeError> {
         if !(hierarchy.generalizes(self, other).is_ok()) {
             return Err(SymbolNodeError::ConflictingTypes(
                 self.get_root_name(),
@@ -487,7 +487,7 @@ impl SymbolNode {
             let substitutions = vec![(self.get_root_name().clone(), other.clone())]
                 .into_iter()
                 .collect();
-            Ok(substitutions)
+            Ok(Substitution::new(substitutions))
         } else {
             if self.get_n_children() != other.get_n_children() {
                 return Err(SymbolNodeError::DifferentNumberOfArguments(
@@ -497,17 +497,19 @@ impl SymbolNode {
                     other.get_n_children(),
                 ));
             }
-            self.get_children()
+            let new_inner = self
+                .get_children()
                 .iter()
                 .zip(other.get_children())
                 .try_fold(HashMap::new(), |mut acc, (i, j)| {
                     i.get_typed_relabelling(hierarchy, j).map(|new_subs| {
-                        new_subs.iter().for_each(|(s, n)| {
+                        new_subs.get_inner().iter().for_each(|(s, n)| {
                             acc.insert(s.clone(), n.clone());
                         });
                         acc
                     })
-                })
+                })?;
+            Ok(Substitution::new(new_inner))
         };
     }
 
@@ -658,7 +660,11 @@ impl Substitution {
         Self { substitution }
     }
 
-    fn substitute(&self, statement: &SymbolNode) -> SymbolNode {
+    pub fn get_inner(&self) -> &HashMap<String, SymbolNode> {
+        &self.substitution
+    }
+
+    pub fn substitute(&self, statement: &SymbolNode) -> SymbolNode {
         let mut locations_to_subs = self
             .substitution
             .iter()
