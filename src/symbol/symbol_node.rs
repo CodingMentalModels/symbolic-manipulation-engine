@@ -312,19 +312,19 @@ impl SymbolNode {
 
     pub fn replace_node(
         &self,
-        address: SymbolNodeAddress,
-        new_node: SymbolNode,
+        address: &SymbolNodeAddress,
+        new_node: &SymbolNode,
     ) -> Result<Self, SymbolNodeError> {
         let mut to_return = self.clone();
         let mut current_node = &mut to_return;
         for i in address {
-            if i < current_node.get_n_children() {
-                current_node = &mut current_node.children[i];
+            if *i < current_node.get_n_children() {
+                current_node = &mut current_node.children[*i];
             } else {
                 return Err(SymbolNodeError::InvalidAddress);
             }
         }
-        *current_node = new_node;
+        *current_node = new_node.clone();
 
         Ok(to_return)
     }
@@ -345,11 +345,11 @@ impl SymbolNode {
         result
     }
 
-    pub fn find_symbol(&self, symbol: Symbol) -> HashSet<SymbolNodeAddress> {
-        self.find_where(&|node| node.root == symbol)
+    pub fn find_symbol(&self, symbol: &Symbol) -> HashSet<SymbolNodeAddress> {
+        self.find_where(&|node| &node.root == symbol)
     }
 
-    pub fn find_symbol_name(&self, symbol_name: String) -> HashSet<SymbolNodeAddress> {
+    pub fn find_symbol_name(&self, symbol_name: &str) -> HashSet<SymbolNodeAddress> {
         self.find_where(&|node| node.root.get_name() == symbol_name)
     }
 
@@ -648,15 +648,19 @@ impl SymbolNode {
     }
 }
 
-#[derive(Clone, Debug, Default, Hash, PartialEq, Eq, Serialize, Deserialize)]
-pub struct Relabelling {
-    relabelling: HashMap<String, SymbolNode>,
+#[derive(Clone, Debug, Default, PartialEq, Eq)]
+pub struct Substitution {
+    substitution: HashMap<String, SymbolNode>,
 }
 
-impl Relabelling {
-    fn relabel(&self, statement: &SymbolNode) -> SymbolNode {
+impl Substitution {
+    pub fn new(substitution: HashMap<String, SymbolNode>) -> Self {
+        Self { substitution }
+    }
+
+    fn substitute(&self, statement: &SymbolNode) -> SymbolNode {
         let mut locations_to_subs = self
-            .relabelling
+            .substitution
             .iter()
             .map(|(from, to)| {
                 statement
@@ -673,9 +677,11 @@ impl Relabelling {
         locations_to_subs.sort_by(|a, b| a.0.len().cmp(&b.0.len()).reverse());
 
         let mut to_return = statement.clone();
-        locations_to_subs
-            .iter()
-            .for_each(|(x, s)| to_return.replace_node(x, s));
+        locations_to_subs.iter().for_each(|(x, s)| {
+            to_return = to_return
+                .replace_node(x, s)
+                .expect("The address is guaranteed to be valid.");
+        });
         to_return
     }
 }
@@ -734,7 +740,7 @@ mod test_statement {
     use super::*;
 
     #[test]
-    fn test_symbol_node_relabelling_relabels() {
+    fn test_substitution_substitutes() {
         let interpretations = vec![
             Interpretation::infix_operator("=".into(), 1, "Integer".into()),
             Interpretation::singleton("a", "Integer".into()),
@@ -755,7 +761,7 @@ mod test_statement {
             .parse_from_string(custom_tokens.clone(), "a=b")
             .unwrap();
         let x_equals_y = parser
-            .parse_from_string(custom_tokens.clone(), "a=b")
+            .parse_from_string(custom_tokens.clone(), "x=y")
             .unwrap();
         let x_equals_y_equals_b = parser
             .parse_from_string(custom_tokens.clone(), "(x=y)=b")
@@ -767,29 +773,41 @@ mod test_statement {
             .parse_from_string(custom_tokens.clone(), "(x=y)=(x=y)")
             .unwrap();
 
-        let relabelling = Relabelling::new(
-            vec![("a".to_string(), x_equals_y), ("b".to_string(), b)]
-                .into_iter()
-                .collect(),
-        );
-        assert_eq!(relabelling.relabel(a_equals_b), x_equals_y_equals_b);
-
-        let relabelling = Relabelling::new(
-            vec![("a", x_equals_y), ("b", x_equals_y)]
+        let substitution = Substitution::new(
+            vec![("a".to_string(), x_equals_y.clone()), ("b".to_string(), b)]
                 .into_iter()
                 .collect(),
         );
         assert_eq!(
-            relabelling.relabel(a_equals_b),
+            substitution.substitute(&a_equals_b.clone()),
+            x_equals_y_equals_b.clone()
+        );
+
+        let substitution = Substitution::new(
+            vec![
+                ("a".to_string(), x_equals_y.clone()),
+                ("b".to_string(), x_equals_y.clone()),
+            ]
+            .into_iter()
+            .collect(),
+        );
+        assert_eq!(
+            substitution.substitute(&a_equals_b),
             x_equals_y_equals_x_equals_y
         );
 
-        let relabelling = Relabelling::new(
-            vec![("x".to_string(), x_equals_y), ("y".to_string(), y)]
-                .into_iter()
-                .collect(),
+        let substitution = Substitution::new(
+            vec![
+                ("x".to_string(), x_equals_y.clone()),
+                ("y".to_string(), y.clone()),
+            ]
+            .into_iter()
+            .collect(),
         );
-        assert_eq!(relabelling.relabel(x_equals_y), x_equals_y_equals_y);
+        assert_eq!(
+            substitution.substitute(&x_equals_y),
+            x_equals_y_equals_y.clone()
+        );
     }
 
     #[test]

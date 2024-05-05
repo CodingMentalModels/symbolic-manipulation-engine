@@ -233,7 +233,7 @@ impl Transformation {
             Ok(relabellings) => {
                 let transformed_substatement =
                     self.transform(&substatement_to_transform, &relabellings)?;
-                match statement.replace_node(address, transformed_substatement) {
+                match statement.replace_node(&address, &transformed_substatement) {
                     Ok(transformed_statement) => Ok(transformed_statement),
                     Err(e) => Err(TransformationError::InvalidSymbolNode(e)),
                 }
