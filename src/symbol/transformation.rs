@@ -186,23 +186,24 @@ impl Transformation {
             // there are no transformations
             println!("Bitmask: {:#018b}", bitmask);
 
+            let mut new_statement = statement.clone();
             for (i, child) in statement.get_children().iter().enumerate() {
                 let should_transform_ith_child = bitmask & (1 << i) != 0;
                 if should_transform_ith_child {
                     let transformed_children_set = child_to_valid_transformations
                         .get(child)
                         .expect("We constructed the map from the same vector.");
-                    let mut new_statement = statement.clone();
                     for c in transformed_children_set {
                         new_statement = new_statement
                             .with_child_replaced(i, c.clone())
                             .expect("Child index is guaranteed to be in range.");
                     }
-                    new_statements.insert(new_statement);
                 } else {
                     // Do nothing; child is fine as is
                 }
             }
+            println!("Inserting: {}", new_statement.to_string());
+            new_statements.insert(new_statement);
         }
         println!(
             "End get_valid_child_transformations({}).  Returning {} results:\n{:?}",
@@ -505,6 +506,22 @@ mod test_transformation {
 
         assert_eq!(
             transformation.get_valid_child_transformations(&hierarchy, &x_equals_y_equals_z),
+            expected.into_iter().collect()
+        );
+
+        let z_equals_x_equals_y = parser
+            .parse_from_string(custom_tokens.clone(), "z=(x=y)")
+            .unwrap();
+
+        let expected = vec![
+            z_equals_x_equals_y.clone(),
+            parser
+                .parse_from_string(custom_tokens.clone(), "z=(y=x)")
+                .unwrap(),
+        ];
+
+        assert_eq!(
+            transformation.get_valid_child_transformations(&hierarchy, &z_equals_x_equals_y),
             expected.into_iter().collect()
         );
 
