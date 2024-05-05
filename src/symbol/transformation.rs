@@ -186,24 +186,34 @@ impl Transformation {
             // there are no transformations
             println!("Bitmask: {:#018b}", bitmask);
 
-            let mut new_statement = statement.clone();
+            let mut transformed_statements =
+                vec![statement.clone()].into_iter().collect::<HashSet<_>>();
             for (i, child) in statement.get_children().iter().enumerate() {
+                let mut updated_statements = transformed_statements.clone();
                 let should_transform_ith_child = bitmask & (1 << i) != 0;
                 if should_transform_ith_child {
                     let transformed_children_set = child_to_valid_transformations
                         .get(child)
                         .expect("We constructed the map from the same vector.");
                     for c in transformed_children_set {
-                        new_statement = new_statement
-                            .with_child_replaced(i, c.clone())
-                            .expect("Child index is guaranteed to be in range.");
+                        for transformed_statement in transformed_statements.iter() {
+                            let updated_statement = transformed_statement
+                                .clone()
+                                .with_child_replaced(i, c.clone())
+                                .expect("Child index is guaranteed to be in range.");
+                            println!("Inserting: {}", updated_statement.to_string());
+                            updated_statements.insert(updated_statement);
+                        }
                     }
                 } else {
                     // Do nothing; child is fine as is
                 }
+                transformed_statements = updated_statements;
             }
-            println!("Inserting: {}", new_statement.to_string());
-            new_statements.insert(new_statement);
+            new_statements = new_statements
+                .union(&transformed_statements)
+                .cloned()
+                .collect();
         }
         println!(
             "End get_valid_child_transformations({}).  Returning {} results:\n{:?}",
