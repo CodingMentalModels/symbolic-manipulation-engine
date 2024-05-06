@@ -238,7 +238,7 @@ impl Transformation {
             TransformationError::InvalidSymbolNode(SymbolNodeError::InvalidAddress)
         })?;
         let generalized_transform =
-            self.typed_generalize_to_fit(hierarchy, &substatement_to_transform)?;
+            self.generalize_to_fit(hierarchy, &substatement_to_transform)?;
         generalized_transform.transform_at(statement, address)
     }
 
@@ -263,7 +263,7 @@ impl Transformation {
         }
     }
 
-    fn typed_generalize_to_fit(
+    fn generalize_to_fit(
         &self,
         hierarchy: &TypeHierarchy,
         statement: &SymbolNode,
@@ -276,25 +276,6 @@ impl Transformation {
             .get_typed_relabelling(hierarchy, &new_from)
             .map_err(|e| Into::<TransformationError>::into(e))?;
         let new_to = substitutions.substitute(&self.to);
-        Ok(Self::new(new_from, new_to))
-    }
-
-    fn generalize_to_fit(&self, statement: &SymbolNode) -> Result<Self, TransformationError> {
-        let (relabelling, substitutions) = self
-            .from
-            .get_relabelling_and_leaf_substitutions(statement)
-            .map_err(|e| Into::<TransformationError>::into(e))?;
-        println!(
-            "generalize_to_fit with ({:?}, {:?})",
-            relabelling, substitutions
-        );
-        let mut new_from = self.from.clone();
-        let mut new_to = self.to.clone();
-        for (sub_from, sub_to) in substitutions {
-            new_from = new_from.replace_all(&sub_from, &sub_to)?;
-            new_to = new_to.replace_all(&sub_from, &sub_to)?;
-        }
-        println!("generalized to {:?} => {:?}", new_from, new_to);
         Ok(Self::new(new_from, new_to))
     }
 
@@ -720,7 +701,7 @@ mod test_transformation {
     }
 
     #[test]
-    fn test_transformation_typed_generalizes_to_fit() {
+    fn test_transformation_generalizes_to_fit() {
         let hierarchy = TypeHierarchy::chain(vec!["Integer".into(), "=".into()]).unwrap();
         let trivial_t = Transformation::new(
             SymbolNode::leaf_object("c".to_string()),
@@ -729,9 +710,7 @@ mod test_transformation {
 
         let trivial = SymbolNode::leaf_object("c".to_string());
         assert_eq!(
-            trivial_t
-                .typed_generalize_to_fit(&hierarchy, &trivial)
-                .unwrap(),
+            trivial_t.generalize_to_fit(&hierarchy, &trivial).unwrap(),
             trivial_t
         );
 
@@ -743,7 +722,7 @@ mod test_transformation {
         let different_name = SymbolNode::leaf_object("a".to_string());
         assert_eq!(
             different_t
-                .typed_generalize_to_fit(&hierarchy, &different_name)
+                .generalize_to_fit(&hierarchy, &different_name)
                 .unwrap(),
             different_t
         );
@@ -755,7 +734,7 @@ mod test_transformation {
         let overloaded_name = SymbolNode::leaf_object("d".to_string());
         assert_eq!(
             overloaded_t
-                .typed_generalize_to_fit(&hierarchy, &overloaded_name)
+                .generalize_to_fit(&hierarchy, &overloaded_name)
                 .unwrap(),
             overloaded_t
         );
@@ -787,12 +766,12 @@ mod test_transformation {
 
         assert_eq!(
             symmetry
-                .typed_generalize_to_fit(&hierarchy, &x_equals_y_equals_z)
+                .generalize_to_fit(&hierarchy, &x_equals_y_equals_z)
                 .unwrap(),
             Transformation::new(x_equals_y_equals_z.clone(), z_equals_x_equals_y.clone()),
             "\n\n{} \nvs. \n{}",
             symmetry
-                .typed_generalize_to_fit(&hierarchy, &x_equals_y_equals_z)
+                .generalize_to_fit(&hierarchy, &x_equals_y_equals_z)
                 .unwrap()
                 .to_string(),
             Transformation::new(x_equals_y_equals_z, z_equals_x_equals_y.clone()).to_string(),
@@ -807,12 +786,12 @@ mod test_transformation {
 
         assert_eq!(
             symmetry
-                .typed_generalize_to_fit(&hierarchy, &x_equals_y_equals_z)
+                .generalize_to_fit(&hierarchy, &x_equals_y_equals_z)
                 .unwrap(),
             Transformation::new(x_equals_y_equals_z.clone(), z_equals_x_equals_y.clone()),
             "\n\n{} \nvs. \n{}",
             symmetry
-                .typed_generalize_to_fit(&hierarchy, &x_equals_y_equals_z)
+                .generalize_to_fit(&hierarchy, &x_equals_y_equals_z)
                 .unwrap()
                 .to_string(),
             Transformation::new(x_equals_y_equals_z, z_equals_x_equals_y.clone()).to_string(),
@@ -835,62 +814,6 @@ mod test_transformation {
         //                Symbol::new("1".to_string(), "Real".into()).into(),
         //            )
         //        );
-    }
-
-    #[test]
-    fn test_transformation_generalizes_to_fit() {
-        let trivial_t = Transformation::new(
-            SymbolNode::leaf_object("c".to_string()),
-            SymbolNode::leaf_object("d".to_string()),
-        );
-
-        let trivial = SymbolNode::leaf_object("c".to_string());
-        assert_eq!(trivial_t.generalize_to_fit(&trivial).unwrap(), trivial_t);
-
-        let different_t = Transformation::new(
-            SymbolNode::leaf_object("a".to_string()),
-            SymbolNode::leaf_object("d".to_string()),
-        );
-
-        let different_name = SymbolNode::leaf_object("a".to_string());
-        assert_eq!(
-            different_t.generalize_to_fit(&different_name).unwrap(),
-            different_t
-        );
-
-        let overloaded_t = Transformation::new(
-            SymbolNode::leaf_object("d".to_string()),
-            SymbolNode::leaf_object("d".to_string()),
-        );
-        let overloaded_name = SymbolNode::leaf_object("d".to_string());
-        assert_eq!(
-            overloaded_t.generalize_to_fit(&overloaded_name).unwrap(),
-            overloaded_t
-        );
-
-        let interpretations = vec![
-            Interpretation::infix_operator("=".into(), 1, "Integer".into()),
-            Interpretation::singleton("x", "Integer".into()),
-            Interpretation::singleton("y", "Integer".into()),
-            Interpretation::singleton("z", "Integer".into()),
-        ];
-        let parser = Parser::new(interpretations);
-
-        let custom_tokens = vec!["=".to_string()];
-
-        let symmetry = Transformation::symmetry(
-            "=".to_string(),
-            "=".into(),
-            ("a".to_string(), "b".to_string()),
-            "Integer".into(),
-        );
-
-        let x_equals_y_equals_z = parser
-            .parse_from_string(custom_tokens.clone(), "(x=y)=z")
-            .unwrap();
-
-        // We can't generalize because we don't know that "=" < "Integer" as a type
-        assert!(symmetry.generalize_to_fit(&x_equals_y_equals_z).is_err(),);
     }
 
     #[test]

@@ -511,53 +511,6 @@ impl SymbolNode {
         };
     }
 
-    pub fn get_relabelling_and_leaf_substitutions(
-        &self,
-        other: &Self,
-    ) -> Result<(HashMap<String, String>, HashMap<Symbol, Self>), SymbolNodeError> {
-        if self.get_evaluates_to_type() != other.get_evaluates_to_type() {
-            return Err(SymbolNodeError::ConflictingTypes(
-                self.get_root_name(),
-                self.get_evaluates_to_type(),
-                other.get_evaluates_to_type(),
-            ));
-        }
-        let relabelling = vec![(self.get_root_name(), other.get_root_name())]
-            .into_iter()
-            .collect();
-        return if !self.has_children() {
-            let substitutions = vec![(self.get_symbol().clone(), other.clone())]
-                .into_iter()
-                .collect();
-            Ok((relabelling, substitutions))
-        } else {
-            if self.get_n_children() != other.get_n_children() {
-                return Err(SymbolNodeError::DifferentNumberOfArguments(
-                    self.get_symbol().clone(),
-                    self.get_n_children(),
-                    other.get_symbol().clone(),
-                    other.get_n_children(),
-                ));
-            }
-            self.get_children()
-                .iter()
-                .zip(other.get_children())
-                .try_fold((relabelling, HashMap::new()), |mut acc, (i, j)| {
-                    i.get_relabelling_and_leaf_substitutions(j).map(
-                        |(new_relabelling, new_subs)| {
-                            new_relabelling.iter().for_each(|(from, to)| {
-                                acc.0.insert(from.clone(), to.clone());
-                            });
-                            new_subs.iter().for_each(|(s, n)| {
-                                acc.1.insert(s.clone(), n.clone());
-                            });
-                            acc
-                        },
-                    )
-                })
-        };
-    }
-
     pub fn get_relabelling(
         &self,
         other: &Self,
@@ -924,37 +877,6 @@ mod test_statement {
                 .with_child_replaced(1, x_equals_y)
                 .unwrap(),
             a_equals_x_equals_y,
-        );
-    }
-
-    #[test]
-    fn test_symbol_node_gets_relabelling() {
-        let interpretations = vec![
-            Interpretation::infix_operator("=".into(), 1, "Integer".into()),
-            Interpretation::singleton("a", "Integer".into()),
-            Interpretation::singleton("b", "Integer".into()),
-            Interpretation::singleton("x", "Integer".into()),
-            Interpretation::singleton("y", "Integer".into()),
-        ];
-        let parser = Parser::new(interpretations);
-
-        let custom_tokens = vec!["=".to_string()];
-        let a_equals_b = parser
-            .parse_from_string(custom_tokens.clone(), "a=b")
-            .unwrap();
-        let x_equals_y = parser
-            .parse_from_string(custom_tokens.clone(), "x=y")
-            .unwrap();
-        let expected = vec![
-            ("a".to_string(), "x".to_string()),
-            ("b".to_string(), "y".to_string()),
-            ("=".to_string(), "=".to_string()),
-        ]
-        .into_iter()
-        .collect::<HashMap<_, _>>();
-        assert_eq!(
-            a_equals_b.get_relabelling(&x_equals_y),
-            Ok(expected.clone())
         );
     }
 
