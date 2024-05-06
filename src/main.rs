@@ -46,6 +46,7 @@ fn main() {
     let cli = Cli::new(filesystem);
 
     let result = match matches.subcommand() {
+        Some(("hello-world", _sub_matches)) => cli.hello_world(),
         Some(("init", _sub_matches)) => cli.init(),
         Some(("rmws", sub_matches)) => cli.rmws(sub_matches),
         Some(("ls", _sub_matches)) => cli.ls(),

@@ -14,6 +14,10 @@ impl Cli {
         Self { filesystem }
     }
 
+    pub fn hello_world(&self) -> Result<String, String> {
+        Ok("Hello World!".to_string())
+    }
+
     pub fn init(&self) -> Result<String, String> {
         if self.filesystem.path_exists(STATE_DIRECTORY_RELATIVE_PATH) {
             return Err("A workspace already exists in this directory".to_string());
