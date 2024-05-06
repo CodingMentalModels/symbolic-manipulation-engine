@@ -1,11 +1,15 @@
+use core::fmt;
 use std::{
     collections::{HashMap, HashSet},
+    fmt::Debug,
     unimplemented,
 };
 
 use serde::{Deserialize, Serialize};
 
 use crate::symbol::symbol_type::Type;
+
+use super::symbol_type::TypeHierarchy;
 
 pub type SymbolName = String;
 pub type SymbolNodeAddress = Vec<usize>;
@@ -14,15 +18,57 @@ pub type SymbolNodeAddress = Vec<usize>;
 pub enum SymbolNodeError {
     ConflictingTypes(String, Type, Type),
     ConflictingSymbolArities(Symbol),
-    DifferentNumberOfArguments,
-    RelabellingNotInjective,
+    ChildIndexOutOfRange,
+    DifferentNumberOfArguments(Symbol, usize, Symbol, usize),
+    RelabellingNotInjective(Vec<(String, String)>),
     InvalidAddress,
 }
 
-#[derive(Clone, Debug, Hash, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Clone, Hash, PartialEq, Eq, Serialize, Deserialize)]
 pub struct SymbolNode {
     root: Symbol,
     children: Vec<SymbolNode>,
+}
+
+impl From<Symbol> for SymbolNode {
+    fn from(value: Symbol) -> Self {
+        Self::leaf(value)
+    }
+}
+
+impl Debug for SymbolNode {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let string_representation = self.to_string();
+        let line = "--------".to_string();
+
+        write!(
+            f,
+            "\nSymbolNode.to_string(): {}\nIndented:\n{}\n",
+            string_representation, line,
+        )?;
+
+        fn format_children(
+            node: &SymbolNode,
+            f: &mut fmt::Formatter<'_>,
+            indentation_level: usize,
+        ) -> fmt::Result {
+            // Indent children
+            let indentation = " ".repeat(indentation_level);
+            write!(f, "{}{:?}\n", indentation, node.root)?;
+
+            for child in &node.children {
+                // Recursively format children
+                format_children(child, f, indentation_level + 4)?;
+            }
+
+            Ok(())
+        }
+
+        let to_return = format_children(self, f, 0);
+        write!(f, "{}\n", line)?;
+
+        to_return
+    }
 }
 
 impl SymbolNode {
@@ -71,8 +117,25 @@ impl SymbolNode {
         self.children.len()
     }
 
+    pub fn has_children(&self) -> bool {
+        self.children.len() > 0
+    }
+
     pub fn push_child(&mut self, child: SymbolNode) {
         self.children.push(child)
+    }
+
+    pub fn with_child_replaced(
+        mut self,
+        i: usize,
+        new_child: SymbolNode,
+    ) -> Result<Self, SymbolNodeError> {
+        if i >= self.get_n_children() {
+            return Err(SymbolNodeError::ChildIndexOutOfRange);
+        }
+
+        self.children[i] = new_child;
+        Ok(self)
     }
 
     pub fn get_symbol(&self) -> &Symbol {
@@ -184,21 +247,84 @@ impl SymbolNode {
         Some(current_node)
     }
 
+    pub fn replace_by_name(&self, from: &str, to: &Self) -> Result<Self, SymbolNodeError> {
+        if self.get_root_name() == from {
+            return Ok(to.clone());
+        };
+        let new_children = self
+            .children
+            .iter()
+            .try_fold(Vec::new(), |mut acc, child| {
+                child.replace_by_name(from, to).map(|c| acc.push(c))?;
+                Ok(acc)
+            })?;
+        Ok(Self::new(self.get_symbol().clone(), new_children))
+    }
+
+    pub fn replace_name(&self, from: &str, to: &str) -> Result<Self, SymbolNodeError> {
+        let new_root = if self.get_root_name() == from {
+            Symbol::new(from.to_string(), self.get_evaluates_to_type())
+        } else {
+            self.root.clone()
+        };
+        let new_children = self
+            .children
+            .iter()
+            .try_fold(Vec::new(), |mut acc, child| {
+                child.replace_name(from, to).map(|c| acc.push(c))?;
+                Ok(acc)
+            })?;
+        Ok(Self::new(new_root, new_children))
+    }
+
+    pub fn replace_symbol(&self, from: &Symbol, to: &Symbol) -> Result<Self, SymbolNodeError> {
+        let new_root = if self.get_symbol() == from {
+            to.clone()
+        } else {
+            self.root.clone()
+        };
+        let new_children = self
+            .children
+            .iter()
+            .try_fold(Vec::new(), |mut acc, child| {
+                child.replace_symbol(from, to).map(|c| acc.push(c))?;
+                Ok(acc)
+            })?;
+        Ok(Self::new(new_root, new_children))
+    }
+
+    pub fn replace_all(&self, from: &Symbol, to: &SymbolNode) -> Result<Self, SymbolNodeError> {
+        if self.get_symbol() == from {
+            Ok(to.clone())
+        } else {
+            let children = self.get_children().iter().try_fold(
+                Vec::new(),
+                |mut acc: Vec<SymbolNode>, child: &SymbolNode| {
+                    child
+                        .replace_all(from, to)
+                        .map(|new_child: SymbolNode| acc.push(new_child))?;
+                    Ok(acc)
+                },
+            )?;
+            Ok(Self::new(self.get_symbol().clone(), children))
+        }
+    }
+
     pub fn replace_node(
         &self,
-        address: SymbolNodeAddress,
-        new_node: SymbolNode,
+        address: &SymbolNodeAddress,
+        new_node: &SymbolNode,
     ) -> Result<Self, SymbolNodeError> {
         let mut to_return = self.clone();
         let mut current_node = &mut to_return;
         for i in address {
-            if i < current_node.get_n_children() {
-                current_node = &mut current_node.children[i];
+            if *i < current_node.get_n_children() {
+                current_node = &mut current_node.children[*i];
             } else {
                 return Err(SymbolNodeError::InvalidAddress);
             }
         }
-        *current_node = new_node;
+        *current_node = new_node.clone();
 
         Ok(to_return)
     }
@@ -219,11 +345,11 @@ impl SymbolNode {
         result
     }
 
-    pub fn find_symbol(&self, symbol: Symbol) -> HashSet<SymbolNodeAddress> {
-        self.find_where(&|node| node.root == symbol)
+    pub fn find_symbol(&self, symbol: &Symbol) -> HashSet<SymbolNodeAddress> {
+        self.find_where(&|node| &node.root == symbol)
     }
 
-    pub fn find_symbol_name(&self, symbol_name: String) -> HashSet<SymbolNodeAddress> {
+    pub fn find_symbol_name(&self, symbol_name: &str) -> HashSet<SymbolNodeAddress> {
         self.find_where(&|node| node.root.get_name() == symbol_name)
     }
 
@@ -275,17 +401,17 @@ impl SymbolNode {
         }
     }
 
-    pub fn relabel(&self, old_label: String, new_label: String) -> Self {
-        self.relabel_and_get_addresses_if(old_label, new_label, Vec::new(), &|x| true)
+    pub fn relabel(&self, old_label: &str, new_label: &str) -> Self {
+        self.relabel_and_get_addresses_if(old_label, new_label, Vec::new(), &|_, _| true)
             .0
     }
 
     fn relabel_and_get_addresses_if(
         &self,
-        old_label: String,
-        new_label: String,
+        old_label: &str,
+        new_label: &str,
         current_address: SymbolNodeAddress,
-        condition: &dyn Fn((Self, SymbolNodeAddress)) -> bool,
+        condition: &dyn Fn(&Self, &SymbolNodeAddress) -> bool,
     ) -> (Self, HashSet<SymbolNodeAddress>) {
         let (new_children, children_addresses) = self
             .children
@@ -294,12 +420,7 @@ impl SymbolNode {
             .map(|(i, child)| {
                 let mut child_address = current_address.clone();
                 child_address.push(i);
-                child.relabel_and_get_addresses_if(
-                    old_label.clone(),
-                    new_label.clone(),
-                    child_address,
-                    condition,
-                )
+                child.relabel_and_get_addresses_if(old_label, new_label, child_address, condition)
             })
             .fold((Vec::new(), HashSet::new()), |acc, elt| {
                 let (new_children, new_children_addresses) = acc;
@@ -312,12 +433,12 @@ impl SymbolNode {
                         .collect(),
                 )
             });
-        if self.root.get_name() == old_label && condition((self.clone(), current_address.clone())) {
+        if self.root.get_name() == old_label && condition(self, &current_address) {
             let mut addresses = children_addresses;
             addresses.insert(current_address);
             (
                 Self::new(
-                    Symbol::new(new_label, self.root.get_evaluates_to_type()),
+                    Symbol::new(new_label.to_string(), self.root.get_evaluates_to_type()),
                     new_children,
                 ),
                 addresses,
@@ -330,19 +451,64 @@ impl SymbolNode {
         }
     }
 
-    pub fn relabel_all(&self, relabelling: HashSet<(String, String)>) -> Self {
+    pub fn relabel_all(&self, relabelling: &HashSet<(String, String)>) -> Self {
         relabelling
             .into_iter()
             .fold(
                 (self.clone(), HashSet::new()),
                 |acc, (old_label, new_label)| {
                     let (new_tree, addresses) = acc;
-                    new_tree.relabel_and_get_addresses_if(old_label, new_label, Vec::new(), &|x| {
-                        !addresses.contains(&x.1)
-                    })
+                    new_tree.relabel_and_get_addresses_if(
+                        old_label,
+                        new_label,
+                        Vec::new(),
+                        &|_node, address| !addresses.contains(address),
+                    )
                 },
             )
             .0
+    }
+
+    pub fn get_typed_relabelling(
+        &self,
+        hierarchy: &TypeHierarchy,
+        other: &Self,
+    ) -> Result<Substitution, SymbolNodeError> {
+        if !(hierarchy.generalizes(self, other).is_ok()) {
+            return Err(SymbolNodeError::ConflictingTypes(
+                self.get_root_name(),
+                self.get_evaluates_to_type(),
+                other.get_evaluates_to_type(),
+            ));
+        }
+        return if !self.has_children() {
+            let substitutions = vec![(self.get_root_name().clone(), other.clone())]
+                .into_iter()
+                .collect();
+            Ok(Substitution::new(substitutions))
+        } else {
+            if self.get_n_children() != other.get_n_children() {
+                return Err(SymbolNodeError::DifferentNumberOfArguments(
+                    self.get_symbol().clone(),
+                    self.get_n_children(),
+                    other.get_symbol().clone(),
+                    other.get_n_children(),
+                ));
+            }
+            let new_inner = self
+                .get_children()
+                .iter()
+                .zip(other.get_children())
+                .try_fold(HashMap::new(), |mut acc, (i, j)| {
+                    i.get_typed_relabelling(hierarchy, j).map(|new_subs| {
+                        new_subs.get_inner().iter().for_each(|(s, n)| {
+                            acc.insert(s.clone(), n.clone());
+                        });
+                        acc
+                    })
+                })?;
+            Ok(Substitution::new(new_inner))
+        };
     }
 
     pub fn get_relabelling(
@@ -350,10 +516,16 @@ impl SymbolNode {
         other: &Self,
     ) -> Result<HashMap<String, String>, SymbolNodeError> {
         if self.children.len() != other.children.len() {
-            return Err(SymbolNodeError::DifferentNumberOfArguments);
+            return Err(SymbolNodeError::DifferentNumberOfArguments(
+                self.root.clone(),
+                self.children.len(),
+                other.root.clone(),
+                other.children.len(),
+            ));
         }
         let mut to_return = vec![(self.root.get_name(), other.root.get_name())];
-        for (i, (child, other_child)) in self.children.iter().zip(other.children.iter()).enumerate()
+        for (_i, (child, other_child)) in
+            self.children.iter().zip(other.children.iter()).enumerate()
         {
             let child_relabelling = child.get_relabelling(other_child)?;
             for (old_label, new_label) in child_relabelling {
@@ -361,14 +533,20 @@ impl SymbolNode {
             }
         }
 
-        if to_return
+        let to_return_keys = to_return
             .iter()
             .map(|x| x.0.clone())
-            .collect::<HashSet<_>>()
-            .len()
-            != to_return.len()
-        {
-            return Err(SymbolNodeError::RelabellingNotInjective);
+            .collect::<HashSet<_>>();
+
+        let to_return_key_values = to_return
+            .iter()
+            .map(|x| (x.0.clone(), x.1.clone()))
+            .collect::<HashSet<_>>();
+
+        if to_return_keys.len() != to_return_key_values.len() {
+            return Err(SymbolNodeError::RelabellingNotInjective(
+                to_return_key_values.into_iter().collect(),
+            ));
         }
 
         Ok(to_return.into_iter().collect())
@@ -423,6 +601,61 @@ impl SymbolNode {
     }
 }
 
+#[derive(Clone, Debug, Default, PartialEq, Eq)]
+pub struct Substitution {
+    substitution: HashMap<String, SymbolNode>,
+}
+
+impl Substitution {
+    pub fn new(substitution: HashMap<String, SymbolNode>) -> Self {
+        Self { substitution }
+    }
+
+    pub fn get_inner(&self) -> &HashMap<String, SymbolNode> {
+        &self.substitution
+    }
+
+    pub fn substitute(&self, statement: &SymbolNode) -> SymbolNode {
+        self.substitute_and_get_addresses_if(statement, &|_, _| true)
+            .0
+    }
+
+    pub fn substitute_and_get_addresses_if(
+        &self,
+        statement: &SymbolNode,
+        condition: &dyn Fn(&SymbolNode, &SymbolNodeAddress) -> bool,
+    ) -> (SymbolNode, HashSet<SymbolNodeAddress>) {
+        let mut addresses_to_subs = self
+            .substitution
+            .iter()
+            .map(|(from, to)| {
+                statement
+                    .find_symbol_name(from)
+                    .into_iter()
+                    .filter(|address| condition(statement, address))
+                    .map(|x| (x, to))
+                    .collect::<Vec<_>>()
+            })
+            .flatten()
+            .collect::<Vec<_>>();
+
+        // Sort decreasing in order to capture the deepest addresses first so they don't stomp each
+        // other
+        addresses_to_subs.sort_by(|a, b| a.0.len().cmp(&b.0.len()).reverse());
+
+        let mut to_return = statement.clone();
+        addresses_to_subs.iter().for_each(|(x, s)| {
+            to_return = to_return
+                .replace_node(x, s)
+                .expect("The address is guaranteed to be valid.");
+        });
+        (
+            to_return,
+            addresses_to_subs.into_iter().map(|x| x.0).collect(),
+        )
+    }
+}
+
 #[derive(Clone, Debug, Default, Hash, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Symbol {
     name: SymbolName,
@@ -472,7 +705,80 @@ impl Symbol {
 
 #[cfg(test)]
 mod test_statement {
+    use crate::parsing::{interpretation::Interpretation, parser::Parser};
+
     use super::*;
+
+    #[test]
+    fn test_substitution_substitutes() {
+        let interpretations = vec![
+            Interpretation::infix_operator("=".into(), 1, "Integer".into()),
+            Interpretation::singleton("a", "Integer".into()),
+            Interpretation::singleton("b", "Integer".into()),
+            Interpretation::singleton("x", "Integer".into()),
+            Interpretation::singleton("y", "Integer".into()),
+        ];
+        let parser = Parser::new(interpretations);
+
+        let custom_tokens = vec!["=".to_string()];
+        let b = parser
+            .parse_from_string(custom_tokens.clone(), "b")
+            .unwrap();
+        let y = parser
+            .parse_from_string(custom_tokens.clone(), "y")
+            .unwrap();
+        let a_equals_b = parser
+            .parse_from_string(custom_tokens.clone(), "a=b")
+            .unwrap();
+        let x_equals_y = parser
+            .parse_from_string(custom_tokens.clone(), "x=y")
+            .unwrap();
+        let x_equals_y_equals_b = parser
+            .parse_from_string(custom_tokens.clone(), "(x=y)=b")
+            .unwrap();
+        let x_equals_y_equals_y = parser
+            .parse_from_string(custom_tokens.clone(), "(x=y)=y")
+            .unwrap();
+        let x_equals_y_equals_x_equals_y = parser
+            .parse_from_string(custom_tokens.clone(), "(x=y)=(x=y)")
+            .unwrap();
+
+        let substitution = Substitution::new(
+            vec![("a".to_string(), x_equals_y.clone()), ("b".to_string(), b)]
+                .into_iter()
+                .collect(),
+        );
+        assert_eq!(
+            substitution.substitute(&a_equals_b.clone()),
+            x_equals_y_equals_b.clone()
+        );
+
+        let substitution = Substitution::new(
+            vec![
+                ("a".to_string(), x_equals_y.clone()),
+                ("b".to_string(), x_equals_y.clone()),
+            ]
+            .into_iter()
+            .collect(),
+        );
+        assert_eq!(
+            substitution.substitute(&a_equals_b),
+            x_equals_y_equals_x_equals_y
+        );
+
+        let substitution = Substitution::new(
+            vec![
+                ("x".to_string(), x_equals_y.clone()),
+                ("y".to_string(), y.clone()),
+            ]
+            .into_iter()
+            .collect(),
+        );
+        assert_eq!(
+            substitution.substitute(&x_equals_y),
+            x_equals_y_equals_y.clone()
+        );
+    }
 
     #[test]
     fn test_symbol_node_initializes() {
@@ -517,6 +823,64 @@ mod test_statement {
     }
 
     #[test]
+    fn test_symbol_node_with_child_replaced() {
+        let interpretations = vec![
+            Interpretation::infix_operator("=".into(), 1, "Integer".into()),
+            Interpretation::singleton("a", "Integer".into()),
+            Interpretation::singleton("b", "Integer".into()),
+            Interpretation::singleton("x", "Integer".into()),
+            Interpretation::singleton("y", "Integer".into()),
+        ];
+        let parser = Parser::new(interpretations);
+
+        let custom_tokens = vec!["=".to_string()];
+        let a_equals_b = parser
+            .parse_from_string(custom_tokens.clone(), "a=b")
+            .unwrap();
+        let q_equals_b = parser
+            .parse_from_string(custom_tokens.clone(), "q=b")
+            .unwrap();
+        let a_equals_q = parser
+            .parse_from_string(custom_tokens.clone(), "a=q")
+            .unwrap();
+        let x_equals_y = parser
+            .parse_from_string(custom_tokens.clone(), "x=y")
+            .unwrap();
+        let a_equals_x_equals_y = parser
+            .parse_from_string(custom_tokens.clone(), "a=(x=y)")
+            .unwrap();
+
+        assert_eq!(
+            a_equals_b
+                .clone()
+                .with_child_replaced(0, Symbol::new_object("q".to_string()).into())
+                .unwrap(),
+            q_equals_b
+        );
+        assert_eq!(
+            a_equals_b
+                .clone()
+                .with_child_replaced(1, Symbol::new_object("q".to_string()).into())
+                .unwrap(),
+            a_equals_q
+        );
+        assert_eq!(
+            a_equals_b
+                .clone()
+                .with_child_replaced(2, Symbol::new_object("q".to_string()).into()),
+            Err(SymbolNodeError::ChildIndexOutOfRange),
+        );
+
+        assert_eq!(
+            a_equals_b
+                .clone()
+                .with_child_replaced(1, x_equals_y)
+                .unwrap(),
+            a_equals_x_equals_y,
+        );
+    }
+
+    #[test]
     fn test_symbol_nodes_relabel() {
         let a_equals_b_plus_c = SymbolNode::new(
             "=".into(),
@@ -532,7 +896,7 @@ mod test_statement {
             ],
         );
 
-        let x_equals_b_plus_c = a_equals_b_plus_c.relabel("a".to_string(), "x".to_string());
+        let x_equals_b_plus_c = a_equals_b_plus_c.relabel("a", "x");
         let expected = SymbolNode::new(
             "=".into(),
             vec![
@@ -548,9 +912,7 @@ mod test_statement {
         );
         assert_eq!(x_equals_b_plus_c, expected);
 
-        let x_equals_y_plus_y = x_equals_b_plus_c
-            .relabel("b".to_string(), "y".to_string())
-            .relabel("c".to_string(), "y".to_string());
+        let x_equals_y_plus_y = x_equals_b_plus_c.relabel("b", "y").relabel("c", "y");
         let expected = SymbolNode::new(
             "=".into(),
             vec![
@@ -566,7 +928,7 @@ mod test_statement {
         );
         assert_eq!(x_equals_y_plus_y, expected);
 
-        let x_equals_x_plus_x = x_equals_y_plus_y.relabel("y".to_string(), "x".to_string());
+        let x_equals_x_plus_x = x_equals_y_plus_y.relabel("y", "x");
         let expected = SymbolNode::new(
             "=".into(),
             vec![
@@ -583,7 +945,7 @@ mod test_statement {
         assert_eq!(x_equals_x_plus_x, expected);
 
         let also_x_equals_x_plus_x = a_equals_b_plus_c.relabel_all(
-            vec![
+            &vec![
                 ("b".to_string(), "x".to_string()),
                 ("c".to_string(), "x".to_string()),
                 ("a".to_string(), "x".to_string()),
@@ -595,7 +957,7 @@ mod test_statement {
         assert_eq!(x_equals_x_plus_x, also_x_equals_x_plus_x);
 
         let a_equals_c_plus_b = a_equals_b_plus_c.relabel_all(
-            vec![
+            &vec![
                 ("b".to_string(), "c".to_string()),
                 ("c".to_string(), "b".to_string()),
             ]

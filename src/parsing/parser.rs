@@ -3,7 +3,7 @@ use crate::parsing::tokenizer::{Token, Tokenizer};
 use crate::symbol::symbol_node::SymbolNode;
 use crate::symbol::symbol_type::GeneratedType;
 
-use super::interpretation::ExpressionPrecedence;
+use super::interpretation::{ExpressionPrecedence, InterpretationCondition};
 use super::tokenizer::TokenStack;
 
 #[derive(Debug, PartialEq, Eq)]
@@ -158,6 +158,16 @@ impl Parser {
         }
 
         return None;
+    }
+
+    pub fn get_interpretation_custom_tokens(&self) -> Vec<String> {
+        self.interpretations
+            .iter()
+            .filter_map(|interpretation| match interpretation.get_condition() {
+                InterpretationCondition::Matches(t) => Some(t.to_string()),
+                _ => None,
+            })
+            .collect()
     }
 }
 
@@ -316,7 +326,13 @@ mod test_parser {
             })
             .collect();
 
-        let parser = Parser::new(operators_interpretations.clone());
+        let mut interpretations = operators_interpretations.clone();
+        interpretations.push(Interpretation::function(
+            Token::Object("inv".to_string()),
+            7,
+        ));
+
+        let parser = Parser::new(interpretations.clone());
 
         let pythagorean_theorem =
             parser.parse_from_string(operator_names.clone(), "a^2 + b^2 = c^2");
@@ -354,6 +370,23 @@ mod test_parser {
         );
 
         assert_eq!(pythagorean_theorem, Ok(expected));
+
+        let inverse_from = parser
+            .parse_from_string(vec!["*".to_string(), "inv".to_string()], "g*inv(g)")
+            .unwrap();
+
+        let expected = SymbolNode::new(
+            Symbol::new("*".to_string(), "Operator".into()),
+            vec![
+                SymbolNode::leaf_object("g".to_string()),
+                SymbolNode::new(
+                    Symbol::new("inv".to_string(), "inv".into()),
+                    vec![SymbolNode::leaf_object("g".to_string())],
+                ),
+            ],
+        );
+
+        assert_eq!(inverse_from, expected);
     }
 
     #[test]
@@ -573,7 +606,7 @@ mod test_parser {
 
     #[test]
     fn test_parser_parses_generated_type() {
-        let plus = Interpretation::infix_operator("+".into(), 1);
+        let plus = Interpretation::infix_operator("+".into(), 1, "+".into());
         let integer_condition = GeneratedTypeCondition::IsInteger;
         let integer = Interpretation::new(
             integer_condition.clone().into(),

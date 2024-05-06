@@ -2,15 +2,19 @@ use std::collections::HashSet;
 
 use serde::{Deserialize, Serialize};
 
-use crate::symbol::{
-    symbol_type::{GeneratedType, Type, TypeError, TypeHierarchy},
-    transformation::Transformation,
+use crate::{
+    parsing::interpretation::Interpretation,
+    symbol::{
+        symbol_type::{GeneratedType, Type, TypeError, TypeHierarchy},
+        transformation::Transformation,
+    },
 };
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Context {
     types: TypeHierarchy,
     generated_types: Vec<GeneratedType>,
+    interpretations: Vec<Interpretation>,
     transformations: Vec<Transformation>,
 }
 
@@ -19,6 +23,7 @@ impl Context {
         Self {
             types: TypeHierarchy::new(),
             generated_types: vec![],
+            interpretations: vec![],
             transformations: vec![],
         }
     }
@@ -26,6 +31,7 @@ impl Context {
     pub fn new(
         types: TypeHierarchy,
         generated_types: Vec<GeneratedType>,
+        interpretations: Vec<Interpretation>,
         transformations: Vec<Transformation>,
     ) -> Result<Self, ContextError> {
         match transformations
@@ -36,6 +42,7 @@ impl Context {
             None | Some(Ok(())) => Ok(Self {
                 types,
                 generated_types,
+                interpretations,
                 transformations,
             }),
             Some(Err(e)) => Err(ContextError::from(e)),
@@ -48,6 +55,10 @@ impl Context {
 
     pub fn get_generated_types(&self) -> &Vec<GeneratedType> {
         &self.generated_types
+    }
+
+    pub fn get_interpretations(&self) -> &Vec<Interpretation> {
+        &self.interpretations
     }
 
     pub fn get_transformations(&self) -> &Vec<Transformation> {
@@ -87,6 +98,71 @@ mod tests {
     use super::*;
 
     #[test]
+    fn test_context_expresses_group_theory() {
+        let context = Context::empty();
+        assert_eq!(context.get_types(), &TypeHierarchy::new());
+        assert_eq!(context.get_transformations(), &vec![]);
+
+        let mut types = TypeHierarchy::chain(vec!["Group Element".into()]).unwrap();
+        types.add_chain(vec!["Operator".into(), "*".into()]);
+        types.add_chain(vec!["=".into()]);
+
+        let equals_interpretation = Interpretation::infix_operator("=".into(), 1, "Integer".into());
+        let times_interpretation = Interpretation::infix_operator("*".into(), 3, "Integer".into());
+        let inverse_interpretation = Interpretation::function("inv".into(), 90);
+        let g_interpretation = Interpretation::singleton("g", "Group Element".into());
+        let one_interpretation = Interpretation::singleton("1", "Group Element".into());
+
+        let parser = Parser::new(vec![
+            equals_interpretation,
+            times_interpretation,
+            inverse_interpretation,
+            g_interpretation,
+            one_interpretation,
+        ]);
+
+        let commutativity = Transformation::symmetry(
+            "*".to_string(),
+            "*".into(),
+            ("a".to_string(), "b".to_string()),
+            "Group Element".into(),
+        );
+
+        let associativity = Transformation::associativity(
+            "*".to_string(),
+            "*".into(),
+            ("a".to_string(), "b".to_string(), "c".to_string()),
+            "Group Element".into(),
+        );
+
+        let identity_from = parser
+            .parse_from_string(vec!["*".to_string()], "g*1")
+            .unwrap();
+        let identity_to = parser
+            .parse_from_string(vec!["*".to_string()], "g")
+            .unwrap();
+        let identity = Transformation::new(identity_from, identity_to);
+
+        let inverse_from = parser
+            .parse_from_string(vec!["*".to_string()], "g*inv(g)")
+            .unwrap();
+        let inverse_to = parser
+            .parse_from_string(vec!["*".to_string()], "1")
+            .unwrap();
+        let inverse = Transformation::new(inverse_from, inverse_to);
+
+        let transformations = vec![commutativity, associativity, identity, inverse];
+
+        let context = Context::new(types.clone(), vec![], vec![], transformations.clone());
+
+        assert_eq!(context.clone().unwrap().get_types(), &types);
+        assert_eq!(
+            context.clone().unwrap().get_transformations(),
+            &transformations
+        );
+    }
+
+    #[test]
     fn test_context_initializes() {
         let context = Context::empty();
         assert_eq!(context.get_types(), &TypeHierarchy::new());
@@ -101,9 +177,9 @@ mod tests {
         .unwrap();
         types.add_chain(vec!["Operator".into(), "+".into()]);
         types.add_child_to_parent("*".into(), "Operator".into());
-        let equals_interpretation = Interpretation::infix_operator("=".into(), 1);
-        let plus_interpretation = Interpretation::infix_operator("+".into(), 2);
-        let times_interpretation = Interpretation::infix_operator("*".into(), 3);
+        let equals_interpretation = Interpretation::infix_operator("=".into(), 1, "Integer".into());
+        let plus_interpretation = Interpretation::infix_operator("+".into(), 2, "Integer".into());
+        let times_interpretation = Interpretation::infix_operator("*".into(), 3, "Integer".into());
 
         let parser = Parser::new(vec![
             equals_interpretation,
@@ -141,7 +217,7 @@ mod tests {
 
         let transformations = vec![additive_commutativity, multiplicative_commutativity];
 
-        let context = Context::new(types.clone(), vec![], transformations.clone());
+        let context = Context::new(types.clone(), vec![], vec![], transformations.clone());
 
         assert_eq!(context.clone().unwrap().get_types(), &types);
         assert_eq!(

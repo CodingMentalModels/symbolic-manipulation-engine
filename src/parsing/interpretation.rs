@@ -1,5 +1,7 @@
 use std::{collections::VecDeque, unimplemented};
 
+use serde::{Deserialize, Serialize};
+
 use crate::{
     constants::*,
     parsing::parser::ParserError,
@@ -13,7 +15,7 @@ use super::tokenizer::Token;
 
 pub type ExpressionPrecedence = u8;
 
-#[derive(Clone, Debug, Hash, PartialEq, Eq)]
+#[derive(Clone, Debug, Hash, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Interpretation {
     condition: InterpretationCondition,
     expression_type: ExpressionType,
@@ -81,12 +83,12 @@ impl Interpretation {
         )
     }
 
-    pub fn infix_operator(token: Token, precedence: u8) -> Self {
+    pub fn infix_operator(token: Token, precedence: u8, evaluates_to_type: Type) -> Self {
         Interpretation::new(
             InterpretationCondition::Matches(token.clone()),
             ExpressionType::Infix,
             precedence,
-            token.to_string().into(),
+            evaluates_to_type.into(),
         )
     }
 
@@ -98,6 +100,11 @@ impl Interpretation {
             token.to_string().into(),
         )
     }
+
+    pub fn get_condition(&self) -> InterpretationCondition {
+        self.condition.clone()
+    }
+
     pub fn get_expression_type(&self) -> ExpressionType {
         self.expression_type.clone()
     }
@@ -178,7 +185,7 @@ impl Interpretation {
     }
 }
 
-#[derive(Clone, Debug, Hash, PartialEq, Eq)]
+#[derive(Clone, Debug, Hash, PartialEq, Eq, Serialize, Deserialize)]
 pub enum InterpretationCondition {
     Matches(Token),
     IsObject,
@@ -195,7 +202,7 @@ impl From<GeneratedTypeCondition> for InterpretationCondition {
     }
 }
 
-#[derive(Clone, Debug, Hash, PartialEq, Eq)]
+#[derive(Clone, Debug, Hash, PartialEq, Eq, Serialize, Deserialize)]
 pub enum ExpressionType {
     Singleton,
     Prefix,
@@ -211,7 +218,7 @@ impl Default for ExpressionType {
     }
 }
 
-#[derive(Clone, Debug, Hash, PartialEq, Eq)]
+#[derive(Clone, Debug, Hash, PartialEq, Eq, Serialize, Deserialize)]
 pub enum InterpretedType {
     PassThrough,
     Delimiter,

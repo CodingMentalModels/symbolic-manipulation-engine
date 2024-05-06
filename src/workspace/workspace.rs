@@ -4,6 +4,10 @@ use serde::{Deserialize, Serialize};
 
 use crate::{
     context::context::Context,
+    parsing::{
+        interpretation::Interpretation,
+        parser::{Parser, ParserError},
+    },
     symbol::{
         symbol_node::{SymbolNode, SymbolNodeAddress},
         symbol_type::{GeneratedType, Type, TypeError, TypeHierarchy},
@@ -18,20 +22,30 @@ type TransformationIndex = usize;
 pub struct Workspace {
     types: TypeHierarchy,
     generated_types: Vec<GeneratedType>,
+    interpretations: Vec<Interpretation>,
     statements: Vec<SymbolNode>,
     transformations: Vec<Transformation>,
     provenance: Vec<Provenance>,
 }
 
 impl Workspace {
-    pub fn new(types: TypeHierarchy, generated_types: Vec<GeneratedType>) -> Workspace {
+    pub fn new(
+        types: TypeHierarchy,
+        generated_types: Vec<GeneratedType>,
+        interpretations: Vec<Interpretation>,
+    ) -> Workspace {
         Self {
             types,
             generated_types,
+            interpretations,
             statements: vec![],
             transformations: vec![],
             provenance: vec![],
         }
+    }
+
+    pub fn get_types(&self) -> &TypeHierarchy {
+        &self.types
     }
 
     pub fn try_import_context(&mut self, context: Context) -> Result<(), WorkspaceError> {
@@ -58,10 +72,39 @@ impl Workspace {
         let mut new_generated_types = self.generated_types.clone();
         new_generated_types.append(&mut context.get_generated_types().clone());
 
+        if context.get_interpretations().len() > 0 {
+            if self.interpretations.len() > 0
+                && &self.interpretations != context.get_interpretations()
+            {
+                return Err(WorkspaceError::UnsupportedOperation("For simplicity, we don't support importing Contexts with different interpretations than the workspace.".to_string()));
+            }
+        }
+
+        let mut new_interpretations = self.interpretations.clone();
+        new_interpretations.append(&mut context.get_interpretations().clone());
+
         self.types = new_types;
         self.generated_types = new_generated_types;
+        self.interpretations = new_interpretations;
         self.transformations = context.get_transformations().clone();
         Ok(())
+    }
+
+    pub fn add_parsed_statement(&mut self, s: &str) -> Result<SymbolNode, WorkspaceError> {
+        let parsed = self.parse_from_string(s)?;
+        self.add_statement(parsed.clone())?;
+        Ok(parsed)
+    }
+
+    pub fn parse_from_string(&self, s: &str) -> Result<SymbolNode, WorkspaceError> {
+        let parser = Parser::new(self.interpretations.clone());
+        parser
+            .parse_from_string(parser.get_interpretation_custom_tokens(), s)
+            .map_err(|e| e.into())
+    }
+
+    pub fn get_statements(&self) -> &Vec<SymbolNode> {
+        &self.statements
     }
 
     pub fn add_statement(&mut self, statement: SymbolNode) -> Result<(), WorkspaceError> {
@@ -91,6 +134,31 @@ impl Workspace {
         Ok(())
     }
 
+    pub fn try_transform_into_parsed(
+        &mut self,
+        desired: &str,
+    ) -> Result<SymbolNode, WorkspaceError> {
+        self.try_transform_into(self.parse_from_string(desired)?)
+    }
+
+    pub fn try_transform_into(
+        &mut self,
+        desired: SymbolNode,
+    ) -> Result<SymbolNode, WorkspaceError> {
+        for statement in self.statements.iter() {
+            for transform in self.transformations.iter() {
+                match transform.try_transform_into(self.get_types(), &statement, &desired) {
+                    Ok(output) => {
+                        self.add_statement(output.clone())?;
+                        return Ok(output);
+                    }
+                    Err(e) => {}
+                }
+            }
+        }
+        return Err(WorkspaceError::NoTransformationsPossible);
+    }
+
     pub fn transform_all(
         &mut self,
         transformation_index: TransformationIndex,
@@ -106,7 +174,7 @@ impl Workspace {
         let transformation = self.transformations[transformation_index].clone();
         let statement = self.statements[statement_index].clone();
         let (transformed_statement, transformed_addresses) = transformation
-            .transform_all(statement, substitutions)
+            .transform_all(&statement, &substitutions)
             .map_err(|e| WorkspaceError::TransformationError(e))?;
 
         self.statements.push(transformed_statement.clone());
@@ -134,7 +202,7 @@ impl Workspace {
         let transformation = self.transformations[transformation_index].clone();
         let statement = self.statements[statement_index].clone();
         let transformed_statement = transformation
-            .transform_at(statement, address.clone())
+            .transform_at(&statement, address.clone())
             .map_err(|_| WorkspaceError::InvalidTransformationAddress)?;
 
         self.statements.push(transformed_statement.clone());
@@ -258,12 +326,20 @@ pub enum WorkspaceError {
     InvalidStatementIndex,
     InvalidTransformationIndex,
     InvalidTransformationAddress,
+    ParserError(ParserError),
     TransformationError(TransformationError),
     StatementContainsTypesNotInHierarchy(HashSet<Type>),
     IncompatibleTypeRelationships(HashSet<Type>),
+    NoTransformationsPossible,
     InvalidTypeErrorTransformation(TypeError),
     AttemptedToImportAmbiguousTypes(HashSet<Type>),
     UnsupportedOperation(String),
+}
+
+impl From<ParserError> for WorkspaceError {
+    fn from(value: ParserError) -> Self {
+        Self::ParserError(value)
+    }
 }
 
 impl From<TypeError> for WorkspaceError {
@@ -294,30 +370,103 @@ mod test_workspace {
     use super::*;
 
     #[test]
+    fn test_workspace_try_transform_into() {
+        let mut types = TypeHierarchy::chain(vec!["Real".into(), "Integer".into()]).unwrap();
+        types
+            .add_child_to_parent("=".into(), "Real".into())
+            .unwrap();
+        types
+            .add_child_to_parent("+".into(), "Real".into())
+            .unwrap();
+        let interpretations = vec![
+            Interpretation::infix_operator("=".into(), 1, "=".into()),
+            Interpretation::infix_operator("+".into(), 6, "+".into()),
+            Interpretation::singleton("x".into(), "Real".into()),
+            Interpretation::singleton("y".into(), "Real".into()),
+            Interpretation::singleton("j".into(), "Integer".into()),
+            Interpretation::singleton("k".into(), "Integer".into()),
+            Interpretation::singleton("a".into(), "Integer".into()),
+            Interpretation::singleton("b".into(), "Integer".into()),
+            Interpretation::singleton("c".into(), "Integer".into()),
+        ];
+        let mut workspace = Workspace::new(types.clone(), vec![], interpretations.clone());
+        workspace
+            .add_transformation(Transformation::symmetry(
+                "+".to_string(),
+                "+".into(),
+                ("a".to_string(), "b".to_string()),
+                "Real".into(),
+            ))
+            .unwrap();
+
+        workspace.add_parsed_statement("x+y").unwrap();
+        let expected = workspace.parse_from_string("y+x").unwrap();
+        assert_eq!(
+            workspace.try_transform_into_parsed("y+x").unwrap(),
+            expected
+        );
+        assert!(workspace.get_statements().contains(&expected));
+
+        workspace.add_parsed_statement("j+k").unwrap();
+        let expected = workspace.parse_from_string("k+j").unwrap();
+        assert_eq!(
+            workspace.try_transform_into_parsed("k+j").unwrap(),
+            expected
+        );
+        assert!(workspace.get_statements().contains(&expected));
+
+        workspace.add_parsed_statement("a+(b+c)").unwrap();
+        let expected = workspace.parse_from_string("(b+c)+a").unwrap();
+        assert_eq!(
+            workspace.try_transform_into_parsed("(b+c)+a").unwrap(),
+            expected
+        );
+        assert!(workspace.get_statements().contains(&expected));
+
+        let mut workspace = Workspace::new(types.clone(), vec![], interpretations);
+        workspace
+            .add_transformation(Transformation::symmetry(
+                "+".to_string(),
+                "+".into(),
+                ("a".to_string(), "b".to_string()),
+                "Real".into(),
+            ))
+            .unwrap();
+
+        workspace.add_parsed_statement("a+(b+c)").unwrap();
+        let expected = workspace.parse_from_string("a+(c+b)").unwrap();
+        assert_eq!(
+            workspace.try_transform_into_parsed("a+(c+b)").unwrap(),
+            expected
+        );
+        assert!(workspace.get_statements().contains(&expected));
+    }
+
+    #[test]
     fn test_workspace_adds_and_deletes_statement() {
         let types = TypeHierarchy::new();
-        let mut workspace = Workspace::new(types, vec![]);
+        let mut workspace = Workspace::new(types, vec![], vec![]);
         let statement = SymbolNode::leaf_object("a".to_string());
-        workspace.add_statement(statement);
+        workspace.add_statement(statement).unwrap();
         assert_eq!(workspace.statements.len(), 1);
 
         let statement = SymbolNode::leaf_object("b".to_string());
-        workspace.add_statement(statement);
+        workspace.add_statement(statement).unwrap();
 
         assert_eq!(workspace.statements.len(), 2);
     }
 
     #[test]
     fn test_workspace_adds_statement_with_generated_type() {
-        let plus = Interpretation::infix_operator("+".into(), 1);
+        let plus = Interpretation::infix_operator("+".into(), 1, "Integer".into());
         let integer = GeneratedType::new(
             GeneratedTypeCondition::IsInteger,
             vec!["Integer".into()].into_iter().collect(),
         );
 
         let mut types = TypeHierarchy::chain(vec!["Real".into(), "Integer".into()]).unwrap();
-        types.add_chain(vec!["+".into()]);
-        let mut workspace = Workspace::new(types, vec![integer]);
+        types.add_chain(vec!["+".into()]).unwrap();
+        let mut workspace = Workspace::new(types, vec![integer], vec![]);
 
         let parser = Parser::new(vec![plus]);
         let two_plus_two = parser
@@ -327,14 +476,14 @@ mod test_workspace {
         assert_eq!(workspace.add_statement(two_plus_two), Ok(()));
         let mut expected =
             TypeHierarchy::chain(vec!["Real".into(), "Integer".into(), "2".into()]).unwrap();
-        expected.add_chain(vec!["+".into()]);
+        expected.add_chain(vec!["+".into()]).unwrap();
         assert_eq!(workspace.types, expected);
     }
 
     #[test]
     fn test_workspace_transforms_statement_and_maintains_provenance() {
         let types = TypeHierarchy::new();
-        let mut workspace = Workspace::new(types, vec![]);
+        let mut workspace = Workspace::new(types, vec![], vec![]);
         let statement = SymbolNode::leaf_object("a".to_string());
         assert_eq!(workspace.add_statement(statement), Ok(()));
         assert_eq!(workspace.statements.len(), 1);
@@ -343,7 +492,7 @@ mod test_workspace {
             SymbolNode::leaf_object("a".to_string()),
             SymbolNode::leaf_object("b".to_string()),
         );
-        workspace.add_transformation(transformation);
+        workspace.add_transformation(transformation).unwrap();
         assert_eq!(workspace.transformations.len(), 1);
 
         let _transformed = workspace.transform_all(0, 0, HashMap::new());
@@ -374,10 +523,12 @@ mod test_workspace {
             ])
         );
 
-        workspace.add_transformation(Transformation::new(
-            SymbolNode::leaf_object("b".to_string()),
-            SymbolNode::leaf_object("=".to_string()),
-        ));
+        workspace
+            .add_transformation(Transformation::new(
+                SymbolNode::leaf_object("b".to_string()),
+                SymbolNode::leaf_object("=".to_string()),
+            ))
+            .unwrap();
 
         let _transformed = workspace.transform_at(1, 1, vec![]);
         assert_eq!(workspace.statements.len(), 3);
@@ -399,12 +550,16 @@ mod test_workspace {
     #[test]
     fn test_workspace_imports_context() {
         let types = TypeHierarchy::new();
-        let mut workspace = Workspace::new(types, vec![]);
+        let mut workspace = Workspace::new(types, vec![], vec![]);
 
         let mut types =
             TypeHierarchy::chain(vec!["Real".into(), "Rational".into(), "Integer".into()]).unwrap();
-        types.add_chain(vec!["Operator".into(), "=".into()]);
-        types.add_chain_to_parent(vec!["+".into()], "Operator".into());
+        types
+            .add_chain(vec!["Operator".into(), "=".into()])
+            .unwrap();
+        types
+            .add_chain_to_parent(vec!["+".into()], "Operator".into())
+            .unwrap();
 
         let equality_reflexivity = Transformation::reflexivity(
             "=".to_string(),
@@ -423,6 +578,7 @@ mod test_workspace {
         let context = Context::new(
             types.clone(),
             vec![],
+            vec![],
             vec![equality_reflexivity.clone(), equality_symmetry.clone()],
         )
         .unwrap();
@@ -439,10 +595,15 @@ mod test_workspace {
         ])
         .unwrap();
 
-        complex_types.add_chain(vec!["Operator".into(), "=".into()]);
-        complex_types.add_chain_to_parent(vec!["+".into()], "Operator".into());
+        complex_types
+            .add_chain(vec!["Operator".into(), "=".into()])
+            .unwrap();
+        complex_types
+            .add_chain_to_parent(vec!["+".into()], "Operator".into())
+            .unwrap();
         let ambiguous_context = Context::new(
             complex_types,
+            vec![],
             vec![],
             vec![equality_reflexivity, equality_symmetry],
         )
@@ -466,9 +627,8 @@ mod test_workspace {
 
         assert_eq!(workspace.transformations.len(), 2);
 
-        let mut inverted_types =
-            TypeHierarchy::chain(vec!["Rational".into(), "Real".into()]).unwrap();
-        let conflicting_context = Context::new(inverted_types, vec![], vec![]).unwrap();
+        let inverted_types = TypeHierarchy::chain(vec!["Rational".into(), "Real".into()]).unwrap();
+        let conflicting_context = Context::new(inverted_types, vec![], vec![], vec![]).unwrap();
 
         assert_eq!(
             workspace.try_import_context(conflicting_context),

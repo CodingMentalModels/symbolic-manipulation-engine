@@ -1,5 +1,7 @@
 use std::collections::VecDeque;
 
+use serde::{Deserialize, Serialize};
+
 use super::parser::ParserError;
 use crate::constants::*;
 
@@ -137,7 +139,7 @@ impl TokenStack {
         self.len() == 0
     }
 }
-#[derive(Clone, Debug, Hash, PartialEq, Eq)]
+#[derive(Clone, Debug, Hash, PartialEq, Eq, Serialize, Deserialize)]
 pub enum Token {
     LeftParen,
     RightParen,
