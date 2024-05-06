@@ -55,6 +55,6 @@ fn main() {
 
     match result {
         Ok(message) => println!("{}", message),
-        Err(e) => println!("{}", e),
+        Err(e) => eprintln!("{}", e),
     }
 }
