@@ -402,7 +402,7 @@ impl SymbolNode {
     }
 
     pub fn relabel(&self, old_label: &str, new_label: &str) -> Self {
-        self.relabel_and_get_addresses_if(old_label, new_label, Vec::new(), &|x| true)
+        self.relabel_and_get_addresses_if(old_label, new_label, Vec::new(), &|_, _| true)
             .0
     }
 
@@ -411,7 +411,7 @@ impl SymbolNode {
         old_label: &str,
         new_label: &str,
         current_address: SymbolNodeAddress,
-        condition: &dyn Fn((Self, SymbolNodeAddress)) -> bool,
+        condition: &dyn Fn(&Self, &SymbolNodeAddress) -> bool,
     ) -> (Self, HashSet<SymbolNodeAddress>) {
         let (new_children, children_addresses) = self
             .children
@@ -420,12 +420,7 @@ impl SymbolNode {
             .map(|(i, child)| {
                 let mut child_address = current_address.clone();
                 child_address.push(i);
-                child.relabel_and_get_addresses_if(
-                    old_label.clone(),
-                    new_label.clone(),
-                    child_address,
-                    condition,
-                )
+                child.relabel_and_get_addresses_if(old_label, new_label, child_address, condition)
             })
             .fold((Vec::new(), HashSet::new()), |acc, elt| {
                 let (new_children, new_children_addresses) = acc;
@@ -438,7 +433,7 @@ impl SymbolNode {
                         .collect(),
                 )
             });
-        if self.root.get_name() == old_label && condition((self.clone(), current_address.clone())) {
+        if self.root.get_name() == old_label && condition(self, &current_address) {
             let mut addresses = children_addresses;
             addresses.insert(current_address);
             (
@@ -463,9 +458,12 @@ impl SymbolNode {
                 (self.clone(), HashSet::new()),
                 |acc, (old_label, new_label)| {
                     let (new_tree, addresses) = acc;
-                    new_tree.relabel_and_get_addresses_if(old_label, new_label, Vec::new(), &|x| {
-                        !addresses.contains(&x.1)
-                    })
+                    new_tree.relabel_and_get_addresses_if(
+                        old_label,
+                        new_label,
+                        Vec::new(),
+                        &|_node, address| !addresses.contains(address),
+                    )
                 },
             )
             .0
@@ -665,13 +663,23 @@ impl Substitution {
     }
 
     pub fn substitute(&self, statement: &SymbolNode) -> SymbolNode {
-        let mut locations_to_subs = self
+        self.substitute_and_get_addresses_if(statement, &|_, _| true)
+            .0
+    }
+
+    pub fn substitute_and_get_addresses_if(
+        &self,
+        statement: &SymbolNode,
+        condition: &dyn Fn(&SymbolNode, &SymbolNodeAddress) -> bool,
+    ) -> (SymbolNode, HashSet<SymbolNodeAddress>) {
+        let mut addresses_to_subs = self
             .substitution
             .iter()
             .map(|(from, to)| {
                 statement
                     .find_symbol_name(from)
                     .into_iter()
+                    .filter(|address| condition(statement, address))
                     .map(|x| (x, to))
                     .collect::<Vec<_>>()
             })
@@ -680,15 +688,18 @@ impl Substitution {
 
         // Sort decreasing in order to capture the deepest addresses first so they don't stomp each
         // other
-        locations_to_subs.sort_by(|a, b| a.0.len().cmp(&b.0.len()).reverse());
+        addresses_to_subs.sort_by(|a, b| a.0.len().cmp(&b.0.len()).reverse());
 
         let mut to_return = statement.clone();
-        locations_to_subs.iter().for_each(|(x, s)| {
+        addresses_to_subs.iter().for_each(|(x, s)| {
             to_return = to_return
                 .replace_node(x, s)
                 .expect("The address is guaranteed to be valid.");
         });
-        to_return
+        (
+            to_return,
+            addresses_to_subs.into_iter().map(|x| x.0).collect(),
+        )
     }
 }
 
