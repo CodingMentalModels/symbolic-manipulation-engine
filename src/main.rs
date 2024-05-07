@@ -36,7 +36,7 @@ fn main() {
         )
         .subcommand(Command::new("ls").about("Lists the workspaces"))
         .subcommand(Command::new("get-transformations").about("Takes a partial string and gets all valid transformations sorted based on the string.").arg(
-                Arg::new("string").required(true)
+                Arg::new("partial-statement").required(true)
                 )
                     )
         .get_matches();
