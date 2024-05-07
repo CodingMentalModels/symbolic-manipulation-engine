@@ -1,4 +1,5 @@
 use clap::ArgMatches;
+use serde_json::to_string;
 
 use crate::{
     cli::filesystem::FileSystem, config::STATE_DIRECTORY_RELATIVE_PATH, parsing::parser::Parser,
@@ -83,6 +84,21 @@ impl Cli {
 
     pub fn ls(&self) -> Result<String, String> {
         self.load_workspace().map(|w| w.to_string())
+    }
+
+    pub fn get_transformations(&self, sub_matches: &ArgMatches) -> Result<String, String> {
+        let workspace = self.load_workspace()?;
+        // TODO: Format these strings so that they look like what the user expects
+        // TODO: Are we going to have line separator issues across different platforms?
+        match sub_matches.get_one::<String>("partial-statement") {
+            None => Err("No partial statement provided.".to_string()),
+            Some(partial_statement) => {
+                let serialized_result =
+                    to_string(&workspace.get_valid_transformations(partial_statement))
+                        .map_err(|e| e.to_string())?;
+                Ok(serialized_result)
+            }
+        }
     }
 
     pub fn derive(&self, sub_matches: &ArgMatches) -> Result<String, String> {

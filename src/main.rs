@@ -35,6 +35,10 @@ fn main() {
             ),
         )
         .subcommand(Command::new("ls").about("Lists the workspaces"))
+        .subcommand(Command::new("get-transformations").about("Takes a partial string and gets all valid transformations sorted based on the string.").arg(
+                Arg::new("partial-statement").required(true)
+                )
+                    )
         .get_matches();
 
     let current_directory = match current_dir() {
@@ -53,6 +57,7 @@ fn main() {
         Some(("init", _sub_matches)) => cli.init(),
         Some(("rmws", sub_matches)) => cli.rmws(sub_matches),
         Some(("ls", _sub_matches)) => cli.ls(),
+        Some(("get-transformations", sub_matches)) => cli.get_transformations(sub_matches),
         _ => Err("No subcommand was used".to_string()),
     };
 
