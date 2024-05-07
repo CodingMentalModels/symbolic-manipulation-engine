@@ -21,6 +21,9 @@ fn main() {
         .about("Symbolic Manipulation Engine for performing mathematical operations")
         .propagate_version(true)
         .subcommand_required(true)
+        .subcommand(
+            Command::new("hello-world").about("Returns Hello World to stdout for debugging."),
+        )
         .subcommand(Command::new("init").about("Initializes a new workspace"))
         .subcommand(
             Command::new("rmws").about("Removes the workspace").arg(
