@@ -21,9 +21,6 @@ fn main() {
         .about("Symbolic Manipulation Engine for performing mathematical operations")
         .propagate_version(true)
         .subcommand_required(true)
-        .subcommand(
-            Command::new("hello-world").about("Returns Hello World to stdout for debugging."),
-        )
         .subcommand(Command::new("init").about("Initializes a new workspace"))
         .subcommand(
             Command::new("rmws").about("Removes the workspace").arg(
@@ -53,7 +50,6 @@ fn main() {
     let cli = Cli::new(filesystem);
 
     let result = match matches.subcommand() {
-        Some(("hello-world", _sub_matches)) => cli.hello_world(),
         Some(("init", _sub_matches)) => cli.init(),
         Some(("rmws", sub_matches)) => cli.rmws(sub_matches),
         Some(("ls", _sub_matches)) => cli.ls(),
