@@ -117,6 +117,10 @@ impl Workspace {
         Ok(())
     }
 
+    pub fn get_transformations(&self) -> &Vec<Transformation> {
+        &self.transformations
+    }
+
     pub fn add_transformation(
         &mut self,
         transformation: Transformation,
@@ -132,6 +136,26 @@ impl Workspace {
         );
         self.transformations.push(transformation);
         Ok(())
+    }
+
+    pub fn get_valid_transformations(&self, partial_statement: &str) -> Vec<SymbolNode> {
+        // TODO: Try to complete partial statements
+        let desired = match self.parse_from_string(partial_statement) {
+            Err(_) => {
+                return vec![];
+            }
+            Ok(s) => s,
+        };
+        for statement in self.get_statements() {
+            for transformation in self.get_transformations() {
+                let valid_transformations =
+                    transformation.get_valid_transformations(self.get_types(), statement);
+                if valid_transformations.contains(&desired) {
+                    return vec![desired.clone()];
+                }
+            }
+        }
+        return vec![];
     }
 
     pub fn try_transform_into_parsed(
