@@ -357,9 +357,16 @@ impl SymbolNode {
         &self,
         interpretations: Vec<Interpretation>,
     ) -> (String, (String, Type)) {
+        (
+            self.to_interpreted_string(interpretations),
+            self.get_sorted_type_map(),
+        )
+    }
+
+    pub fn to_interpreted_string(&self, interpretations: Vec<Interpretation>) -> String {
         if self.has_children() {
         } else {
-            (self.get_root_name(), self.get_sorted_type_map())
+            self.get_root_name()
         }
     }
 
