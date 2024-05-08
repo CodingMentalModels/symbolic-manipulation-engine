@@ -79,7 +79,9 @@ impl Cli {
     }
 
     pub fn ls(&self) -> Result<String, String> {
-        self.load_workspace().map(|w| w.to_string())
+        self.load_workspace()?
+            .to_json()
+            .map_err(|_| "Serialization Error.".to_string())
     }
 
     pub fn get_transformations(&self, sub_matches: &ArgMatches) -> Result<String, String> {

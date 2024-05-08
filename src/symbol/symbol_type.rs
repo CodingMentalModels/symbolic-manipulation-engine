@@ -14,6 +14,27 @@ use super::{
 
 pub type TypeName = String;
 
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+pub struct DisplayTypeHierarchyNode {
+    inner: Type,
+    parents: Vec<Type>,
+    children: Vec<Type>,
+}
+
+impl From<&TypeHierarchy> for Vec<DisplayTypeHierarchyNode> {
+    fn from(hierarchy: &TypeHierarchy) -> Self {
+        hierarchy
+            .type_map
+            .iter()
+            .map(|(type_key, node)| DisplayTypeHierarchyNode {
+                inner: type_key.clone(),
+                parents: node.parents.iter().cloned().collect(),
+                children: node.children.iter().cloned().collect(),
+            })
+            .collect()
+    }
+}
+
 #[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
 pub struct TypeHierarchy {
     type_map: HashMap<Type, TypeHierarchyNode>,

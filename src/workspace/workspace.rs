@@ -1,6 +1,7 @@
 use std::collections::{HashMap, HashSet};
 
 use serde::{Deserialize, Serialize};
+use serde_json::to_string;
 
 use crate::{
     context::context::Context,
@@ -10,13 +11,36 @@ use crate::{
     },
     symbol::{
         symbol_node::{SymbolNode, SymbolNodeAddress},
-        symbol_type::{GeneratedType, Type, TypeError, TypeHierarchy},
+        symbol_type::{DisplayTypeHierarchyNode, GeneratedType, Type, TypeError, TypeHierarchy},
         transformation::{Transformation, TransformationError},
     },
 };
 
 type StatementIndex = usize;
 type TransformationIndex = usize;
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct DisplayWorkspace {
+    types: Vec<DisplayTypeHierarchyNode>,
+    generated_types: Vec<GeneratedType>,
+    interpretations: Vec<Interpretation>,
+    statements: Vec<SymbolNode>,
+    transformations: Vec<Transformation>,
+    provenance: Vec<Provenance>,
+}
+
+impl From<&Workspace> for DisplayWorkspace {
+    fn from(workspace: &Workspace) -> Self {
+        DisplayWorkspace {
+            types: Vec::<DisplayTypeHierarchyNode>::from(&workspace.types),
+            generated_types: workspace.generated_types.clone(),
+            interpretations: workspace.interpretations.clone(),
+            statements: workspace.statements.clone(),
+            transformations: workspace.transformations.clone(),
+            provenance: workspace.provenance.clone(),
+        }
+    }
+}
 
 #[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Workspace {
@@ -264,30 +288,9 @@ impl Workspace {
         Ok(self.provenance[index].clone())
     }
 
-    pub fn to_string(&self) -> String {
-        let mut to_return = Vec::new();
-        let transformation_header = "Transformations:".to_string();
-        to_return.push(transformation_header);
-
-        self.transformations
-            .iter()
-            .enumerate()
-            .for_each(|(index, transformation)| {
-                to_return.push(format!("{}: {}", index, transformation.to_string()));
-            });
-        to_return.push("".to_string());
-
-        let statement_header = "Statements:".to_string();
-        to_return.push(statement_header);
-
-        self.statements
-            .iter()
-            .enumerate()
-            .for_each(|(index, statement)| {
-                to_return.push(format!("{}: {}", index, statement.to_string()));
-            });
-
-        return to_return.join("\n");
+    pub fn to_json(&self) -> Result<String, WorkspaceError> {
+        let display_workspace = DisplayWorkspace::from(self);
+        to_string(&display_workspace).map_err(|e| WorkspaceError::UnableToSerialize)
     }
 
     pub fn serialize(&self) -> String {
@@ -351,6 +354,7 @@ pub enum WorkspaceError {
     InvalidTransformationIndex,
     InvalidTransformationAddress,
     ParserError(ParserError),
+    UnableToSerialize,
     TransformationError(TransformationError),
     StatementContainsTypesNotInHierarchy(HashSet<Type>),
     IncompatibleTypeRelationships(HashSet<Type>),
