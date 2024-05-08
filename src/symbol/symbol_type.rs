@@ -419,6 +419,21 @@ pub struct TypeHierarchyNode {
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+pub struct DisplayGeneratedType {
+    condition: GeneratedTypeCondition,
+    parents: Vec<Type>,
+}
+
+impl From<&GeneratedType> for DisplayGeneratedType {
+    fn from(value: &GeneratedType) -> Self {
+        Self {
+            condition: value.condition.clone(),
+            parents: value.parents.clone().into_iter().collect(),
+        }
+    }
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub struct GeneratedType {
     condition: GeneratedTypeCondition,
     parents: HashSet<Type>,

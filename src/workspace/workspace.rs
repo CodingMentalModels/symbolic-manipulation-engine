@@ -11,7 +11,10 @@ use crate::{
     },
     symbol::{
         symbol_node::{SymbolNode, SymbolNodeAddress},
-        symbol_type::{DisplayTypeHierarchyNode, GeneratedType, Type, TypeError, TypeHierarchy},
+        symbol_type::{
+            DisplayGeneratedType, DisplayTypeHierarchyNode, GeneratedType, Type, TypeError,
+            TypeHierarchy,
+        },
         transformation::{Transformation, TransformationError},
     },
 };
@@ -22,7 +25,7 @@ type TransformationIndex = usize;
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct DisplayWorkspace {
     types: Vec<DisplayTypeHierarchyNode>,
-    generated_types: Vec<GeneratedType>,
+    generated_types: Vec<DisplayGeneratedType>,
     interpretations: Vec<Interpretation>,
     statements: Vec<SymbolNode>,
     transformations: Vec<Transformation>,
@@ -33,7 +36,11 @@ impl From<&Workspace> for DisplayWorkspace {
     fn from(workspace: &Workspace) -> Self {
         DisplayWorkspace {
             types: Vec::<DisplayTypeHierarchyNode>::from(&workspace.types),
-            generated_types: workspace.generated_types.clone(),
+            generated_types: workspace
+                .generated_types
+                .iter()
+                .map(|g| DisplayGeneratedType::from(g))
+                .collect(),
             interpretations: workspace.interpretations.clone(),
             statements: workspace.statements.clone(),
             transformations: workspace.transformations.clone(),
