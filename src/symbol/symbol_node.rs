@@ -353,6 +353,16 @@ impl SymbolNode {
         self.find_where(&|node| node.root.get_name() == symbol_name)
     }
 
+    pub fn to_interpreted_string_and_type_map(
+        &self,
+        interpretations: Vec<Interpretation>,
+    ) -> (String, (String, Type)) {
+        if self.has_children() {
+        } else {
+            (self.get_root_name(), self.get_sorted_type_map())
+        }
+    }
+
     pub fn to_string(&self) -> String {
         if self.children.len() == 0 {
             self.root.to_string()
