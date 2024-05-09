@@ -365,6 +365,14 @@ impl SymbolNode {
 
     pub fn to_interpreted_string(&self, interpretations: Vec<Interpretation>) -> String {
         if self.has_children() {
+            match interpretations.iter().find(|i| i.could_produce(self)) {
+                Some(interpretation) => {
+                    not_implemented!();
+                }
+                None => {
+                    not_implemented();
+                }
+            }
         } else {
             self.get_root_name()
         }
