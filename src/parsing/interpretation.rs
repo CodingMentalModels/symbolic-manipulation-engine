@@ -145,6 +145,12 @@ impl Interpretation {
         }
     }
 
+    pub fn could_produce(&self, statement: &SymbolNode) -> bool {
+        self.condition.could_produce(statement)
+            && self.expression_type.could_produce(statement)
+            && self.output_type.could_produce(statement)
+    }
+
     pub fn satisfies_condition(&self, so_far: &Option<SymbolNode>, token: &Token) -> bool {
         let is_ok_expression_type = match self.expression_type {
             ExpressionType::Singleton
@@ -166,21 +172,29 @@ impl Interpretation {
                 }
             }
             InterpretationCondition::IsInteger => {
-                if let Token::Object(n) = token {
-                    // TODO: This will fail on big enough numbers
-                    return n.parse::<i64>().is_ok();
-                } else {
-                    return false;
-                }
+                return Self::is_integer(token);
             }
             InterpretationCondition::IsNumeric => {
-                if let Token::Object(n) = token {
-                    // TODO: This will fail on big enough numbers
-                    return n.parse::<f64>().is_ok();
-                } else {
-                    return false;
-                }
+                return Self::is_numeric(token);
             }
+        }
+    }
+
+    fn is_integer(token: &Token) -> bool {
+        if let Token::Object(n) = token {
+            // TODO: This will fail on big enough numbers
+            return n.parse::<i64>().is_ok();
+        } else {
+            return false;
+        }
+    }
+
+    fn is_numeric(token: &Token) -> bool {
+        if let Token::Object(n) = token {
+            // TODO: This will fail on big enough numbers
+            return n.parse::<f64>().is_ok();
+        } else {
+            return false;
         }
     }
 }
@@ -198,6 +212,23 @@ impl From<GeneratedTypeCondition> for InterpretationCondition {
         match value {
             GeneratedTypeCondition::IsInteger => Self::IsInteger,
             GeneratedTypeCondition::IsNumeric => Self::IsNumeric,
+        }
+    }
+}
+
+impl InterpretationCondition {
+    fn could_produce(&self, statement: &SymbolNode) -> bool {
+        match self {
+            Self::IsObject => true,
+            Self::IsNumeric => unimplemented!(),
+            Self::IsInteger => unimplemented!(),
+            Self::Matches(token) => {
+                if let Token::Object(s) = token {
+                    return s == &statement.get_root_name();
+                } else {
+                    return false;
+                }
+            }
         }
     }
 }

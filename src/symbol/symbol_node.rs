@@ -7,7 +7,7 @@ use std::{
 
 use serde::{Deserialize, Serialize};
 
-use crate::symbol::symbol_type::Type;
+use crate::{parsing::interpretation::Interpretation, symbol::symbol_type::Type};
 
 use super::symbol_type::TypeHierarchy;
 
@@ -367,10 +367,10 @@ impl SymbolNode {
         if self.has_children() {
             match interpretations.iter().find(|i| i.could_produce(self)) {
                 Some(interpretation) => {
-                    not_implemented!();
+                    unimplemented!();
                 }
                 None => {
-                    not_implemented();
+                    unimplemented!();
                 }
             }
         } else {
