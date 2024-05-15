@@ -2,7 +2,6 @@ use core::fmt;
 use std::{
     collections::{HashMap, HashSet},
     fmt::Debug,
-    unimplemented,
 };
 
 use serde::{Deserialize, Serialize};
@@ -175,7 +174,7 @@ impl SymbolNode {
             std::collections::hash_map::Entry::Vacant(e) => {
                 e.insert(self.get_n_children());
             }
-            std::collections::hash_map::Entry::Occupied(mut e) => {
+            std::collections::hash_map::Entry::Occupied(e) => {
                 // If the arity (number of children) is different, return an error
                 if *e.get() != self.get_n_children() {
                     return Err(SymbolNodeError::ConflictingSymbolArities(self.root.clone()));

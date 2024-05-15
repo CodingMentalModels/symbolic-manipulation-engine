@@ -1,11 +1,6 @@
-use std::{
-    collections::{HashMap, HashSet},
-    unimplemented,
-};
+use std::collections::{HashMap, HashSet};
 
 use serde::{Deserialize, Serialize};
-
-use crate::parsing::interpretation::InterpretedType;
 
 use super::{
     symbol_node::{Symbol, SymbolNode},
@@ -158,7 +153,7 @@ impl TypeHierarchy {
                 self.instantiate(general_child, specific_child)
                     .map(|new_child| {
                         acc.push(new_child);
-                    });
+                    })?;
                 Ok(acc)
             })?;
 
@@ -284,7 +279,7 @@ impl TypeHierarchy {
     }
 
     pub fn get_types(&self) -> HashSet<Type> {
-        self.type_map.iter().map(|(t, n)| t).cloned().collect()
+        self.type_map.iter().map(|(t, _)| t).cloned().collect()
     }
 
     pub fn get_shared_types(&self, other: &Self) -> HashSet<Type> {
@@ -367,7 +362,7 @@ impl TypeHierarchy {
         }
     }
 
-    fn are_compatible_or_error(h1: &TypeHierarchy, h2: &TypeHierarchy) -> Result<(()), TypeError> {
+    fn are_compatible_or_error(h1: &TypeHierarchy, h2: &TypeHierarchy) -> Result<(), TypeError> {
         let left_to_right = Self::is_left_compatible_with_right(h1, h2);
         let right_to_left = Self::is_left_compatible_with_right(h2, h1);
 
