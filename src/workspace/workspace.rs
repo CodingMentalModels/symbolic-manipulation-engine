@@ -142,7 +142,7 @@ impl Workspace {
         self.types
             .binds_statement_or_error(&statement)
             .map_err(|x| WorkspaceError::from(x))?;
-        self.generate_types_in_bulk(vec![statement.clone()].into_iter().collect());
+        self.generate_types_in_bulk(vec![statement.clone()].into_iter().collect())?;
         self.statements.push(statement);
         self.provenance.push(Provenance::Hypothesis);
         Ok(())
@@ -164,7 +164,7 @@ impl Workspace {
             ]
             .into_iter()
             .collect(),
-        );
+        )?;
         self.transformations.push(transformation);
         Ok(())
     }
@@ -297,7 +297,7 @@ impl Workspace {
 
     pub fn to_json(&self) -> Result<String, WorkspaceError> {
         let display_workspace = DisplayWorkspace::from(self);
-        to_string(&display_workspace).map_err(|e| WorkspaceError::UnableToSerialize)
+        to_string(&display_workspace).map_err(|_| WorkspaceError::UnableToSerialize)
     }
 
     pub fn serialize(&self) -> String {
