@@ -116,6 +116,18 @@ impl TypeHierarchy {
         parent_child_pairs
     }
 
+    pub fn get_parents(&self, child: &Type) -> Result<HashSet<Type>, TypeError> {
+        let pairs = self
+            .get_parent_child_pairs()
+            .into_iter()
+            .filter(|pair| &pair.1 == child)
+            .collect::<Vec<_>>();
+        if pairs.len() == 0 {
+            return Err(TypeError::InvalidType(child.clone()));
+        }
+        Ok(pairs.into_iter().map(|pair| pair.1.clone()).collect())
+    }
+
     pub fn instantiate(
         &self,
         general: &SymbolNode,

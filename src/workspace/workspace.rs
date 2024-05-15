@@ -336,9 +336,15 @@ impl Workspace {
             let result: Option<TypeError> = generated_type
                 .generate(&statement)
                 .into_iter()
-                .map(|(t, parents)| self.types.add_child_to_parents(t, parents))
-                .filter(|r| r.is_err())
-                .map(|r| r.expect_err("We just checked that it's an error."))
+                .map(|(t, parents)| (self.types.add_child_to_parents(t, parents), parents))
+                .filter(|(r, parents)| match r {
+                    Err(TypeError::TypeHierarchyAlreadyIncludes(prior_type)) => {
+                        self.types.get_parents(prior_type) == Ok(parents).cloned()
+                    }
+                    Err(_) => true,
+                    _ => false,
+                })
+                .map(|(r, parents)| r.expect_err("We just checked that it's an error."))
                 .next();
             match result {
                 Some(e) => return Err(e.into()),
