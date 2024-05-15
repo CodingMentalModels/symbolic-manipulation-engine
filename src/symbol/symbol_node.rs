@@ -780,6 +780,8 @@ mod test_statement {
         let interpretations = vec![
             Interpretation::infix_operator("=".into(), 1, "Integer".into()),
             Interpretation::outfix_operator(("|".into(), "|".into()), 2, "Integer".into()),
+            Interpretation::postfix_operator("!".into(), 3, "Integer".into()),
+            Interpretation::prefix_operator("-".into(), 4, "Integer".into()),
             Interpretation::function("f".into(), 99),
             Interpretation::singleton("a", "Integer".into()),
             Interpretation::singleton("b", "Integer".into()),
@@ -815,6 +817,22 @@ mod test_statement {
         assert_eq!(
             abs_x.to_interpreted_string(&interpretations),
             "|x|".to_string()
+        );
+
+        let neg_x = parser
+            .parse_from_string(custom_tokens.clone(), "-x")
+            .unwrap();
+        assert_eq!(
+            neg_x.to_interpreted_string(&interpretations),
+            "-x".to_string()
+        );
+
+        let x_factorial = parser
+            .parse_from_string(custom_tokens.clone(), "x!")
+            .unwrap();
+        assert_eq!(
+            x_factorial.to_interpreted_string(&interpretations),
+            "x!".to_string()
         );
 
         let f_of_x = parser

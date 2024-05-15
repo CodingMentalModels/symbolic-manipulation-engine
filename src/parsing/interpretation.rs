@@ -83,6 +83,24 @@ impl Interpretation {
         )
     }
 
+    pub fn prefix_operator(token: Token, precedence: u8, evaluates_to_type: Type) -> Self {
+        Interpretation::new(
+            InterpretationCondition::Matches(token.clone()),
+            ExpressionType::Prefix,
+            precedence,
+            evaluates_to_type.into(),
+        )
+    }
+
+    pub fn postfix_operator(token: Token, precedence: u8, evaluates_to_type: Type) -> Self {
+        Interpretation::new(
+            InterpretationCondition::Matches(token.clone()),
+            ExpressionType::Postfix,
+            precedence,
+            evaluates_to_type.into(),
+        )
+    }
+
     pub fn infix_operator(token: Token, precedence: u8, evaluates_to_type: Type) -> Self {
         Interpretation::new(
             InterpretationCondition::Matches(token.clone()),
