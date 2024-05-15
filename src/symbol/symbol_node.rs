@@ -7,7 +7,13 @@ use std::{
 
 use serde::{Deserialize, Serialize};
 
-use crate::{parsing::interpretation::Interpretation, symbol::symbol_type::Type};
+use crate::{
+    parsing::{
+        interpretation::{ExpressionType, Interpretation},
+        tokenizer::Token,
+    },
+    symbol::symbol_type::Type,
+};
 
 use super::symbol_type::TypeHierarchy;
 
@@ -355,23 +361,54 @@ impl SymbolNode {
 
     pub fn to_interpreted_string_and_type_map(
         &self,
-        interpretations: Vec<Interpretation>,
-    ) -> (String, (String, Type)) {
-        (
-            self.to_interpreted_string(interpretations),
-            self.get_sorted_type_map(),
-        )
+        interpretations: &Vec<Interpretation>,
+    ) -> Result<(String, Vec<(String, Type)>), SymbolNodeError> {
+        self.get_sorted_type_map()
+            .map(|type_map| (self.to_interpreted_string(interpretations), type_map))
     }
 
-    pub fn to_interpreted_string(&self, interpretations: Vec<Interpretation>) -> String {
+    pub fn to_interpreted_string(&self, interpretations: &Vec<Interpretation>) -> String {
         if self.has_children() {
+            let interpreted_children = self
+                .get_children()
+                .iter()
+                .map(|child| child.to_interpreted_string(interpretations))
+                .collect::<Vec<_>>();
+            let functional_string = format!(
+                "{}({})",
+                self.get_root_name(),
+                interpreted_children.join(", ")
+            )
+            .to_string();
             match interpretations.iter().find(|i| i.could_produce(self)) {
-                Some(interpretation) => {
-                    unimplemented!();
-                }
-                None => {
-                    unimplemented!();
-                }
+                Some(interpretation) => match interpretation.get_expression_type() {
+                    ExpressionType::Singleton => self.get_root_name(),
+                    ExpressionType::Prefix => {
+                        format!("{}{}", self.get_root_name(), interpreted_children[0]).to_string()
+                    }
+                    ExpressionType::Infix => format!(
+                        "{}{}{}",
+                        interpreted_children[0],
+                        self.get_root_name(),
+                        interpreted_children[1]
+                    )
+                    .to_string(),
+                    ExpressionType::Postfix => {
+                        format!("{}{}", interpreted_children[0], self.get_root_name()).to_string()
+                    }
+                    ExpressionType::Outfix(right) => match right {
+                        Token::Object(right_string) => format!(
+                            "{}{}{}",
+                            self.get_root_name(),
+                            interpreted_children[0],
+                            right_string,
+                        )
+                        .to_string(),
+                        _ => functional_string,
+                    },
+                    ExpressionType::Functional => functional_string,
+                },
+                None => functional_string,
             }
         } else {
             self.get_root_name()
@@ -583,6 +620,10 @@ impl SymbolNode {
         Ok(())
     }
 
+    pub fn get_sorted_type_map(&self) -> Result<Vec<(String, Type)>, SymbolNodeError> {
+        self.get_type_map().map(|m| m.into_iter().collect())
+    }
+
     pub fn get_type_map(&self) -> Result<HashMap<String, Type>, SymbolNodeError> {
         let children_type_map =
             self.children
@@ -733,6 +774,65 @@ mod test_statement {
     use crate::parsing::{interpretation::Interpretation, parser::Parser};
 
     use super::*;
+
+    #[test]
+    fn test_symbol_node_to_interpreted_string() {
+        let interpretations = vec![
+            Interpretation::infix_operator("=".into(), 1, "Integer".into()),
+            Interpretation::outfix_operator(("|".into(), "|".into()), 2, "Integer".into()),
+            Interpretation::function("f".into(), 99),
+            Interpretation::singleton("a", "Integer".into()),
+            Interpretation::singleton("b", "Integer".into()),
+            Interpretation::singleton("x", "Integer".into()),
+            Interpretation::singleton("y", "Integer".into()),
+            Interpretation::singleton("z", "Integer".into()),
+        ];
+
+        let parser = Parser::new(interpretations.clone());
+
+        let custom_tokens = vec!["=".to_string(), "|".to_string()];
+
+        let trivial = SymbolNode::leaf_object("d".to_string());
+        assert_eq!(
+            trivial.to_interpreted_string(&interpretations),
+            "d".to_string()
+        );
+
+        let trivial = SymbolNode::leaf_object("x".to_string());
+        assert_eq!(
+            trivial.to_interpreted_string(&interpretations),
+            "x".to_string()
+        );
+
+        let x_equals_y = parser
+            .parse_from_string(custom_tokens.clone(), "x=y")
+            .unwrap();
+        assert_eq!(x_equals_y.to_interpreted_string(&interpretations), "x=y");
+
+        let abs_x = parser
+            .parse_from_string(custom_tokens.clone(), "|x|")
+            .unwrap();
+        assert_eq!(
+            abs_x.to_interpreted_string(&interpretations),
+            "|x|".to_string()
+        );
+
+        let f_of_x = parser
+            .parse_from_string(custom_tokens.clone(), "f(x)")
+            .unwrap();
+        assert_eq!(
+            f_of_x.to_interpreted_string(&interpretations),
+            "f(x)".to_string()
+        );
+
+        let f_of_x_y_z = parser
+            .parse_from_string(custom_tokens.clone(), "f(x, y, z)")
+            .unwrap();
+        assert_eq!(
+            f_of_x_y_z.to_interpreted_string(&interpretations),
+            "f(x, y, z)".to_string()
+        );
+    }
 
     #[test]
     fn test_substitution_substitutes() {
