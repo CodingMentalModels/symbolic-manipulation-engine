@@ -1,5 +1,3 @@
-use std::{collections::VecDeque, unimplemented};
-
 use serde::{Deserialize, Serialize};
 
 use crate::{
@@ -83,10 +81,41 @@ impl Interpretation {
         )
     }
 
+    pub fn prefix_operator(token: Token, precedence: u8, evaluates_to_type: Type) -> Self {
+        Interpretation::new(
+            InterpretationCondition::Matches(token.clone()),
+            ExpressionType::Prefix,
+            precedence,
+            evaluates_to_type.into(),
+        )
+    }
+
+    pub fn postfix_operator(token: Token, precedence: u8, evaluates_to_type: Type) -> Self {
+        Interpretation::new(
+            InterpretationCondition::Matches(token.clone()),
+            ExpressionType::Postfix,
+            precedence,
+            evaluates_to_type.into(),
+        )
+    }
+
     pub fn infix_operator(token: Token, precedence: u8, evaluates_to_type: Type) -> Self {
         Interpretation::new(
             InterpretationCondition::Matches(token.clone()),
             ExpressionType::Infix,
+            precedence,
+            evaluates_to_type.into(),
+        )
+    }
+
+    pub fn outfix_operator(
+        tokens: (Token, Token),
+        precedence: u8,
+        evaluates_to_type: Type,
+    ) -> Self {
+        Interpretation::new(
+            InterpretationCondition::Matches(tokens.0.clone()),
+            ExpressionType::Outfix(tokens.1.clone()),
             precedence,
             evaluates_to_type.into(),
         )
@@ -145,6 +174,12 @@ impl Interpretation {
         }
     }
 
+    pub fn could_produce(&self, statement: &SymbolNode) -> bool {
+        self.condition.could_produce(statement)
+            && self.expression_type.could_produce(statement)
+            && self.output_type.could_produce(statement)
+    }
+
     pub fn satisfies_condition(&self, so_far: &Option<SymbolNode>, token: &Token) -> bool {
         let is_ok_expression_type = match self.expression_type {
             ExpressionType::Singleton
@@ -166,21 +201,29 @@ impl Interpretation {
                 }
             }
             InterpretationCondition::IsInteger => {
-                if let Token::Object(n) = token {
-                    // TODO: This will fail on big enough numbers
-                    return n.parse::<i64>().is_ok();
-                } else {
-                    return false;
-                }
+                return Self::is_integer(token);
             }
             InterpretationCondition::IsNumeric => {
-                if let Token::Object(n) = token {
-                    // TODO: This will fail on big enough numbers
-                    return n.parse::<f64>().is_ok();
-                } else {
-                    return false;
-                }
+                return Self::is_numeric(token);
             }
+        }
+    }
+
+    fn is_integer(token: &Token) -> bool {
+        if let Token::Object(n) = token {
+            // TODO: This will fail on big enough numbers
+            return n.parse::<i64>().is_ok();
+        } else {
+            return false;
+        }
+    }
+
+    fn is_numeric(token: &Token) -> bool {
+        if let Token::Object(n) = token {
+            // TODO: This will fail on big enough numbers
+            return n.parse::<f64>().is_ok();
+        } else {
+            return false;
         }
     }
 }
@@ -202,6 +245,27 @@ impl From<GeneratedTypeCondition> for InterpretationCondition {
     }
 }
 
+impl InterpretationCondition {
+    fn could_produce(&self, statement: &SymbolNode) -> bool {
+        match self {
+            Self::IsObject => true,
+            Self::IsNumeric => {
+                Interpretation::is_numeric(&Token::Object(statement.get_root_name()))
+            }
+            Self::IsInteger => {
+                Interpretation::is_integer(&Token::Object(statement.get_root_name()))
+            }
+            Self::Matches(token) => {
+                if let Token::Object(s) = token {
+                    return s == &statement.get_root_name();
+                } else {
+                    return false;
+                }
+            }
+        }
+    }
+}
+
 #[derive(Clone, Debug, Hash, PartialEq, Eq, Serialize, Deserialize)]
 pub enum ExpressionType {
     Singleton,
@@ -215,6 +279,17 @@ pub enum ExpressionType {
 impl Default for ExpressionType {
     fn default() -> Self {
         ExpressionType::Singleton
+    }
+}
+
+impl ExpressionType {
+    fn could_produce(&self, statement: &SymbolNode) -> bool {
+        match self {
+            Self::Singleton => !statement.has_children(),
+            Self::Prefix | Self::Postfix | Self::Outfix(_) => statement.get_n_children() == 1,
+            Self::Infix => statement.get_n_children() == 2,
+            Self::Functional => statement.has_children(),
+        }
     }
 }
 
@@ -240,6 +315,19 @@ impl From<String> for InterpretedType {
 impl From<&str> for InterpretedType {
     fn from(value: &str) -> Self {
         Self::from(Type::from(value))
+    }
+}
+
+impl InterpretedType {
+    fn could_produce(&self, statement: &SymbolNode) -> bool {
+        match self {
+            Self::PassThrough => false,
+            Self::Delimiter => false,
+            Self::SameAsValue => {
+                statement.get_root_name() == statement.get_evaluates_to_type().to_string()
+            }
+            Self::Type(t) => t == &statement.get_evaluates_to_type(),
+        }
     }
 }
 

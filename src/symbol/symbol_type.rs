@@ -1,11 +1,6 @@
-use std::{
-    collections::{HashMap, HashSet},
-    unimplemented,
-};
+use std::collections::{HashMap, HashSet};
 
 use serde::{Deserialize, Serialize};
-
-use crate::parsing::interpretation::InterpretedType;
 
 use super::{
     symbol_node::{Symbol, SymbolNode},
@@ -79,13 +74,13 @@ impl TypeHierarchy {
         type_to_add: Type,
         parent_type: Type,
     ) -> Result<Type, TypeError> {
-        self.add_child_to_parents(type_to_add, vec![parent_type].into_iter().collect())
+        self.add_child_to_parents(type_to_add, &vec![parent_type].into_iter().collect())
     }
 
     pub fn add_child_to_parents(
         &mut self,
         type_to_add: Type,
-        parent_types: HashSet<Type>,
+        parent_types: &HashSet<Type>,
     ) -> Result<Type, TypeError> {
         match self.type_map.get(&type_to_add) {
             Some(_node) => Err(TypeError::TypeHierarchyAlreadyIncludes(type_to_add)),
@@ -119,6 +114,18 @@ impl TypeHierarchy {
         }
 
         parent_child_pairs
+    }
+
+    pub fn get_parents(&self, child: &Type) -> Result<HashSet<Type>, TypeError> {
+        let pairs = self
+            .get_parent_child_pairs()
+            .into_iter()
+            .filter(|pair| &pair.1 == child)
+            .collect::<Vec<_>>();
+        if pairs.len() == 0 {
+            return Err(TypeError::InvalidType(child.clone()));
+        }
+        Ok(pairs.into_iter().map(|pair| pair.1.clone()).collect())
     }
 
     pub fn instantiate(
@@ -158,7 +165,7 @@ impl TypeHierarchy {
                 self.instantiate(general_child, specific_child)
                     .map(|new_child| {
                         acc.push(new_child);
-                    });
+                    })?;
                 Ok(acc)
             })?;
 
@@ -284,7 +291,7 @@ impl TypeHierarchy {
     }
 
     pub fn get_types(&self) -> HashSet<Type> {
-        self.type_map.iter().map(|(t, n)| t).cloned().collect()
+        self.type_map.iter().map(|(t, _)| t).cloned().collect()
     }
 
     pub fn get_shared_types(&self, other: &Self) -> HashSet<Type> {
@@ -367,7 +374,7 @@ impl TypeHierarchy {
         }
     }
 
-    fn are_compatible_or_error(h1: &TypeHierarchy, h2: &TypeHierarchy) -> Result<(()), TypeError> {
+    fn are_compatible_or_error(h1: &TypeHierarchy, h2: &TypeHierarchy) -> Result<(), TypeError> {
         let left_to_right = Self::is_left_compatible_with_right(h1, h2);
         let right_to_left = Self::is_left_compatible_with_right(h2, h1);
 

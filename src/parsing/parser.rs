@@ -1,7 +1,6 @@
 use crate::parsing::interpretation::{ExpressionType, Interpretation};
 use crate::parsing::tokenizer::{Token, Tokenizer};
 use crate::symbol::symbol_node::SymbolNode;
-use crate::symbol::symbol_type::GeneratedType;
 
 use super::interpretation::{ExpressionPrecedence, InterpretationCondition};
 use super::tokenizer::TokenStack;
@@ -137,7 +136,7 @@ impl Parser {
                     token_stack,
                     interpretation.get_expression_precedence() + 1,
                 )?;
-                let mut children = vec![left_expression, right_expression];
+                let children = vec![left_expression, right_expression];
                 left_expression = interpretation.get_symbol_node(&next_token, children)?;
             }
         }
@@ -188,10 +187,7 @@ mod test_parser {
     use crate::{
         constants::DEFAULT_PRECEDENCE,
         parsing::interpretation::{InterpretationCondition, InterpretedType},
-        symbol::{
-            symbol_node::Symbol,
-            symbol_type::{GeneratedTypeCondition, Type},
-        },
+        symbol::{symbol_node::Symbol, symbol_type::GeneratedTypeCondition},
     };
 
     use super::*;
@@ -200,7 +196,6 @@ mod test_parser {
     fn test_parser_parses() {
         let mut tokens = Tokenizer::new_with_tokens(vec!["+".to_string(), "=".to_string()])
             .tokenize("2 + 2 = 4");
-        let integer_type = Type::new("Integer".to_string());
 
         let plus_interpretation = Interpretation::new(
             InterpretationCondition::Matches(Token::Object("+".to_string())),

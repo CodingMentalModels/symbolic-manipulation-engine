@@ -2,12 +2,17 @@ use core::fmt;
 use std::{
     collections::{HashMap, HashSet},
     fmt::Debug,
-    unimplemented,
 };
 
 use serde::{Deserialize, Serialize};
 
-use crate::symbol::symbol_type::Type;
+use crate::{
+    parsing::{
+        interpretation::{ExpressionType, Interpretation},
+        tokenizer::Token,
+    },
+    symbol::symbol_type::Type,
+};
 
 use super::symbol_type::TypeHierarchy;
 
@@ -169,7 +174,7 @@ impl SymbolNode {
             std::collections::hash_map::Entry::Vacant(e) => {
                 e.insert(self.get_n_children());
             }
-            std::collections::hash_map::Entry::Occupied(mut e) => {
+            std::collections::hash_map::Entry::Occupied(e) => {
                 // If the arity (number of children) is different, return an error
                 if *e.get() != self.get_n_children() {
                     return Err(SymbolNodeError::ConflictingSymbolArities(self.root.clone()));
@@ -351,6 +356,62 @@ impl SymbolNode {
 
     pub fn find_symbol_name(&self, symbol_name: &str) -> HashSet<SymbolNodeAddress> {
         self.find_where(&|node| node.root.get_name() == symbol_name)
+    }
+
+    pub fn to_interpreted_string_and_type_map(
+        &self,
+        interpretations: &Vec<Interpretation>,
+    ) -> Result<(String, Vec<(String, Type)>), SymbolNodeError> {
+        self.get_sorted_type_map()
+            .map(|type_map| (self.to_interpreted_string(interpretations), type_map))
+    }
+
+    pub fn to_interpreted_string(&self, interpretations: &Vec<Interpretation>) -> String {
+        if self.has_children() {
+            let interpreted_children = self
+                .get_children()
+                .iter()
+                .map(|child| child.to_interpreted_string(interpretations))
+                .collect::<Vec<_>>();
+            let functional_string = format!(
+                "{}({})",
+                self.get_root_name(),
+                interpreted_children.join(", ")
+            )
+            .to_string();
+            match interpretations.iter().find(|i| i.could_produce(self)) {
+                Some(interpretation) => match interpretation.get_expression_type() {
+                    ExpressionType::Singleton => self.get_root_name(),
+                    ExpressionType::Prefix => {
+                        format!("{}{}", self.get_root_name(), interpreted_children[0]).to_string()
+                    }
+                    ExpressionType::Infix => format!(
+                        "{}{}{}",
+                        interpreted_children[0],
+                        self.get_root_name(),
+                        interpreted_children[1]
+                    )
+                    .to_string(),
+                    ExpressionType::Postfix => {
+                        format!("{}{}", interpreted_children[0], self.get_root_name()).to_string()
+                    }
+                    ExpressionType::Outfix(right) => match right {
+                        Token::Object(right_string) => format!(
+                            "{}{}{}",
+                            self.get_root_name(),
+                            interpreted_children[0],
+                            right_string,
+                        )
+                        .to_string(),
+                        _ => functional_string,
+                    },
+                    ExpressionType::Functional => functional_string,
+                },
+                None => functional_string,
+            }
+        } else {
+            self.get_root_name()
+        }
     }
 
     pub fn to_string(&self) -> String {
@@ -558,6 +619,13 @@ impl SymbolNode {
         Ok(())
     }
 
+    pub fn get_sorted_type_map(&self) -> Result<Vec<(String, Type)>, SymbolNodeError> {
+        let mut to_return: Vec<(String, Type)> =
+            self.get_type_map().map(|m| m.into_iter().collect())?;
+        to_return.sort_by(|a, b| a.0.cmp(&b.0));
+        Ok(to_return)
+    }
+
     pub fn get_type_map(&self) -> Result<HashMap<String, Type>, SymbolNodeError> {
         let children_type_map =
             self.children
@@ -705,9 +773,121 @@ impl Symbol {
 
 #[cfg(test)]
 mod test_statement {
-    use crate::parsing::{interpretation::Interpretation, parser::Parser};
+    use crate::{
+        parsing::{interpretation::Interpretation, parser::Parser},
+        symbol::symbol_type::GeneratedTypeCondition,
+    };
 
     use super::*;
+
+    #[test]
+    fn test_symbol_node_to_interpreted_string() {
+        let interpretations = vec![
+            Interpretation::infix_operator("=".into(), 1, "Integer".into()),
+            Interpretation::outfix_operator(("|".into(), "|".into()), 2, "Integer".into()),
+            Interpretation::postfix_operator("!".into(), 3, "Integer".into()),
+            Interpretation::prefix_operator("-".into(), 4, "Integer".into()),
+            Interpretation::function("f".into(), 99),
+            Interpretation::singleton("a", "Integer".into()),
+            Interpretation::singleton("b", "Integer".into()),
+            Interpretation::singleton("x", "Integer".into()),
+            Interpretation::singleton("y", "Integer".into()),
+            Interpretation::singleton("z", "Integer".into()),
+        ];
+
+        let parser = Parser::new(interpretations.clone());
+
+        let custom_tokens = vec!["=".to_string(), "|".to_string()];
+
+        let trivial = SymbolNode::leaf_object("d".to_string());
+        assert_eq!(
+            trivial.to_interpreted_string(&interpretations),
+            "d".to_string()
+        );
+
+        let trivial = SymbolNode::leaf_object("x".to_string());
+        assert_eq!(
+            trivial.to_interpreted_string(&interpretations),
+            "x".to_string()
+        );
+
+        let x_equals_y = parser
+            .parse_from_string(custom_tokens.clone(), "x=y")
+            .unwrap();
+        assert_eq!(x_equals_y.to_interpreted_string(&interpretations), "x=y");
+
+        let abs_x = parser
+            .parse_from_string(custom_tokens.clone(), "|x|")
+            .unwrap();
+        assert_eq!(
+            abs_x.to_interpreted_string(&interpretations),
+            "|x|".to_string()
+        );
+
+        let neg_x = parser
+            .parse_from_string(custom_tokens.clone(), "-x")
+            .unwrap();
+        assert_eq!(
+            neg_x.to_interpreted_string(&interpretations),
+            "-x".to_string()
+        );
+
+        let x_factorial = parser
+            .parse_from_string(custom_tokens.clone(), "x!")
+            .unwrap();
+        assert_eq!(
+            x_factorial.to_interpreted_string(&interpretations),
+            "x!".to_string()
+        );
+
+        let f_of_x = parser
+            .parse_from_string(custom_tokens.clone(), "f(x)")
+            .unwrap();
+        assert_eq!(
+            f_of_x.to_interpreted_string(&interpretations),
+            "f(x)".to_string()
+        );
+
+        let f_of_x_y_z = parser
+            .parse_from_string(custom_tokens.clone(), "f(x, y, z)")
+            .unwrap();
+        assert_eq!(
+            f_of_x_y_z.to_interpreted_string(&interpretations),
+            "f(x, y, z)".to_string()
+        );
+
+        let interpretations = vec![
+            Interpretation::infix_operator("=".into(), 1, "Integer".into()),
+            Interpretation::postfix_operator("=".into(), 1, "Integer".into()),
+            Interpretation::function("=".into(), 1),
+        ];
+
+        let parser = Parser::new(interpretations.clone());
+
+        let custom_tokens = vec!["=".to_string(), "|".to_string()];
+
+        let x_equals_y = parser
+            .parse_from_string(custom_tokens.clone(), "x=y")
+            .unwrap();
+        assert_eq!(x_equals_y.to_interpreted_string(&interpretations), "x=y");
+
+        let plus = Interpretation::infix_operator("+".into(), 1, "+".into());
+        let integer_condition = GeneratedTypeCondition::IsInteger;
+
+        let integer = Interpretation::generated_type(integer_condition);
+        assert_eq!(integer, integer);
+
+        let interpretations = vec![plus, integer];
+        let parser = Parser::new(interpretations.clone());
+        let two_plus_two = parser
+            .parse_from_string(vec!["+".to_string()], "2+2")
+            .unwrap();
+
+        assert_eq!(
+            two_plus_two.to_interpreted_string(&interpretations),
+            "2+2".to_string()
+        );
+    }
 
     #[test]
     fn test_substitution_substitutes() {
