@@ -74,13 +74,13 @@ impl TypeHierarchy {
         type_to_add: Type,
         parent_type: Type,
     ) -> Result<Type, TypeError> {
-        self.add_child_to_parents(type_to_add, vec![parent_type].into_iter().collect())
+        self.add_child_to_parents(type_to_add, &vec![parent_type].into_iter().collect())
     }
 
     pub fn add_child_to_parents(
         &mut self,
         type_to_add: Type,
-        parent_types: HashSet<Type>,
+        parent_types: &HashSet<Type>,
     ) -> Result<Type, TypeError> {
         match self.type_map.get(&type_to_add) {
             Some(_node) => Err(TypeError::TypeHierarchyAlreadyIncludes(type_to_add)),

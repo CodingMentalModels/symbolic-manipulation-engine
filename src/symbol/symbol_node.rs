@@ -849,6 +849,21 @@ mod test_statement {
             f_of_x_y_z.to_interpreted_string(&interpretations),
             "f(x, y, z)".to_string()
         );
+
+        let interpretations = vec![
+            Interpretation::infix_operator("=".into(), 1, "Integer".into()),
+            Interpretation::postfix_operator("=".into(), 1, "Integer".into()),
+            Interpretation::function("=".into(), 1),
+        ];
+
+        let parser = Parser::new(interpretations.clone());
+
+        let custom_tokens = vec!["=".to_string(), "|".to_string()];
+
+        let x_equals_y = parser
+            .parse_from_string(custom_tokens.clone(), "x=y")
+            .unwrap();
+        assert_eq!(x_equals_y.to_interpreted_string(&interpretations), "x=y");
     }
 
     #[test]

@@ -295,6 +295,10 @@ impl Workspace {
         Ok(self.provenance[index].clone())
     }
 
+    pub fn get_generated_types(&self) -> &Vec<GeneratedType> {
+        &self.generated_types
+    }
+
     pub fn to_json(&self) -> Result<String, WorkspaceError> {
         let display_workspace = DisplayWorkspace::from(self);
         to_string(&display_workspace).map_err(|_| WorkspaceError::UnableToSerialize)
@@ -316,6 +320,20 @@ impl Workspace {
         index >= self.transformations.len()
     }
 
+    fn add_type_to_parents(
+        &mut self,
+        t: Type,
+        parents: &HashSet<Type>,
+    ) -> Result<Type, WorkspaceError> {
+        self.types
+            .add_child_to_parents(t, parents)
+            .map_err(|e| e.into())
+    }
+
+    fn get_parent_types(&self, t: &Type) -> Result<HashSet<Type>, WorkspaceError> {
+        self.types.get_parents(t).map_err(|e| e.into())
+    }
+
     fn generate_types_in_bulk(
         &mut self,
         statements: HashSet<SymbolNode>,
@@ -332,19 +350,20 @@ impl Workspace {
     }
 
     fn generate_types(&mut self, statement: SymbolNode) -> Result<(), WorkspaceError> {
-        for generated_type in self.generated_types.iter() {
-            let result: Option<TypeError> = generated_type
+        for generated_type in self.get_generated_types().clone() {
+            let result: Option<WorkspaceError> = generated_type
                 .generate(&statement)
                 .into_iter()
-                .map(|(t, parents)| (self.types.add_child_to_parents(t, parents), parents))
-                .filter(|(r, parents)| match r {
-                    Err(TypeError::TypeHierarchyAlreadyIncludes(prior_type)) => {
-                        self.types.get_parents(prior_type) == Ok(parents).cloned()
+                .map(|(t, parents)| self.add_type_to_parents(t, &parents))
+                .filter(|r| match r {
+                    Err(WorkspaceError::TypeHierarchyAlreadyIncludes(prior_type)) => {
+                        // TODO Check that prior_type parents == parents
+                        false
                     }
                     Err(_) => true,
                     _ => false,
                 })
-                .map(|(r, parents)| r.expect_err("We just checked that it's an error."))
+                .map(|r| r.expect_err("We just checked that it's an error."))
                 .next();
             match result {
                 Some(e) => return Err(e.into()),
@@ -371,8 +390,10 @@ pub enum WorkspaceError {
     TransformationError(TransformationError),
     StatementContainsTypesNotInHierarchy(HashSet<Type>),
     IncompatibleTypeRelationships(HashSet<Type>),
+    TypeHierarchyAlreadyIncludes(Type),
+    InvalidType(Type),
     NoTransformationsPossible,
-    InvalidTypeErrorTransformation(TypeError),
+    InvalidTypeError(TypeError),
     AttemptedToImportAmbiguousTypes(HashSet<Type>),
     UnsupportedOperation(String),
 }
@@ -386,13 +407,17 @@ impl From<ParserError> for WorkspaceError {
 impl From<TypeError> for WorkspaceError {
     fn from(value: TypeError) -> Self {
         match value {
+            TypeError::InvalidType(t) => WorkspaceError::InvalidType(t),
+            TypeError::TypeHierarchyAlreadyIncludes(t) => {
+                WorkspaceError::TypeHierarchyAlreadyIncludes(t)
+            }
             TypeError::StatementIncludesTypesNotInHierarchy(types) => {
                 Self::StatementContainsTypesNotInHierarchy(types)
             }
             TypeError::IncompatibleTypeRelationships(types) => {
                 Self::IncompatibleTypeRelationships(types)
             }
-            e => Self::InvalidTypeErrorTransformation(e),
+            e => Self::InvalidTypeError(e),
         }
     }
 }
