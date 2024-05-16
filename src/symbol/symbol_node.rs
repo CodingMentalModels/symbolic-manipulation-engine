@@ -770,7 +770,10 @@ impl Symbol {
 
 #[cfg(test)]
 mod test_statement {
-    use crate::parsing::{interpretation::Interpretation, parser::Parser};
+    use crate::{
+        parsing::{interpretation::Interpretation, parser::Parser},
+        symbol::symbol_type::GeneratedTypeCondition,
+    };
 
     use super::*;
 
@@ -864,6 +867,23 @@ mod test_statement {
             .parse_from_string(custom_tokens.clone(), "x=y")
             .unwrap();
         assert_eq!(x_equals_y.to_interpreted_string(&interpretations), "x=y");
+
+        let plus = Interpretation::infix_operator("+".into(), 1, "+".into());
+        let integer_condition = GeneratedTypeCondition::IsInteger;
+
+        let integer = Interpretation::generated_type(integer_condition);
+        assert_eq!(integer, integer);
+
+        let interpretations = vec![plus, integer];
+        let parser = Parser::new(interpretations.clone());
+        let two_plus_two = parser
+            .parse_from_string(vec!["+".to_string()], "2+2")
+            .unwrap();
+
+        assert_eq!(
+            two_plus_two.to_interpreted_string(&interpretations),
+            "2+2".to_string()
+        );
     }
 
     #[test]
