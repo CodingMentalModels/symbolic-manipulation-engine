@@ -793,6 +793,14 @@ mod test_statement {
             Interpretation::singleton("x", "Integer".into()),
             Interpretation::singleton("y", "Integer".into()),
             Interpretation::singleton("z", "Integer".into()),
+            Interpretation::parentheses_like(
+                Token::Object("{".to_string()),
+                Token::Object("}".to_string()),
+            ),
+            Interpretation::function("\\frac".into(), 99),
+            Interpretation::singleton("\\alpha", "Integer".into()),
+            Interpretation::singleton("\\beta", "Integer".into()),
+            Interpretation::singleton("\\gamma", "Integer".into()),
         ];
 
         let parser = Parser::new(interpretations.clone());
@@ -854,6 +862,14 @@ mod test_statement {
         assert_eq!(
             f_of_x_y_z.to_interpreted_string(&interpretations),
             "f(x, y, z)".to_string()
+        );
+
+        let f_of_alpha_beta_gamma = parser
+            .parse_from_string(custom_tokens.clone(), "f(\\alpha, \\beta, \\gamma)")
+            .unwrap();
+        assert_eq!(
+            f_of_alpha_beta_gamma.to_interpreted_string(&interpretations),
+            "f(\\alpha, \\beta, \\gamma)".to_string()
         );
 
         let interpretations = vec![

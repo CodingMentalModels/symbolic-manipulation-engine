@@ -2,7 +2,7 @@ use crate::parsing::interpretation::{ExpressionType, Interpretation};
 use crate::parsing::tokenizer::{Token, Tokenizer};
 use crate::symbol::symbol_node::SymbolNode;
 
-use super::interpretation::{ExpressionPrecedence, InterpretationCondition};
+use super::interpretation::{ExpressionPrecedence, InterpretationCondition, InterpretedType};
 use super::tokenizer::TokenStack;
 
 #[derive(Debug, PartialEq, Eq)]
@@ -73,13 +73,14 @@ impl Parser {
                     ExpressionType::Functional => {
                         println!("Parsing functional: {:?} ({:?})", token, token_stack);
                         let mut args = Vec::new();
-                        token_stack.pop_and_assert_or_error(Token::LeftParen)?;
-                        if token_stack.peek() != Some(Token::RightParen) {
+                        let left = token_stack.pop_or_error()?;
+                        let (_left_token, right_token) = self.get_functional_parentheses(left)?;
+                        if token_stack.peek() != Some(right_token.clone()) {
                             // There may be no args
                             while let Some(_arg_token) = token_stack.peek() {
                                 let arg_expression = self.parse_expression(token_stack, 0)?; // Reset precedence for arg
                                 args.push(arg_expression);
-                                if token_stack.peek() == Some(Token::RightParen) {
+                                if token_stack.peek() == Some(right_token.clone()) {
                                     token_stack.pop();
                                     break;
                                 }
@@ -168,11 +169,37 @@ impl Parser {
             })
             .collect()
     }
+
+    pub fn get_functional_parentheses(
+        &self,
+        left_token: Token,
+    ) -> Result<(Token, Token), ParserError> {
+        let interpretation = self
+            .interpretations
+            .iter()
+            .filter(|interpretation| {
+                interpretation.get_condition()
+                    == InterpretationCondition::Matches(left_token.clone())
+            })
+            .map(
+                |interpretation| match interpretation.get_expression_type() {
+                    ExpressionType::Outfix(right_token) => Some((left_token.clone(), right_token)),
+                    _ => None,
+                },
+            )
+            .flatten()
+            .next();
+        match interpretation {
+            None => Err(ParserError::NoFunctionalInterpretation(left_token)),
+            Some(interpretation) => Ok(interpretation),
+        }
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum ParserError {
     NoValidInterpretation(Token),
+    NoFunctionalInterpretation(Token),
     NoTokensRemainingToInterpret,
     ExpectedButFound(Token, Token),
     ExpectedLeftArgument(Token),
@@ -296,6 +323,41 @@ mod test_parser {
                     SymbolNode::leaf_object("z".to_string()),
                 ]
             ))
+        );
+    }
+
+    #[test]
+    fn test_parser_gets_functional_parentheses() {
+        let parser = Parser::new(vec![]);
+        assert_eq!(
+            parser.get_functional_parentheses(Token::LeftParen).unwrap(),
+            (Token::LeftParen, Token::RightParen)
+        );
+
+        let parser = Parser::new(vec![
+            Interpretation::parentheses_like(
+                Token::Object("{".to_string()),
+                Token::Object("}".to_string()),
+            ),
+            Interpretation::parentheses_like("|".into(), "|".into()),
+        ]);
+        assert_eq!(
+            parser.get_functional_parentheses(Token::LeftParen).unwrap(),
+            (Token::LeftParen, Token::RightParen)
+        );
+        assert_eq!(
+            parser.get_functional_parentheses("{".into()).unwrap(),
+            (
+                Token::Object("{".to_string()),
+                Token::Object("}".to_string())
+            )
+        );
+        assert_eq!(
+            parser.get_functional_parentheses("|".into()).unwrap(),
+            (
+                Token::Object("|".to_string()),
+                Token::Object("|".to_string())
+            )
         );
     }
 
@@ -581,6 +643,89 @@ mod test_parser {
         let parsed = parser.parse(&mut tokens);
 
         assert_eq!(parsed, Ok(SymbolNode::leaf_object("x".to_string())));
+    }
+
+    #[test]
+    fn test_parser_latex() {
+        let mut tokens = Tokenizer::new_with_tokens(vec![]).tokenize("\\alpha");
+        assert_eq!(tokens.len(), 1);
+
+        let parser = Parser::new(vec![]);
+
+        let parsed = parser.parse(&mut tokens);
+
+        assert_eq!(parsed, Ok(SymbolNode::leaf_object("\\alpha".to_string())));
+
+        let operators = vec![("^", 6), ("*", 5), ("/", 5), ("+", 4), ("-", 4), ("=", 3)];
+        let operator_names: Vec<_> = operators
+            .clone()
+            .into_iter()
+            .map(|(name, _precedence)| name.to_string())
+            .collect();
+
+        let operators_interpretations: Vec<_> = operators
+            .clone()
+            .into_iter()
+            .map(|(name, precedence)| {
+                Interpretation::new(
+                    InterpretationCondition::Matches(Token::Object(name.to_string())),
+                    ExpressionType::Infix,
+                    precedence,
+                    "Operator".into(),
+                )
+            })
+            .collect();
+
+        let mut interpretations = operators_interpretations.clone();
+        interpretations.push(Interpretation::function(
+            Token::Object("inv".to_string()),
+            7,
+        ));
+
+        let parser = Parser::new(interpretations.clone());
+
+        let pythagorean_theorem =
+            parser.parse_from_string(operator_names.clone(), "\\alpha^2 + \\beta^2 = \\gamma^2");
+
+        let alpha_squared = parser
+            .parse_from_string(operator_names.clone(), "\\alpha^2")
+            .unwrap();
+        let beta_squared = parser
+            .parse_from_string(operator_names.clone(), "\\beta^2")
+            .unwrap();
+        let gamma_squared = parser
+            .parse_from_string(operator_names.clone(), "\\gamma^2")
+            .unwrap();
+
+        assert_eq!(
+            alpha_squared.clone(),
+            SymbolNode::new(
+                Symbol::new("^".to_string(), "Operator".into()),
+                vec![
+                    SymbolNode::leaf_object("\\alpha".to_string()),
+                    SymbolNode::leaf_object("2".to_string()),
+                ]
+            )
+        );
+
+        let expected = SymbolNode::new(
+            Symbol::new("=".to_string(), "Operator".into()),
+            vec![
+                SymbolNode::new(
+                    Symbol::new("+".to_string(), "Operator".into()),
+                    vec![alpha_squared, beta_squared],
+                ),
+                gamma_squared,
+            ],
+        );
+
+        assert_eq!(pythagorean_theorem, Ok(expected));
+
+        let frac_alpha_beta = parser
+            .parse_from_string(operator_names.clone(), "\\frac{\\alpha}{\\beta}")
+            .unwrap();
+        assert_eq!(frac_alpha_beta.get_root_name(), "\\frac".to_string());
+        assert_eq!(frac_alpha_beta.get_n_children(), 2);
     }
 
     #[test]

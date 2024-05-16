@@ -37,14 +37,17 @@ impl Interpretation {
     }
 
     pub fn parentheses() -> Self {
+        Self::parentheses_like(Token::LeftParen, Token::RightParen)
+    }
+
+    pub fn parentheses_like(left: Token, right: Token) -> Self {
         Interpretation::new(
-            InterpretationCondition::Matches(Token::LeftParen),
-            ExpressionType::Outfix(Token::RightParen),
+            InterpretationCondition::Matches(left),
+            ExpressionType::Outfix(right),
             PARENTHESIS_PRECEDENCE,
             InterpretedType::PassThrough,
         )
     }
-
     pub fn comma() -> Self {
         Interpretation::new(
             InterpretationCondition::Matches(Token::Comma),

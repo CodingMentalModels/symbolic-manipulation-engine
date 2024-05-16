@@ -113,22 +113,26 @@ impl TokenStack {
         self.0.pop_front()
     }
 
+    pub fn pop_or_error(&mut self) -> Result<Token, ParserError> {
+        match self.pop() {
+            None => Err(ParserError::NoTokensRemainingToInterpret),
+            Some(actual) => Ok(actual),
+        }
+    }
+
     pub fn pop_and_assert(&mut self, expected: Token) -> bool {
         let actual = self.pop();
         actual == Some(expected)
     }
 
     pub fn pop_and_assert_or_error(&mut self, expected: Token) -> Result<(), ParserError> {
-        match self.pop() {
-            None => Err(ParserError::NoTokensRemainingToInterpret),
-            Some(actual) => {
-                if actual != expected {
-                    Err(ParserError::ExpectedButFound(expected, actual))
-                } else {
-                    Ok(())
-                }
+        self.pop_or_error().map(|actual| {
+            if actual != expected {
+                Err(ParserError::ExpectedButFound(expected, actual))
+            } else {
+                Ok(())
             }
-        }
+        })?
     }
 
     pub fn len(&self) -> usize {
