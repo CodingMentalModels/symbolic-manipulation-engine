@@ -620,7 +620,10 @@ impl SymbolNode {
     }
 
     pub fn get_sorted_type_map(&self) -> Result<Vec<(String, Type)>, SymbolNodeError> {
-        self.get_type_map().map(|m| m.into_iter().collect())
+        let mut to_return: Vec<(String, Type)> =
+            self.get_type_map().map(|m| m.into_iter().collect())?;
+        to_return.sort_by(|a, b| a.0.cmp(&b.0));
+        Ok(to_return)
     }
 
     pub fn get_type_map(&self) -> Result<HashMap<String, Type>, SymbolNodeError> {
