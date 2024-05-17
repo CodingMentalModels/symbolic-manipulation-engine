@@ -2,6 +2,7 @@ use std::collections::{HashMap, HashSet};
 
 use serde::{Deserialize, Serialize};
 
+use crate::parsing::interpretation::Interpretation;
 use crate::parsing::parser::Parser;
 use crate::symbol::symbol_node::{Symbol, SymbolNode, SymbolNodeError};
 use crate::symbol::symbol_type::{Type, TypeError};
@@ -99,6 +100,14 @@ impl Transformation {
 
     pub fn to_string(&self) -> String {
         format!("{} -> {}", self.from.to_string(), self.to.to_string())
+    }
+
+    pub fn to_interpreted_string(&self, interpretations: &Vec<Interpretation>) -> String {
+        format!(
+            "{} -> {}",
+            self.from.to_interpreted_string(interpretations),
+            self.to.to_interpreted_string(interpretations)
+        )
     }
 
     pub fn get_variables(&self) -> HashSet<String> {

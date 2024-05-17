@@ -20,6 +20,7 @@ use crate::{
 };
 
 type DisplaySymbolNode = String;
+type DisplayTransformation = String;
 type StatementIndex = usize;
 type TransformationIndex = usize;
 
@@ -29,7 +30,7 @@ pub struct DisplayWorkspace {
     generated_types: Vec<DisplayGeneratedType>,
     interpretations: Vec<Interpretation>,
     statements: Vec<DisplaySymbolNode>,
-    transformations: Vec<Transformation>,
+    transformations: Vec<DisplayTransformation>,
     provenance: Vec<DisplayProvenance>,
 }
 
@@ -48,7 +49,11 @@ impl From<&Workspace> for DisplayWorkspace {
                 .iter()
                 .map(|n| n.to_interpreted_string(&workspace.interpretations))
                 .collect(),
-            transformations: workspace.transformations.clone(),
+            transformations: workspace
+                .transformations
+                .iter()
+                .map(|t| t.to_interpreted_string(&workspace.interpretations))
+                .collect(),
             provenance: workspace
                 .provenance
                 .iter()
