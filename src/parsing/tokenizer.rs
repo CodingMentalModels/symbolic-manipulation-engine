@@ -113,22 +113,26 @@ impl TokenStack {
         self.0.pop_front()
     }
 
+    pub fn pop_or_error(&mut self) -> Result<Token, ParserError> {
+        match self.pop() {
+            None => Err(ParserError::NoTokensRemainingToInterpret),
+            Some(actual) => Ok(actual),
+        }
+    }
+
     pub fn pop_and_assert(&mut self, expected: Token) -> bool {
         let actual = self.pop();
         actual == Some(expected)
     }
 
     pub fn pop_and_assert_or_error(&mut self, expected: Token) -> Result<(), ParserError> {
-        match self.pop() {
-            None => Err(ParserError::NoTokensRemainingToInterpret),
-            Some(actual) => {
-                if actual != expected {
-                    Err(ParserError::ExpectedButFound(expected, actual))
-                } else {
-                    Ok(())
-                }
+        self.pop_or_error().map(|actual| {
+            if actual != expected {
+                Err(ParserError::ExpectedButFound(expected, actual))
+            } else {
+                Ok(())
             }
-        }
+        })?
     }
 
     pub fn len(&self) -> usize {
@@ -343,6 +347,43 @@ mod test_tokenizer {
                 Token::Object("=".to_string()),
                 Token::Object("4".to_string()),
             ]
+        );
+    }
+
+    #[test]
+    fn test_token_stack_pops() {
+        let mut tokenizer = Tokenizer::new_with_tokens(vec![
+            "=".to_string(),
+            "+".to_string(),
+            "-".to_string(),
+            "*".to_string(),
+            "/".to_string(),
+        ]);
+
+        let mut stack = tokenizer.tokenize("2 + 2 = 4");
+        assert_eq!(stack.pop(), Some("2".into()));
+        assert_eq!(stack.pop_or_error(), Ok(Token::Whitespace));
+        assert_eq!(stack.pop_and_assert_or_error("+".into()), Ok(()));
+        assert_eq!(stack.pop_and_assert_or_error(Token::Whitespace), Ok(()));
+        assert_eq!(stack.pop_and_assert_or_error("2".into()), Ok(()));
+        assert_eq!(stack.pop_and_assert_or_error(Token::Whitespace), Ok(()));
+        assert_eq!(stack.pop_and_assert_or_error("=".into()), Ok(()));
+        assert_eq!(stack.pop_and_assert_or_error(Token::Whitespace), Ok(()));
+        assert_eq!(stack.pop_and_assert_or_error("4".into()), Ok(()));
+        assert_eq!(stack.pop(), None);
+        assert_eq!(
+            stack.pop_or_error(),
+            Err(ParserError::NoTokensRemainingToInterpret)
+        );
+        assert_eq!(
+            stack.pop_and_assert_or_error(Token::Whitespace),
+            Err(ParserError::NoTokensRemainingToInterpret)
+        );
+
+        let mut stack = tokenizer.tokenize("2 + 2 = 4");
+        assert_eq!(
+            stack.pop_and_assert_or_error(Token::Whitespace),
+            Err(ParserError::ExpectedButFound(Token::Whitespace, "2".into()))
         );
     }
 
