@@ -86,8 +86,6 @@ impl Cli {
 
     pub fn get_transformations(&self, sub_matches: &ArgMatches) -> Result<String, String> {
         let workspace = self.load_workspace()?;
-        // TODO: Format these strings so that they look like what the user expects
-        // TODO: Are we going to have line separator issues across different platforms?
         match sub_matches.get_one::<String>("partial-statement") {
             None => Err("No partial statement provided.".to_string()),
             Some(partial_statement) => {
