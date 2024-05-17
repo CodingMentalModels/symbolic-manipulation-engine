@@ -36,6 +36,10 @@ fn main() {
                 Arg::new("partial-statement").required(true)
                 )
                     )
+        .subcommand(Command::new("derive").about("Checks if the provided statement is valid and adds it to the Workspace if so.").arg(
+                Arg::new("statement").required(true)
+                )
+                    )
         .get_matches();
 
     let current_directory = match current_dir() {
@@ -54,6 +58,7 @@ fn main() {
         Some(("rmws", sub_matches)) => cli.rmws(sub_matches),
         Some(("ls", _sub_matches)) => cli.ls(),
         Some(("get-transformations", sub_matches)) => cli.get_transformations(sub_matches),
+        Some(("derive", sub_matches)) => cli.derive(sub_matches),
         _ => Err("No subcommand was used".to_string()),
     };
 
