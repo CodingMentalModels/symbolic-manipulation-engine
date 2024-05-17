@@ -19,6 +19,7 @@ use crate::{
     },
 };
 
+type DisplaySymbolNode = String;
 type StatementIndex = usize;
 type TransformationIndex = usize;
 
@@ -27,9 +28,9 @@ pub struct DisplayWorkspace {
     types: Vec<DisplayTypeHierarchyNode>,
     generated_types: Vec<DisplayGeneratedType>,
     interpretations: Vec<Interpretation>,
-    statements: Vec<SymbolNode>,
+    statements: Vec<DisplaySymbolNode>,
     transformations: Vec<Transformation>,
-    provenance: Vec<Provenance>,
+    provenance: Vec<DisplayProvenance>,
 }
 
 impl From<&Workspace> for DisplayWorkspace {
@@ -42,9 +43,17 @@ impl From<&Workspace> for DisplayWorkspace {
                 .map(|g| DisplayGeneratedType::from(g))
                 .collect(),
             interpretations: workspace.interpretations.clone(),
-            statements: workspace.statements.clone(),
+            statements: workspace
+                .statements
+                .iter()
+                .map(|n| n.to_interpreted_string(&workspace.interpretations))
+                .collect(),
             transformations: workspace.transformations.clone(),
-            provenance: workspace.provenance.clone(),
+            provenance: workspace
+                .provenance
+                .iter()
+                .map(|p| DisplayProvenance::from(p))
+                .collect(),
         }
     }
 }
@@ -371,6 +380,23 @@ impl Workspace {
             }
         }
         Ok(())
+    }
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+pub enum DisplayProvenance {
+    Hypothesis,
+    Derived((TransformationIndex, StatementIndex, Vec<SymbolNodeAddress>)),
+}
+
+impl From<&Provenance> for DisplayProvenance {
+    fn from(value: &Provenance) -> Self {
+        match value {
+            Provenance::Hypothesis => Self::Hypothesis,
+            Provenance::Derived((t, s, addresses)) => {
+                Self::Derived((t.clone(), s.clone(), addresses.clone()))
+            }
+        }
     }
 }
 
