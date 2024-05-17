@@ -313,6 +313,18 @@ impl ExpressionType {
             Self::Functional => statement.has_children(),
         }
     }
+
+    pub fn try_parse(s: &str) -> Result<Self, ()> {
+        // TODO Support Outfix
+        match s.to_lowercase().as_ref() {
+            "singleton" => Ok(Self::Singleton),
+            "prefix" => Ok(Self::Prefix),
+            "infix" => Ok(Self::Infix),
+            "postfix" => Ok(Self::Postfix),
+            "functional" => Ok(Self::Functional),
+            _ => Err(()),
+        }
+    }
 }
 
 #[derive(Clone, Debug, Hash, PartialEq, Eq, Serialize, Deserialize)]

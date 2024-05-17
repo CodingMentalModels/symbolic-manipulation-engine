@@ -518,6 +518,12 @@ impl From<String> for Type {
     }
 }
 
+impl From<&String> for Type {
+    fn from(value: &String) -> Self {
+        value.as_str().into()
+    }
+}
+
 impl Type {
     pub fn new(name: TypeName) -> Type {
         Type::NamedType(name)

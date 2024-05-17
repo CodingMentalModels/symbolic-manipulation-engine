@@ -32,6 +32,16 @@ fn main() {
             ),
         )
         .subcommand(Command::new("ls").about("Lists the workspaces"))
+        .subcommand(Command::new("add-interpretation").about("Takes a condition (string to match), expression type, precedence, and output type and adds it as an interpretation.")
+            .arg(
+                Arg::new("condition").required(true).help("String which the parser will match to trigger the interpretation.")
+            ).arg(
+                Arg::new("expression-type").required(true).help("Singleton, Prefix, Infix, Postfix, or Functional (case insensitive)")
+            ).arg(
+                Arg::new("precedence").required(true).help("Relative precedence for different interpretations. Higher values have higher precedence.")
+            ).arg(
+                Arg::new("output-type").required(true).help("Output type to parse into.")
+            ))
         .subcommand(Command::new("hypothesize").about("Takes a statement and adds it to the Workspace as a new hypothesis").arg(
                 Arg::new("statement").required(true)
                 )

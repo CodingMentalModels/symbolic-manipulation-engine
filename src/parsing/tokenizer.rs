@@ -158,6 +158,12 @@ impl From<String> for Token {
     }
 }
 
+impl From<&String> for Token {
+    fn from(value: &String) -> Self {
+        value.as_str().into()
+    }
+}
+
 impl From<&str> for Token {
     fn from(value: &str) -> Self {
         Self::Object(value.to_string())

@@ -156,6 +156,10 @@ impl Workspace {
         &self.statements
     }
 
+    pub fn add_interpretation(&mut self, interpretation: Interpretation) {
+        self.interpretations.push(interpretation);
+    }
+
     pub fn add_statement(&mut self, statement: SymbolNode) -> Result<(), WorkspaceError> {
         self.types
             .binds_statement_or_error(&statement)

@@ -2,7 +2,15 @@ use clap::ArgMatches;
 use serde_json::to_string;
 
 use crate::{
-    cli::filesystem::FileSystem, config::STATE_DIRECTORY_RELATIVE_PATH, parsing::parser::Parser,
+    cli::filesystem::FileSystem,
+    config::STATE_DIRECTORY_RELATIVE_PATH,
+    parsing::{
+        interpretation::{
+            ExpressionPrecedence, ExpressionType, Interpretation, InterpretationCondition,
+            InterpretedType,
+        },
+        parser::Parser,
+    },
     workspace::workspace::Workspace,
 };
 
@@ -34,16 +42,7 @@ impl Cli {
         }
 
         let workspace = Workspace::default();
-        match self.filesystem.write_file(
-            STATE_DIRECTORY_RELATIVE_PATH,
-            "workspace.toml",
-            workspace.serialize(),
-        ) {
-            true => println!("Created workspace.toml"),
-            false => {
-                return Err("Couldn't create workspace.toml".to_string());
-            }
-        }
+        self.update_workspace(workspace)?;
         return Ok(format!(
             "Initialized new workspace in {}",
             self.filesystem.get_root_directory_path()
@@ -82,6 +81,37 @@ impl Cli {
         self.load_workspace()?
             .to_json()
             .map_err(|_| "Serialization Error.".to_string())
+    }
+
+    pub fn add_interpretation(&mut self, sub_matches: &ArgMatches) -> Result<String, String> {
+        let mut workspace = self.load_workspace()?;
+        let condition = match sub_matches.get_one::<String>("condition") {
+            None => return Err("No condition provided.".to_string()),
+            Some(condition) => InterpretationCondition::Matches(condition.into()),
+        };
+        let expression_type = match sub_matches.get_one::<String>("expression-type") {
+            None => return Err("No expression type provided.".to_string()),
+            Some(expression_type) => ExpressionType::try_parse(expression_type)
+                .map_err(|e| format!("Unable to parse expression type: {:?}", e).to_string())?,
+        };
+        let precedence = match sub_matches.get_one::<String>("precedence") {
+            None => return Err("No precedence provided.".to_string()),
+            Some(precedence) => precedence
+                .parse::<ExpressionPrecedence>()
+                .map_err(|e| format!("Unable to parse precedence: {:?}", e.to_string()))?,
+        };
+        let output_type = match sub_matches.get_one::<String>("output_type") {
+            None => return Err("No output type provided.".to_string()),
+            Some(output_type) => InterpretedType::Type(output_type.into()),
+        };
+        workspace.add_interpretation(Interpretation::new(
+            condition,
+            expression_type,
+            precedence,
+            output_type,
+        ));
+        self.update_workspace(workspace)?;
+        return Ok("Interpretation added.".to_string());
     }
 
     pub fn get_transformations(&self, sub_matches: &ArgMatches) -> Result<String, String> {
@@ -134,6 +164,20 @@ impl Cli {
                     });
             }
         }
+    }
+
+    fn update_workspace(&self, workspace: Workspace) -> Result<(), String> {
+        match self.filesystem.write_file(
+            STATE_DIRECTORY_RELATIVE_PATH,
+            "workspace.toml",
+            workspace.serialize(),
+        ) {
+            true => println!("Overwrote workspace.toml"),
+            false => {
+                return Err("Couldn't create workspace.toml".to_string());
+            }
+        }
+        Ok(())
     }
 
     fn load_workspace(&self) -> Result<Workspace, String> {
