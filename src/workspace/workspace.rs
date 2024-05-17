@@ -93,6 +93,10 @@ impl Workspace {
         &self.types
     }
 
+    pub fn get_interpretations(&self) -> &Vec<Interpretation> {
+        &self.interpretations
+    }
+
     pub fn try_import_context(&mut self, context: Context) -> Result<(), WorkspaceError> {
         let mut shared_types = self.types.get_shared_types(context.get_types());
         shared_types.remove(&Type::Object);
