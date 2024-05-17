@@ -102,6 +102,22 @@ impl Cli {
         }
     }
 
+    pub fn hypothesize(&self, sub_matches: &ArgMatches) -> Result<String, String> {
+        let mut workspace = self.load_workspace()?;
+        match sub_matches.get_one::<String>("statement") {
+            None => Err("No statement provided to derive".to_string()),
+            Some(statement) => {
+                let tree = workspace
+                    .parse_from_string(statement)
+                    .map_err(|e| format!("Parser Error: {:?}", e).to_string())?;
+                workspace
+                    .add_statement(tree)
+                    .map_err(|e| format!("Workspace Error: {:?}", e).to_string())
+                    .map(|_| "Hypthesis added.".to_string())
+            }
+        }
+    }
+
     pub fn derive(&self, sub_matches: &ArgMatches) -> Result<String, String> {
         let mut workspace = self.load_workspace()?;
         match sub_matches.get_one::<String>("statement") {

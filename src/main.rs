@@ -32,7 +32,11 @@ fn main() {
             ),
         )
         .subcommand(Command::new("ls").about("Lists the workspaces"))
-        .subcommand(Command::new("get-transformations").about("Takes a partial string and gets all valid transformations sorted based on the string.").arg(
+        .subcommand(Command::new("hypothesize").about("Takes a statement and adds it to the Workspace as a new hypothesis").arg(
+                Arg::new("statement").required(true)
+                )
+                    )
+        .subcommand(Command::new("get-transformations").about("Takes a partial statement and gets all valid transformations sorted based on the string.").arg(
                 Arg::new("partial-statement").required(true)
                 )
                     )
@@ -57,6 +61,7 @@ fn main() {
         Some(("init", _sub_matches)) => cli.init(),
         Some(("rmws", sub_matches)) => cli.rmws(sub_matches),
         Some(("ls", _sub_matches)) => cli.ls(),
+        Some(("hypothesize", sub_matches)) => cli.hypothesize(sub_matches),
         Some(("get-transformations", sub_matches)) => cli.get_transformations(sub_matches),
         Some(("derive", sub_matches)) => cli.derive(sub_matches),
         _ => Err("No subcommand was used".to_string()),
