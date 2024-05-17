@@ -14,6 +14,25 @@ use super::tokenizer::Token;
 pub type ExpressionPrecedence = u8;
 
 #[derive(Clone, Debug, Hash, PartialEq, Eq, Serialize, Deserialize)]
+pub struct DisplayInterpretation {
+    condition: InterpretationCondition,
+    expression_type: ExpressionType,
+    expression_precidence: ExpressionPrecedence,
+    output_type: InterpretedType,
+}
+
+impl From<Interpretation> for DisplayInterpretation {
+    fn from(value: Interpretation) -> Self {
+        Self {
+            condition: value.condition,
+            expression_type: value.expression_type,
+            expression_precidence: value.expression_precidence,
+            output_type: value.output_type,
+        }
+    }
+}
+
+#[derive(Clone, Debug, Hash, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Interpretation {
     condition: InterpretationCondition,
     expression_type: ExpressionType,
