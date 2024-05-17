@@ -86,14 +86,17 @@ impl Cli {
 
     pub fn get_transformations(&self, sub_matches: &ArgMatches) -> Result<String, String> {
         let workspace = self.load_workspace()?;
-        // TODO: Format these strings so that they look like what the user expects
-        // TODO: Are we going to have line separator issues across different platforms?
         match sub_matches.get_one::<String>("partial-statement") {
             None => Err("No partial statement provided.".to_string()),
             Some(partial_statement) => {
-                let serialized_result =
-                    to_string(&workspace.get_valid_transformations(partial_statement))
-                        .map_err(|e| e.to_string())?;
+                let serialized_result = to_string(
+                    &workspace
+                        .get_valid_transformations(partial_statement)
+                        .into_iter()
+                        .map(|n| n.to_interpreted_string(workspace.get_interpretations()))
+                        .collect::<Vec<_>>(),
+                )
+                .map_err(|e| e.to_string())?;
                 Ok(serialized_result)
             }
         }
@@ -110,7 +113,9 @@ impl Cli {
                 return workspace
                     .try_transform_into(tree)
                     .map_err(|e| format!("Workspace error: {:?}", e))
-                    .map(|statement| statement.to_string());
+                    .map(|statement| {
+                        statement.to_interpreted_string(workspace.get_interpretations())
+                    });
             }
         }
     }
