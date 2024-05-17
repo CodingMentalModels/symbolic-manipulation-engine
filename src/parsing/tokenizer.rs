@@ -351,6 +351,43 @@ mod test_tokenizer {
     }
 
     #[test]
+    fn test_token_stack_pops() {
+        let mut tokenizer = Tokenizer::new_with_tokens(vec![
+            "=".to_string(),
+            "+".to_string(),
+            "-".to_string(),
+            "*".to_string(),
+            "/".to_string(),
+        ]);
+
+        let mut stack = tokenizer.tokenize("2 + 2 = 4");
+        assert_eq!(stack.pop(), Some("2".into()));
+        assert_eq!(stack.pop_or_error(), Ok(Token::Whitespace));
+        assert_eq!(stack.pop_and_assert_or_error("+".into()), Ok(()));
+        assert_eq!(stack.pop_and_assert_or_error(Token::Whitespace), Ok(()));
+        assert_eq!(stack.pop_and_assert_or_error("2".into()), Ok(()));
+        assert_eq!(stack.pop_and_assert_or_error(Token::Whitespace), Ok(()));
+        assert_eq!(stack.pop_and_assert_or_error("=".into()), Ok(()));
+        assert_eq!(stack.pop_and_assert_or_error(Token::Whitespace), Ok(()));
+        assert_eq!(stack.pop_and_assert_or_error("4".into()), Ok(()));
+        assert_eq!(stack.pop(), None);
+        assert_eq!(
+            stack.pop_or_error(),
+            Err(ParserError::NoTokensRemainingToInterpret)
+        );
+        assert_eq!(
+            stack.pop_and_assert_or_error(Token::Whitespace),
+            Err(ParserError::NoTokensRemainingToInterpret)
+        );
+
+        let mut stack = tokenizer.tokenize("2 + 2 = 4");
+        assert_eq!(
+            stack.pop_and_assert_or_error(Token::Whitespace),
+            Err(ParserError::ExpectedButFound(Token::Whitespace, "2".into()))
+        );
+    }
+
+    #[test]
     fn test_char_queue_takes() {
         let mut queue = CharQueue::from_string("ABCDEFGH".to_string());
         assert_eq!(queue.peek(), Some('A'));
