@@ -65,16 +65,16 @@ fn main() {
     };
 
     let filesystem = FileSystem::new(current_directory);
-    let cli = Cli::new(filesystem);
+    let mut cli = Cli::new(filesystem);
 
     let result = match matches.subcommand() {
         Some(("init", _sub_matches)) => cli.init(),
         Some(("rmws", sub_matches)) => cli.rmws(sub_matches),
         Some(("ls", _sub_matches)) => cli.ls(),
-        Some(("hypothesize", sub_matches)) => cli.hypothesize(sub_matches),
+        Some(("add-interpretation", sub_matches)) => cli.add_interpretation(sub_matches),
         Some(("get-transformations", sub_matches)) => cli.get_transformations(sub_matches),
         Some(("derive", sub_matches)) => cli.derive(sub_matches),
-        _ => Err("No subcommand was used".to_string()),
+        _ => Err("No subcommand was provided".to_string()),
     };
 
     match result {
