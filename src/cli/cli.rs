@@ -100,7 +100,7 @@ impl Cli {
                 .parse::<ExpressionPrecedence>()
                 .map_err(|e| format!("Unable to parse precedence: {:?}", e.to_string()))?,
         };
-        let output_type = match sub_matches.get_one::<String>("output_type") {
+        let output_type = match sub_matches.get_one::<String>("output-type") {
             None => return Err("No output type provided.".to_string()),
             Some(output_type) => InterpretedType::Type(output_type.into()),
         };
