@@ -323,11 +323,11 @@ impl Workspace {
 
     pub fn to_json(&self) -> Result<String, WorkspaceError> {
         let display_workspace = DisplayWorkspace::from(self);
-        to_string(&display_workspace).map_err(|_| WorkspaceError::UnableToSerialize)
+        to_string(&display_workspace).map_err(|e| WorkspaceError::UnableToSerialize(e.to_string()))
     }
 
-    pub fn serialize(&self) -> String {
-        toml::to_string(self).unwrap()
+    pub fn serialize(&self) -> Result<String, WorkspaceError> {
+        toml::to_string(self).map_err(|e| WorkspaceError::UnableToSerialize(e.to_string()))
     }
 
     pub fn deserialize(serialized: &str) -> Result<Workspace, toml::de::Error> {
@@ -426,7 +426,7 @@ pub enum WorkspaceError {
     InvalidTransformationIndex,
     InvalidTransformationAddress,
     ParserError(ParserError),
-    UnableToSerialize,
+    UnableToSerialize(String),
     TransformationError(TransformationError),
     StatementContainsTypesNotInHierarchy(HashSet<Type>),
     IncompatibleTypeRelationships(HashSet<Type>),

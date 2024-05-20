@@ -170,7 +170,7 @@ impl Cli {
         match self.filesystem.write_file(
             STATE_DIRECTORY_RELATIVE_PATH,
             "workspace.toml",
-            workspace.serialize(),
+            workspace.serialize().map_err(|e| format!("{:?}", e))?,
         ) {
             true => println!("Overwrote workspace.toml"),
             false => {
