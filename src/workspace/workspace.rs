@@ -397,6 +397,7 @@ impl Workspace {
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(tag = "kind")]
 pub enum DisplayProvenance {
     Hypothesis,
     Derived((TransformationIndex, StatementIndex, Vec<SymbolNodeAddress>)),

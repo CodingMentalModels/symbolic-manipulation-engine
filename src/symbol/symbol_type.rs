@@ -494,6 +494,7 @@ impl GeneratedTypeCondition {
 }
 
 #[derive(Clone, Debug, Hash, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(tag = "kind")]
 pub enum Type {
     Object,
     Delimiter,

@@ -251,6 +251,7 @@ impl Interpretation {
 }
 
 #[derive(Clone, Debug, Hash, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(tag = "kind")]
 pub enum InterpretationCondition {
     Matches(Token),
     IsObject,
@@ -289,6 +290,7 @@ impl InterpretationCondition {
 }
 
 #[derive(Clone, Debug, Hash, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(tag = "kind")]
 pub enum ExpressionType {
     Singleton,
     Prefix,
