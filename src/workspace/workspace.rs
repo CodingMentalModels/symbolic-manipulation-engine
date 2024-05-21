@@ -2,11 +2,12 @@ use std::collections::{HashMap, HashSet};
 
 use serde::{Deserialize, Serialize};
 use serde_json::to_string;
+use ts_rs::TS;
 
 use crate::{
     context::context::Context,
     parsing::{
-        interpretation::Interpretation,
+        interpretation::{DisplayInterpretation, Interpretation},
         parser::{Parser, ParserError},
     },
     symbol::{
@@ -24,11 +25,13 @@ type DisplayTransformation = String;
 type StatementIndex = usize;
 type TransformationIndex = usize;
 
-#[derive(Clone, Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
 pub struct DisplayWorkspace {
     types: Vec<DisplayTypeHierarchyNode>,
     generated_types: Vec<DisplayGeneratedType>,
-    interpretations: Vec<Interpretation>,
+    interpretations: Vec<DisplayInterpretation>,
     statements: Vec<DisplaySymbolNode>,
     transformations: Vec<DisplayTransformation>,
     provenance: Vec<DisplayProvenance>,
@@ -43,7 +46,11 @@ impl From<&Workspace> for DisplayWorkspace {
                 .iter()
                 .map(|g| DisplayGeneratedType::from(g))
                 .collect(),
-            interpretations: workspace.interpretations.clone(),
+            interpretations: workspace
+                .interpretations
+                .iter()
+                .map(|i| DisplayInterpretation::from(i))
+                .collect(),
             statements: workspace
                 .statements
                 .iter()
@@ -396,8 +403,9 @@ impl Workspace {
     }
 }
 
-#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
-#[serde(tag = "kind")]
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[serde(tag = "kind", rename_all = "camelCase")]
+#[ts(export)]
 pub enum DisplayProvenance {
     Hypothesis,
     Derived((TransformationIndex, StatementIndex, Vec<SymbolNodeAddress>)),

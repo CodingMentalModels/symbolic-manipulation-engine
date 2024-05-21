@@ -1,4 +1,5 @@
 use serde::{Deserialize, Serialize};
+use ts_rs::TS;
 
 use crate::{
     constants::*,
@@ -13,21 +14,23 @@ use super::tokenizer::Token;
 
 pub type ExpressionPrecedence = u8;
 
-#[derive(Clone, Debug, Hash, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Clone, Debug, Hash, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
 pub struct DisplayInterpretation {
     condition: InterpretationCondition,
     expression_type: ExpressionType,
-    expression_precidence: ExpressionPrecedence,
+    expression_precedence: ExpressionPrecedence,
     output_type: InterpretedType,
 }
 
-impl From<Interpretation> for DisplayInterpretation {
-    fn from(value: Interpretation) -> Self {
+impl From<&Interpretation> for DisplayInterpretation {
+    fn from(value: &Interpretation) -> Self {
         Self {
-            condition: value.condition,
-            expression_type: value.expression_type,
-            expression_precidence: value.expression_precidence,
-            output_type: value.output_type,
+            condition: value.condition.clone(),
+            expression_type: value.expression_type.clone(),
+            expression_precedence: value.expression_precidence,
+            output_type: value.output_type.clone(),
         }
     }
 }
@@ -250,8 +253,9 @@ impl Interpretation {
     }
 }
 
-#[derive(Clone, Debug, Hash, PartialEq, Eq, Serialize, Deserialize)]
-#[serde(tag = "kind", content = "token")]
+#[derive(Clone, Debug, Hash, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[serde(tag = "kind", content = "token", rename_all = "camelCase")]
+#[ts(export)]
 pub enum InterpretationCondition {
     Matches(Token),
     IsObject,
@@ -289,8 +293,9 @@ impl InterpretationCondition {
     }
 }
 
-#[derive(Clone, Debug, Hash, PartialEq, Eq, Serialize, Deserialize)]
-#[serde(tag = "kind", content = "token")]
+#[derive(Clone, Debug, Hash, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[serde(tag = "kind", content = "token", rename_all = "camelCase")]
+#[ts(export)]
 pub enum ExpressionType {
     Singleton,
     Prefix,
@@ -329,8 +334,9 @@ impl ExpressionType {
     }
 }
 
-#[derive(Clone, Debug, Hash, PartialEq, Eq, Serialize, Deserialize)]
-#[serde(tag = "kind", content = "type")]
+#[derive(Clone, Debug, Hash, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[serde(tag = "kind", content = "type", rename_all = "camelCase")]
+#[ts(export)]
 pub enum InterpretedType {
     PassThrough,
     Delimiter,

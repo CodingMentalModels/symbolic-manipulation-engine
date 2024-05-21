@@ -1,6 +1,7 @@
 use std::collections::{HashMap, HashSet};
 
 use serde::{Deserialize, Serialize};
+use ts_rs::TS;
 
 use super::{
     symbol_node::{Symbol, SymbolNode},
@@ -9,7 +10,9 @@ use super::{
 
 pub type TypeName = String;
 
-#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
 pub struct DisplayTypeHierarchyNode {
     inner: Type,
     parents: Vec<Type>,
@@ -425,7 +428,8 @@ pub struct TypeHierarchyNode {
     children: HashSet<Type>,
 }
 
-#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[ts(export)]
 pub struct DisplayGeneratedType {
     condition: GeneratedTypeCondition,
     parents: Vec<Type>,
@@ -472,7 +476,8 @@ impl GeneratedType {
     }
 }
 
-#[derive(Clone, Debug, Hash, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Clone, Debug, Hash, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[ts(export)]
 pub enum GeneratedTypeCondition {
     IsInteger,
     IsNumeric,
@@ -493,8 +498,9 @@ impl GeneratedTypeCondition {
     }
 }
 
-#[derive(Clone, Debug, Hash, PartialEq, Eq, Serialize, Deserialize)]
-#[serde(tag = "kind", content = "value")]
+#[derive(Clone, Debug, Hash, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[serde(tag = "kind", content = "value", rename_all = "camelCase")]
+#[ts(export)]
 pub enum Type {
     Object,
     Delimiter,
