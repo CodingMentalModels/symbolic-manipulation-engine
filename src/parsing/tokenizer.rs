@@ -1,6 +1,7 @@
 use std::collections::VecDeque;
 
 use serde::{Deserialize, Serialize};
+use ts_rs::TS;
 
 use super::parser::ParserError;
 use crate::constants::*;
@@ -143,8 +144,9 @@ impl TokenStack {
         self.len() == 0
     }
 }
-#[derive(Clone, Debug, Hash, PartialEq, Eq, Serialize, Deserialize)]
-#[serde(tag = "kind", content = "value")]
+#[derive(Clone, Debug, Hash, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[serde(tag = "kind", content = "value", rename_all = "camelCase")]
+#[ts(export)]
 pub enum Token {
     LeftParen,
     RightParen,
