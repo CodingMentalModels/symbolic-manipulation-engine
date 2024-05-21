@@ -144,7 +144,7 @@ impl TokenStack {
     }
 }
 #[derive(Clone, Debug, Hash, PartialEq, Eq, Serialize, Deserialize)]
-#[serde(tag = "kind")]
+#[serde(tag = "kind", content = "value")]
 pub enum Token {
     LeftParen,
     RightParen,

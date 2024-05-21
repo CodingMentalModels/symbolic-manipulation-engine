@@ -251,7 +251,7 @@ impl Interpretation {
 }
 
 #[derive(Clone, Debug, Hash, PartialEq, Eq, Serialize, Deserialize)]
-#[serde(tag = "kind")]
+#[serde(tag = "kind", content = "token")]
 pub enum InterpretationCondition {
     Matches(Token),
     IsObject,
@@ -290,7 +290,7 @@ impl InterpretationCondition {
 }
 
 #[derive(Clone, Debug, Hash, PartialEq, Eq, Serialize, Deserialize)]
-#[serde(tag = "kind")]
+#[serde(tag = "kind", content = "token")]
 pub enum ExpressionType {
     Singleton,
     Prefix,
@@ -330,6 +330,7 @@ impl ExpressionType {
 }
 
 #[derive(Clone, Debug, Hash, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(tag = "kind", content = "type")]
 pub enum InterpretedType {
     PassThrough,
     Delimiter,
