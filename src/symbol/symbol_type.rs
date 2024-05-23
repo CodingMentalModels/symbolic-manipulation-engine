@@ -33,7 +33,7 @@ impl From<&TypeHierarchy> for Vec<DisplayTypeHierarchyNode> {
     }
 }
 
-#[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub struct TypeHierarchy {
     type_map: HashMap<Type, TypeHierarchyNode>,
 }

@@ -70,7 +70,7 @@ impl From<&Workspace> for DisplayWorkspace {
     }
 }
 
-#[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Workspace {
     types: TypeHierarchy,
     generated_types: Vec<GeneratedType>,
@@ -78,6 +78,12 @@ pub struct Workspace {
     statements: Vec<SymbolNode>,
     transformations: Vec<Transformation>,
     provenance: Vec<Provenance>,
+}
+
+impl Default for Workspace {
+    fn default() -> Self {
+        Self::new(TypeHierarchy::new(), vec![], vec![])
+    }
 }
 
 impl Workspace {
@@ -165,6 +171,12 @@ impl Workspace {
 
     pub fn add_interpretation(&mut self, interpretation: Interpretation) {
         self.interpretations.push(interpretation);
+    }
+
+    pub fn add_type_to_parent(&mut self, t: Type, parent: Type) -> Result<Type, WorkspaceError> {
+        self.types
+            .add_child_to_parent(t, parent)
+            .map_err(|e| e.into())
     }
 
     pub fn add_statement(&mut self, statement: SymbolNode) -> Result<(), WorkspaceError> {
@@ -440,6 +452,7 @@ pub enum WorkspaceError {
     IncompatibleTypeRelationships(HashSet<Type>),
     TypeHierarchyAlreadyIncludes(Type),
     InvalidType(Type),
+    ParentTypeNotFound(Type),
     NoTransformationsPossible,
     InvalidTypeError(TypeError),
     AttemptedToImportAmbiguousTypes(HashSet<Type>),
@@ -465,6 +478,7 @@ impl From<TypeError> for WorkspaceError {
             TypeError::IncompatibleTypeRelationships(types) => {
                 Self::IncompatibleTypeRelationships(types)
             }
+            TypeError::ParentNotFound(t) => WorkspaceError::ParentTypeNotFound(t),
             e => Self::InvalidTypeError(e),
         }
     }

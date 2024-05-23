@@ -42,6 +42,12 @@ fn main() {
             ).arg(
                 Arg::new("output-type").required(true).help("Output type to parse into.")
             ))
+        .subcommand(Command::new("add-type").about("Takes a type name and optionally a parent type name and adds the type to the Workspace's Type Hierarchy, defaulting to Object if no parent type is provided.")
+            .arg(
+                Arg::new("type-name").required(true).help("Name of the type to add.")
+            ).arg(
+                Arg::new("parent-type-name").help("Optional name of the parent type to add the type to. Must already exist in the Type Hierarchy of the Workspace.")
+            ))
         .subcommand(Command::new("hypothesize").about("Takes a statement and adds it to the Workspace as a new hypothesis").arg(
                 Arg::new("statement").required(true)
                 )
@@ -72,6 +78,7 @@ fn main() {
         Some(("rmws", sub_matches)) => cli.rmws(sub_matches),
         Some(("ls", _sub_matches)) => cli.ls(),
         Some(("add-interpretation", sub_matches)) => cli.add_interpretation(sub_matches),
+        Some(("add-type", sub_matches)) => cli.add_type(sub_matches),
         Some(("get-transformations", sub_matches)) => cli.get_transformations(sub_matches),
         Some(("derive", sub_matches)) => cli.derive(sub_matches),
         _ => Err("No subcommand was provided".to_string()),

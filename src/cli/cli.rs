@@ -11,6 +11,7 @@ use crate::{
         },
         parser::Parser,
     },
+    symbol::symbol_type::Type,
     workspace::workspace::Workspace,
 };
 
@@ -112,6 +113,39 @@ impl Cli {
         ));
         self.update_workspace(workspace)?;
         return Ok("Interpretation added.".to_string());
+    }
+
+    pub fn add_type(&mut self, sub_matches: &ArgMatches) -> Result<String, String> {
+        let mut workspace = self.load_workspace()?;
+        match sub_matches.get_one::<String>("type-name") {
+            Some(type_name) => {
+                let parent_type = match sub_matches.get_one::<String>("parent-type-name") {
+                    None => Type::Object,
+                    Some(parent_name) => {
+                        match workspace
+                            .get_types()
+                            .get_types()
+                            .iter()
+                            .find(|t| t == &&Type::NamedType(parent_name.clone()))
+                        {
+                            None => {
+                                return Err(format!(
+                                    "No type in type hierarchy named {}.",
+                                    parent_name
+                                )
+                                .to_string())
+                            }
+                            Some(parent_type) => parent_type.clone(),
+                        }
+                    }
+                };
+                workspace
+                    .add_type_to_parent(type_name.into(), parent_type.clone())
+                    .map_err(|e| format!("Workspace Error: {:?}", e).to_string())?;
+                Ok(format!("{} added to {}.", type_name, parent_type.to_string()).to_string())
+            }
+            None => return Err(format!("No type name provided.")),
+        }
     }
 
     pub fn get_transformations(&self, sub_matches: &ArgMatches) -> Result<String, String> {
