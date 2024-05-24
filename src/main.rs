@@ -55,11 +55,11 @@ fn main() {
         .subcommand(Command::new("get-transformations").about("Takes a partial statement and gets all valid transformations sorted based on the string.").arg(
                 Arg::new("partial-statement").required(true)
                 )
-                    )
+            )
         .subcommand(Command::new("derive").about("Checks if the provided statement is valid and adds it to the Workspace if so.").arg(
                 Arg::new("statement").required(true)
                 )
-                    )
+            )
         .get_matches();
 
     let current_directory = match current_dir() {
@@ -80,6 +80,7 @@ fn main() {
         Some(("add-interpretation", sub_matches)) => cli.add_interpretation(sub_matches),
         Some(("add-type", sub_matches)) => cli.add_type(sub_matches),
         Some(("get-transformations", sub_matches)) => cli.get_transformations(sub_matches),
+        Some(("hypothesize", sub_matches)) => cli.hypothesize(sub_matches),
         Some(("derive", sub_matches)) => cli.derive(sub_matches),
         _ => Err("No subcommand was provided".to_string()),
     };
