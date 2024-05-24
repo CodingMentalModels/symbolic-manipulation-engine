@@ -4,7 +4,8 @@ use std::str::FromStr;
 
 use serde::{
     de::{self, MapAccess, Visitor},
-    Deserialize, Deserializer, Serialize, Serializer,
+    ser::{SerializeMap, Serializer},
+    Deserialize, Deserializer, Serialize,
 };
 use ts_rs::TS;
 
@@ -12,6 +13,7 @@ use super::{
     symbol_node::{Symbol, SymbolNode},
     transformation::Transformation,
 };
+use crate::constants::*;
 
 pub type TypeName = String;
 
@@ -71,7 +73,7 @@ impl<'de> Visitor<'de> for TypeHierarchyVisitor {
     {
         let mut type_map = HashMap::new();
         while let Some((key, value)) = map.next_entry::<String, TypeHierarchyNode>()? {
-            let type_key = Type::from_str(&key).map_err(de::Error::custom)?;
+            let type_key = Type::from(&key);
             type_map.insert(type_key, value);
         }
         Ok(TypeHierarchy { type_map })
@@ -564,13 +566,19 @@ impl Default for Type {
 
 impl From<&str> for Type {
     fn from(value: &str) -> Self {
-        Self::from(value.to_string())
+        if value == SERIALIZED_OBJECT_TYPE {
+            Self::Object
+        } else if value == SERIALIZED_DELIMITER_TYPE {
+            Self::Delimiter
+        } else {
+            Self::NamedType(value.to_string())
+        }
     }
 }
 
 impl From<String> for Type {
     fn from(value: String) -> Self {
-        Self::NamedType(value)
+        Self::from(value.as_str())
     }
 }
 
@@ -587,8 +595,8 @@ impl Type {
 
     pub fn to_string(&self) -> String {
         match self {
-            Type::Object => "Object".to_string(),
-            Type::Delimiter => "Delimiter".to_string(),
+            Type::Object => SERIALIZED_OBJECT_TYPE.to_string(),
+            Type::Delimiter => SERIALIZED_DELIMITER_TYPE.to_string(),
             Type::NamedType(name) => name.clone(),
         }
     }
@@ -753,7 +761,7 @@ mod test_type {
 
     #[test]
     fn test_type_to_string() {
-        assert_eq!(Type::Object.to_string(), "Object".to_string());
+        assert_eq!(Type::Object.to_string(), SERIALIZED_OBJECT_TYPE.to_string());
 
         let quaternion = Type::new("Quaternion".to_string());
 
