@@ -769,6 +769,15 @@ mod test_type {
     }
 
     #[test]
+    fn test_type_serde() {
+        assert_eq!(Type::from(Type::Object.to_string()), Type::Object);
+        assert_eq!(Type::from(Type::Delimiter.to_string()), Type::Delimiter);
+
+        let quaternion = Type::new("Quaternion".to_string());
+        assert_eq!(Type::from(quaternion.to_string()), quaternion);
+    }
+
+    #[test]
     fn test_generalizes_and_is_generalized_by() {
         let mut type_hierarchy = TypeHierarchy::chain(vec!["Integer".into()]).unwrap();
         type_hierarchy.add_chain(vec!["Boolean".into()]);
