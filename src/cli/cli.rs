@@ -105,12 +105,14 @@ impl Cli {
             None => return Err("No output type provided.".to_string()),
             Some(output_type) => InterpretedType::Type(output_type.into()),
         };
-        workspace.add_interpretation(Interpretation::new(
-            condition,
-            expression_type,
-            precedence,
-            output_type,
-        ));
+        workspace
+            .add_interpretation(Interpretation::new(
+                condition,
+                expression_type,
+                precedence,
+                output_type,
+            ))
+            .map_err(|e| format!("Workspace Error: {:?}", e).to_string())?;
         self.update_workspace(workspace)?;
         return Ok("Interpretation added.".to_string());
     }
@@ -149,7 +151,7 @@ impl Cli {
 
                 self.update_workspace(workspace)?;
 
-                Ok(format!("{} added to {}.", type_name, parent_type.to_string()).to_string())
+                Ok(format!("{} added to {}.", type_name, parent_type.pretty_print()).to_string())
             }
             None => return Err(format!("No type name provided.")),
         }

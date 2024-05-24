@@ -7,7 +7,7 @@ use ts_rs::TS;
 use crate::{
     context::context::Context,
     parsing::{
-        interpretation::{DisplayInterpretation, Interpretation},
+        interpretation::{DisplayInterpretation, Interpretation, InterpretedType},
         parser::{Parser, ParserError},
     },
     symbol::{
@@ -169,8 +169,20 @@ impl Workspace {
         &self.statements
     }
 
-    pub fn add_interpretation(&mut self, interpretation: Interpretation) {
+    pub fn add_interpretation(
+        &mut self,
+        interpretation: Interpretation,
+    ) -> Result<(), WorkspaceError> {
+        match interpretation.get_output_type() {
+            InterpretedType::Type(t) => {
+                if !self.types.contains_type(&t) {
+                    return Err(WorkspaceError::InvalidType(t));
+                }
+            }
+            _ => {}
+        }
         self.interpretations.push(interpretation);
+        Ok(())
     }
 
     pub fn add_type_to_parent(&mut self, t: Type, parent: Type) -> Result<Type, WorkspaceError> {
