@@ -146,6 +146,9 @@ impl Cli {
                 workspace
                     .add_type_to_parent(type_name.into(), parent_type.clone())
                     .map_err(|e| format!("Workspace Error: {:?}", e).to_string())?;
+
+                self.update_workspace(workspace)?;
+
                 Ok(format!("{} added to {}.", type_name, parent_type.to_string()).to_string())
             }
             None => return Err(format!("No type name provided.")),
