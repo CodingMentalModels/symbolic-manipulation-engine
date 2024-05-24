@@ -1,6 +1,11 @@
 use std::collections::{HashMap, HashSet};
+use std::fmt;
+use std::str::FromStr;
 
-use serde::{Deserialize, Serialize};
+use serde::{
+    de::{self, MapAccess, Visitor},
+    Deserialize, Deserializer, Serialize, Serializer,
+};
 use ts_rs::TS;
 
 use super::{
@@ -33,9 +38,53 @@ impl From<&TypeHierarchy> for Vec<DisplayTypeHierarchyNode> {
     }
 }
 
-#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub struct TypeHierarchy {
     type_map: HashMap<Type, TypeHierarchyNode>,
+}
+
+impl Serialize for TypeHierarchy {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        let mut map = serializer.serialize_map(Some(self.type_map.len()))?;
+        for (key, value) in &self.type_map {
+            map.serialize_entry(&key.to_string(), value)?;
+        }
+        map.end()
+    }
+}
+
+struct TypeHierarchyVisitor;
+
+impl<'de> Visitor<'de> for TypeHierarchyVisitor {
+    type Value = TypeHierarchy;
+
+    fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
+        formatter.write_str("a map of string keys to TypeHierarchyNode values")
+    }
+
+    fn visit_map<V>(self, mut map: V) -> Result<TypeHierarchy, V::Error>
+    where
+        V: MapAccess<'de>,
+    {
+        let mut type_map = HashMap::new();
+        while let Some((key, value)) = map.next_entry::<String, TypeHierarchyNode>()? {
+            let type_key = Type::from_str(&key).map_err(de::Error::custom)?;
+            type_map.insert(type_key, value);
+        }
+        Ok(TypeHierarchy { type_map })
+    }
+}
+
+impl<'de> Deserialize<'de> for TypeHierarchy {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        deserializer.deserialize_map(TypeHierarchyVisitor)
+    }
 }
 
 impl TypeHierarchy {
@@ -100,7 +149,7 @@ impl TypeHierarchy {
                         Some(parent_node) => {
                             parent_node.children.insert(type_to_add.clone());
                         }
-                        None => return Err(TypeError::ParentNotFound(type_to_add)),
+                        None => return Err(TypeError::ParentNotFound(parent_type.clone())),
                     }
                 }
                 Ok(type_to_add)
