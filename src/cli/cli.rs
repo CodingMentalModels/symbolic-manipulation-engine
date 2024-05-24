@@ -183,10 +183,12 @@ impl Cli {
                 let tree = workspace
                     .parse_from_string(statement)
                     .map_err(|e| format!("Parser Error: {:?}", e).to_string())?;
-                workspace
+                let to_return = workspace
                     .add_statement(tree)
                     .map_err(|e| format!("Workspace Error: {:?}", e).to_string())
-                    .map(|_| "Hypthesis added.".to_string())
+                    .map(|_| "Hypthesis added.".to_string());
+                self.update_workspace(workspace)?;
+                to_return
             }
         }
     }
@@ -199,12 +201,14 @@ impl Cli {
                 let tree = workspace
                     .parse_from_string(statement)
                     .map_err(|e| format!("Parser Error: {:?}", e).to_string())?;
-                return workspace
+                let to_return = workspace
                     .try_transform_into(tree)
                     .map_err(|e| format!("Workspace error: {:?}", e))
                     .map(|statement| {
                         statement.to_interpreted_string(workspace.get_interpretations())
                     });
+                self.update_workspace(workspace)?;
+                to_return
             }
         }
     }
