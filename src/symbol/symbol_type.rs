@@ -600,6 +600,20 @@ impl Type {
             Type::NamedType(name) => name.clone(),
         }
     }
+
+    pub fn pretty_print(&self) -> String {
+        if self == &Self::NamedType("Object".to_string()) {
+            return "Object (Warning: This overloads the Object Type and is not recommended)"
+                .to_string();
+        } else if self == &Self::NamedType("Delimiter".to_string()) {
+            return "Delimiter (Warning: This overloades the Delimiter Type and is not recommended)".to_string();
+        }
+        match self {
+            Type::Object => "Object".to_string(),
+            Type::Delimiter => "Delimiter".to_string(),
+            Type::NamedType(t) => t.to_string(),
+        }
+    }
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
