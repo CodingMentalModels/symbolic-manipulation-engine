@@ -11,7 +11,7 @@ use crate::{
         },
         parser::Parser,
     },
-    symbol::symbol_type::Type,
+    symbol::{symbol_type::Type, transformation::Transformation},
     workspace::workspace::Workspace,
 };
 
@@ -173,6 +173,29 @@ impl Cli {
                 Ok(serialized_result)
             }
         }
+    }
+
+    pub fn add_transformation(&mut self, sub_matches: &ArgMatches) -> Result<String, String> {
+        let mut workspace = self.load_workspace()?;
+        let from_as_string = match sub_matches.get_one::<String>("from") {
+            None => return Err("No from provided.".to_string()),
+            Some(from) => from,
+        };
+        let to_as_string = match sub_matches.get_one::<String>("to") {
+            None => return Err("No to provided.".to_string()),
+            Some(to) => to,
+        };
+        let from = workspace
+            .parse_from_string(&from_as_string)
+            .map_err(|e| format!("Workspace Error: {:?}", e).to_string())?;
+        let to = workspace
+            .parse_from_string(&to_as_string)
+            .map_err(|e| format!("Workspace Error: {:?}", e).to_string())?;
+        workspace
+            .add_transformation(Transformation::new(from, to))
+            .map_err(|e| format!("Workspace Error: {:?}", e).to_string())?;
+        self.update_workspace(workspace)?;
+        return Ok("Transformation added.".to_string());
     }
 
     pub fn hypothesize(&self, sub_matches: &ArgMatches) -> Result<String, String> {
