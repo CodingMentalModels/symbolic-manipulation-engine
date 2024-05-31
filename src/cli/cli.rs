@@ -117,6 +117,26 @@ impl Cli {
         return Ok("Interpretation added.".to_string());
     }
 
+    pub fn remove_interpretation(&mut self, sub_matches: &ArgMatches) -> Result<String, String> {
+        let mut workspace = self.load_workspace()?;
+        match sub_matches.get_one::<String>("index") {
+            None => Err("Invalid Interpretation Index.".to_string()),
+            Some(index_string) => match index_string.parse::<usize>() {
+                Ok(index) => {
+                    let to_return = workspace
+                        .remove_interpretation(index)
+                        .map_err(|e| format!("Workspace Error: {:?}", e).to_string())
+                        .map(|interpretation| {
+                            format!("Removed Interpretation: {:?}", interpretation).to_string()
+                        });
+                    self.update_workspace(workspace)?;
+                    to_return
+                }
+                Err(_) => Err(format!("Unable to parse index: {}", index_string).to_string()),
+            },
+        }
+    }
+
     pub fn add_type(&mut self, sub_matches: &ArgMatches) -> Result<String, String> {
         let maybe_type_name = sub_matches.get_one::<String>("type-name");
         let maybe_parent_name = sub_matches.get_one::<String>("parent-type-name");

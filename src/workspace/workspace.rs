@@ -185,6 +185,16 @@ impl Workspace {
         Ok(())
     }
 
+    pub fn remove_interpretation(
+        &mut self,
+        interpretation_index: usize,
+    ) -> Result<Interpretation, WorkspaceError> {
+        if interpretation_index >= self.interpretations.len() {
+            return Err(WorkspaceError::InvalidInterpretationIndex);
+        }
+        Ok(self.interpretations.remove(interpretation_index))
+    }
+
     pub fn add_type_to_parent(&mut self, t: Type, parent: Type) -> Result<Type, WorkspaceError> {
         self.types
             .add_child_to_parent(t, parent)
@@ -462,6 +472,7 @@ pub enum Provenance {
 pub enum WorkspaceError {
     InvalidStatementIndex,
     InvalidTransformationIndex,
+    InvalidInterpretationIndex,
     InvalidTransformationAddress,
     ParserError(ParserError),
     UnableToSerialize(String),

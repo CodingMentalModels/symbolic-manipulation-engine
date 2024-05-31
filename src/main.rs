@@ -42,6 +42,10 @@ fn main() {
             ).arg(
                 Arg::new("output-type").required(true).help("Output type to parse into.")
             ))
+        .subcommand(Command::new("remove-interpretation").about("Remove an Interpretation from the Workspace by its index.")
+            .arg(
+                Arg::new("index").required(true).help("Index of interpretation to remove (0-indexed).")
+            ))
         .subcommand(Command::new("add-type").about("Takes a type name and optionally a parent type name and adds the type to the Workspace's Type Hierarchy, defaulting to Object if no parent type is provided.")
             .arg(
                 Arg::new("type-name").required(true).help("Name of the type to add.")
@@ -84,6 +88,7 @@ fn main() {
         Some(("rmws", sub_matches)) => cli.rmws(sub_matches),
         Some(("ls", _sub_matches)) => cli.ls(),
         Some(("add-interpretation", sub_matches)) => cli.add_interpretation(sub_matches),
+        Some(("remove-interpretation", sub_matches)) => cli.remove_interpretation(sub_matches),
         Some(("add-type", sub_matches)) => cli.add_type(sub_matches),
         Some(("add-transformation", sub_matches)) => cli.add_transformation(sub_matches),
         Some(("get-transformations", sub_matches)) => cli.get_transformations(sub_matches),
