@@ -1,12 +1,19 @@
 use std::collections::{HashMap, HashSet};
+use std::fmt;
+use std::str::FromStr;
 
-use serde::{Deserialize, Serialize};
+use serde::{
+    de::{self, MapAccess, Visitor},
+    ser::{SerializeMap, Serializer},
+    Deserialize, Deserializer, Serialize,
+};
 use ts_rs::TS;
 
 use super::{
     symbol_node::{Symbol, SymbolNode},
     transformation::Transformation,
 };
+use crate::constants::*;
 
 pub type TypeName = String;
 
@@ -33,9 +40,53 @@ impl From<&TypeHierarchy> for Vec<DisplayTypeHierarchyNode> {
     }
 }
 
-#[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub struct TypeHierarchy {
     type_map: HashMap<Type, TypeHierarchyNode>,
+}
+
+impl Serialize for TypeHierarchy {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        let mut map = serializer.serialize_map(Some(self.type_map.len()))?;
+        for (key, value) in &self.type_map {
+            map.serialize_entry(&key.to_string(), value)?;
+        }
+        map.end()
+    }
+}
+
+struct TypeHierarchyVisitor;
+
+impl<'de> Visitor<'de> for TypeHierarchyVisitor {
+    type Value = TypeHierarchy;
+
+    fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
+        formatter.write_str("a map of string keys to TypeHierarchyNode values")
+    }
+
+    fn visit_map<V>(self, mut map: V) -> Result<TypeHierarchy, V::Error>
+    where
+        V: MapAccess<'de>,
+    {
+        let mut type_map = HashMap::new();
+        while let Some((key, value)) = map.next_entry::<String, TypeHierarchyNode>()? {
+            let type_key = Type::from(&key);
+            type_map.insert(type_key, value);
+        }
+        Ok(TypeHierarchy { type_map })
+    }
+}
+
+impl<'de> Deserialize<'de> for TypeHierarchy {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        deserializer.deserialize_map(TypeHierarchyVisitor)
+    }
 }
 
 impl TypeHierarchy {
@@ -100,7 +151,7 @@ impl TypeHierarchy {
                         Some(parent_node) => {
                             parent_node.children.insert(type_to_add.clone());
                         }
-                        None => return Err(TypeError::ParentNotFound(type_to_add)),
+                        None => return Err(TypeError::ParentNotFound(parent_type.clone())),
                     }
                 }
                 Ok(type_to_add)
@@ -515,13 +566,19 @@ impl Default for Type {
 
 impl From<&str> for Type {
     fn from(value: &str) -> Self {
-        Self::from(value.to_string())
+        if value == SERIALIZED_OBJECT_TYPE {
+            Self::Object
+        } else if value == SERIALIZED_DELIMITER_TYPE {
+            Self::Delimiter
+        } else {
+            Self::NamedType(value.to_string())
+        }
     }
 }
 
 impl From<String> for Type {
     fn from(value: String) -> Self {
-        Self::NamedType(value)
+        Self::from(value.as_str())
     }
 }
 
@@ -538,9 +595,23 @@ impl Type {
 
     pub fn to_string(&self) -> String {
         match self {
+            Type::Object => SERIALIZED_OBJECT_TYPE.to_string(),
+            Type::Delimiter => SERIALIZED_DELIMITER_TYPE.to_string(),
+            Type::NamedType(name) => name.clone(),
+        }
+    }
+
+    pub fn pretty_print(&self) -> String {
+        if self == &Self::NamedType("Object".to_string()) {
+            return "Object (Warning: This overloads the Object Type and is not recommended)"
+                .to_string();
+        } else if self == &Self::NamedType("Delimiter".to_string()) {
+            return "Delimiter (Warning: This overloades the Delimiter Type and is not recommended)".to_string();
+        }
+        match self {
             Type::Object => "Object".to_string(),
             Type::Delimiter => "Delimiter".to_string(),
-            Type::NamedType(name) => name.clone(),
+            Type::NamedType(t) => t.to_string(),
         }
     }
 }
@@ -704,11 +775,20 @@ mod test_type {
 
     #[test]
     fn test_type_to_string() {
-        assert_eq!(Type::Object.to_string(), "Object".to_string());
+        assert_eq!(Type::Object.to_string(), SERIALIZED_OBJECT_TYPE.to_string());
 
         let quaternion = Type::new("Quaternion".to_string());
 
         assert_eq!(quaternion.to_string(), "Quaternion");
+    }
+
+    #[test]
+    fn test_type_serde() {
+        assert_eq!(Type::from(Type::Object.to_string()), Type::Object);
+        assert_eq!(Type::from(Type::Delimiter.to_string()), Type::Delimiter);
+
+        let quaternion = Type::new("Quaternion".to_string());
+        assert_eq!(Type::from(quaternion.to_string()), quaternion);
     }
 
     #[test]

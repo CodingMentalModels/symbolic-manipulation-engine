@@ -11,6 +11,7 @@ use crate::{
         },
         parser::Parser,
     },
+    symbol::{symbol_type::Type, transformation::Transformation},
     workspace::workspace::Workspace,
 };
 
@@ -104,14 +105,54 @@ impl Cli {
             None => return Err("No output type provided.".to_string()),
             Some(output_type) => InterpretedType::Type(output_type.into()),
         };
-        workspace.add_interpretation(Interpretation::new(
-            condition,
-            expression_type,
-            precedence,
-            output_type,
-        ));
+        workspace
+            .add_interpretation(Interpretation::new(
+                condition,
+                expression_type,
+                precedence,
+                output_type,
+            ))
+            .map_err(|e| format!("Workspace Error: {:?}", e).to_string())?;
         self.update_workspace(workspace)?;
         return Ok("Interpretation added.".to_string());
+    }
+
+    pub fn add_type(&mut self, sub_matches: &ArgMatches) -> Result<String, String> {
+        let maybe_type_name = sub_matches.get_one::<String>("type-name");
+        let maybe_parent_name = sub_matches.get_one::<String>("parent-type-name");
+        let mut workspace = self.load_workspace()?;
+        match maybe_type_name {
+            Some(type_name) => {
+                let parent_type = match maybe_parent_name {
+                    None => Type::Object,
+                    Some(parent_name) => {
+                        match workspace
+                            .get_types()
+                            .get_types()
+                            .iter()
+                            .find(|t| t == &&Type::NamedType(parent_name.clone()))
+                        {
+                            None => {
+                                return Err(format!(
+                                    "No type in type hierarchy named {}.",
+                                    parent_name
+                                )
+                                .to_string())
+                            }
+                            Some(parent_type) => parent_type.clone(),
+                        }
+                    }
+                };
+                workspace
+                    .add_type_to_parent(type_name.into(), parent_type.clone())
+                    .map_err(|e| format!("Workspace Error: {:?}", e).to_string())?;
+
+                self.update_workspace(workspace)?;
+
+                Ok(format!("{} added to {}.", type_name, parent_type.pretty_print()).to_string())
+            }
+            None => return Err(format!("No type name provided.")),
+        }
     }
 
     pub fn get_transformations(&self, sub_matches: &ArgMatches) -> Result<String, String> {
@@ -132,6 +173,29 @@ impl Cli {
         }
     }
 
+    pub fn add_transformation(&mut self, sub_matches: &ArgMatches) -> Result<String, String> {
+        let mut workspace = self.load_workspace()?;
+        let from_as_string = match sub_matches.get_one::<String>("from") {
+            None => return Err("No from provided.".to_string()),
+            Some(from) => from,
+        };
+        let to_as_string = match sub_matches.get_one::<String>("to") {
+            None => return Err("No to provided.".to_string()),
+            Some(to) => to,
+        };
+        let from = workspace
+            .parse_from_string(&from_as_string)
+            .map_err(|e| format!("Workspace Error: {:?}", e).to_string())?;
+        let to = workspace
+            .parse_from_string(&to_as_string)
+            .map_err(|e| format!("Workspace Error: {:?}", e).to_string())?;
+        workspace
+            .add_transformation(Transformation::new(from, to))
+            .map_err(|e| format!("Workspace Error: {:?}", e).to_string())?;
+        self.update_workspace(workspace)?;
+        return Ok("Transformation added.".to_string());
+    }
+
     pub fn hypothesize(&self, sub_matches: &ArgMatches) -> Result<String, String> {
         let mut workspace = self.load_workspace()?;
         match sub_matches.get_one::<String>("statement") {
@@ -140,10 +204,12 @@ impl Cli {
                 let tree = workspace
                     .parse_from_string(statement)
                     .map_err(|e| format!("Parser Error: {:?}", e).to_string())?;
-                workspace
+                let to_return = workspace
                     .add_statement(tree)
                     .map_err(|e| format!("Workspace Error: {:?}", e).to_string())
-                    .map(|_| "Hypthesis added.".to_string())
+                    .map(|_| "Hypthesis added.".to_string());
+                self.update_workspace(workspace)?;
+                to_return
             }
         }
     }
@@ -156,12 +222,14 @@ impl Cli {
                 let tree = workspace
                     .parse_from_string(statement)
                     .map_err(|e| format!("Parser Error: {:?}", e).to_string())?;
-                return workspace
+                let to_return = workspace
                     .try_transform_into(tree)
                     .map_err(|e| format!("Workspace error: {:?}", e))
                     .map(|statement| {
                         statement.to_interpreted_string(workspace.get_interpretations())
                     });
+                self.update_workspace(workspace)?;
+                to_return
             }
         }
     }

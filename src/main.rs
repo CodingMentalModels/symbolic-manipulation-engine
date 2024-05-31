@@ -42,18 +42,30 @@ fn main() {
             ).arg(
                 Arg::new("output-type").required(true).help("Output type to parse into.")
             ))
+        .subcommand(Command::new("add-type").about("Takes a type name and optionally a parent type name and adds the type to the Workspace's Type Hierarchy, defaulting to Object if no parent type is provided.")
+            .arg(
+                Arg::new("type-name").required(true).help("Name of the type to add.")
+            ).arg(
+                Arg::new("parent-type-name").help("Optional name of the parent type to add the type to. Must already exist in the Type Hierarchy of the Workspace.")
+            ))
         .subcommand(Command::new("hypothesize").about("Takes a statement and adds it to the Workspace as a new hypothesis").arg(
                 Arg::new("statement").required(true)
                 )
                     )
+        .subcommand(Command::new("add-transformation").about("Add a Transformation to the Workspace via a 'from' and a 'to' statement, parsed using the Workspace's Interpretations.")
+            .arg(
+                Arg::new("from").required(true).help("Starting point of the Transformation.")
+            ).arg(
+                Arg::new("to").required(true).help("Ending point for the Transformation.")
+            ))
         .subcommand(Command::new("get-transformations").about("Takes a partial statement and gets all valid transformations sorted based on the string.").arg(
                 Arg::new("partial-statement").required(true)
                 )
-                    )
+            )
         .subcommand(Command::new("derive").about("Checks if the provided statement is valid and adds it to the Workspace if so.").arg(
                 Arg::new("statement").required(true)
                 )
-                    )
+            )
         .get_matches();
 
     let current_directory = match current_dir() {
@@ -72,7 +84,10 @@ fn main() {
         Some(("rmws", sub_matches)) => cli.rmws(sub_matches),
         Some(("ls", _sub_matches)) => cli.ls(),
         Some(("add-interpretation", sub_matches)) => cli.add_interpretation(sub_matches),
+        Some(("add-type", sub_matches)) => cli.add_type(sub_matches),
+        Some(("add-transformation", sub_matches)) => cli.add_transformation(sub_matches),
         Some(("get-transformations", sub_matches)) => cli.get_transformations(sub_matches),
+        Some(("hypothesize", sub_matches)) => cli.hypothesize(sub_matches),
         Some(("derive", sub_matches)) => cli.derive(sub_matches),
         _ => Err("No subcommand was provided".to_string()),
     };
