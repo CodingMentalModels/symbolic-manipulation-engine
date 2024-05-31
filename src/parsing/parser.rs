@@ -49,12 +49,6 @@ impl Parser {
         min_precedence: ExpressionPrecedence,
     ) -> Result<SymbolNode, ParserError> {
         let mut left_expression = if let Some(token) = token_stack.pop() {
-            println!(
-                "Parsing left_expression: {:?} ({:?}) with min_precedence {:?}",
-                token,
-                token_stack.to_string(),
-                min_precedence
-            );
             match self.get_interpretation(&None, &token) {
                 Some(interpretation) => match interpretation.get_expression_type() {
                     ExpressionType::Singleton => interpretation.get_symbol_node(&token, vec![])?,
@@ -71,7 +65,6 @@ impl Parser {
                         interpretation.get_symbol_node(&token, vec![contained_expression])?
                     }
                     ExpressionType::Functional => {
-                        println!("Parsing functional: {:?} ({:?})", token, token_stack);
                         let mut args = Vec::new();
                         let left = token_stack.pop_or_error()?;
                         let (_left_token, right_token) = self.get_functional_parentheses(left)?;
@@ -98,41 +91,21 @@ impl Parser {
         };
 
         while let Some(next_token) = token_stack.peek() {
-            println!(
-                "Parsing next token: {:?} ({:?})",
-                next_token,
-                token_stack.to_string()
-            );
             let interpretation =
                 match self.get_interpretation(&Some(left_expression.clone()), &next_token) {
                     Some(interpretation) => interpretation,
                     None => {
-                        println!(
-                            "No valid interpretation of the next token so returning: {:?} ({:?})",
-                            next_token,
-                            token_stack.to_string()
-                        );
                         break;
                     }
                 };
 
             if interpretation.get_expression_precedence() < min_precedence {
-                println!(
-                    "Expression precedence is below minimum {:?} vs. {:?}",
-                    interpretation.get_expression_precedence(),
-                    min_precedence
-                );
                 break;
             }
 
             token_stack.pop(); // Consume the token
 
             if interpretation.get_expression_type() == ExpressionType::Infix {
-                println!(
-                    "Parsing infix: {:?} ({:?})",
-                    next_token,
-                    token_stack.to_string()
-                );
                 let right_expression = self.parse_expression(
                     token_stack,
                     interpretation.get_expression_precedence() + 1,
@@ -142,7 +115,6 @@ impl Parser {
             }
         }
 
-        println!("Returning expression: {:?}", left_expression);
         Ok(left_expression)
     }
 

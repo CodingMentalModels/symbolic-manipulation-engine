@@ -135,10 +135,6 @@ impl Transformation {
         hierarchy: &TypeHierarchy,
         statement: &SymbolNode,
     ) -> HashSet<SymbolNode> {
-        println!(
-            "Begin get_valid_transformations({:?})",
-            statement.to_string()
-        );
         let mut base_case = vec![statement.clone()].into_iter().collect::<HashSet<_>>();
         match self.typed_transform_at(hierarchy, statement, vec![]) {
             Ok(result) => {
@@ -146,11 +142,6 @@ impl Transformation {
             }
             _ => {}
         };
-        println!(
-            "{} has {} base cases.",
-            statement.to_string(),
-            base_case.len()
-        );
 
         let mut to_return = base_case.clone();
         for potentially_transformed in base_case.iter() {
@@ -159,16 +150,6 @@ impl Transformation {
             to_return = to_return.union(&new_statements).cloned().collect();
         }
 
-        println!(
-            "End get_valid_transformations({}).  Returning {} results:\n{:?}",
-            statement.to_string(),
-            to_return.len(),
-            to_return
-                .iter()
-                .map(|n| n.to_string())
-                .collect::<Vec<_>>()
-                .join("; ")
-        );
         return to_return;
     }
 
@@ -177,10 +158,6 @@ impl Transformation {
         hierarchy: &TypeHierarchy,
         statement: &SymbolNode,
     ) -> HashSet<SymbolNode> {
-        println!(
-            "Begin get_valid_child_transformations({:?})",
-            statement.to_string()
-        );
         let mut child_to_valid_transformations = HashMap::new();
         for child in statement.get_children() {
             let possible_transformations = self.get_valid_transformations(hierarchy, child);
@@ -193,7 +170,6 @@ impl Transformation {
             // Bitmask indicates whether to take the child or its transformed versions
             // TODO: There's a massive opportunity for optimization here by eliminating the cases where
             // there are no transformations
-            println!("Bitmask: {:#018b}", bitmask);
 
             let mut transformed_statements =
                 vec![statement.clone()].into_iter().collect::<HashSet<_>>();
@@ -210,7 +186,6 @@ impl Transformation {
                                 .clone()
                                 .with_child_replaced(i, c.clone())
                                 .expect("Child index is guaranteed to be in range.");
-                            println!("Inserting: {}", updated_statement.to_string());
                             updated_statements.insert(updated_statement);
                         }
                     }
@@ -224,16 +199,6 @@ impl Transformation {
                 .cloned()
                 .collect();
         }
-        println!(
-            "End get_valid_child_transformations({}).  Returning {} results:\n{:?}",
-            statement.to_string(),
-            new_statements.len(),
-            new_statements
-                .iter()
-                .map(|n| n.to_string())
-                .collect::<Vec<_>>()
-                .join("; ")
-        );
         new_statements
     }
 
