@@ -120,8 +120,6 @@ impl Cli {
     pub fn add_type(&mut self, sub_matches: &ArgMatches) -> Result<String, String> {
         let maybe_type_name = sub_matches.get_one::<String>("type-name");
         let maybe_parent_name = sub_matches.get_one::<String>("parent-type-name");
-        println!("type-name: {:?}", maybe_type_name);
-        println!("parent-type-name: {:?}", maybe_parent_name);
         let mut workspace = self.load_workspace()?;
         match maybe_type_name {
             Some(type_name) => {
