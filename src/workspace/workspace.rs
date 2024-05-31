@@ -234,7 +234,9 @@ impl Workspace {
             for transformation in self.get_transformations() {
                 let valid_transformations =
                     transformation.get_valid_transformations(self.get_types(), statement);
-                if valid_transformations.contains(&desired) {
+                if valid_transformations.contains(&desired)
+                    && !self.get_statements().contains(&desired)
+                {
                     return vec![desired.clone()];
                 }
             }
@@ -257,8 +259,12 @@ impl Workspace {
             for transform in self.transformations.iter() {
                 match transform.try_transform_into(self.get_types(), &statement, &desired) {
                     Ok(output) => {
-                        self.add_statement(output.clone())?;
-                        return Ok(output);
+                        if self.statements.contains(&output) {
+                            return Err(WorkspaceError::StatementsAlreadyInclude(output.clone()));
+                        } else {
+                            self.add_statement(output.clone())?;
+                            return Ok(output);
+                        }
                     }
                     Err(e) => {}
                 }
@@ -462,6 +468,7 @@ pub enum WorkspaceError {
     TransformationError(TransformationError),
     StatementContainsTypesNotInHierarchy(HashSet<Type>),
     IncompatibleTypeRelationships(HashSet<Type>),
+    StatementsAlreadyInclude(SymbolNode),
     TypeHierarchyAlreadyIncludes(Type),
     InvalidType(Type),
     ParentTypeNotFound(Type),

@@ -224,7 +224,7 @@ impl Cli {
                     .map_err(|e| format!("Parser Error: {:?}", e).to_string())?;
                 let to_return = workspace
                     .try_transform_into(tree)
-                    .map_err(|e| format!("Workspace error: {:?}", e))
+                    .map_err(|e| format!("Workspace error: {:?} (Statement: {})", e, statement))
                     .map(|statement| {
                         statement.to_interpreted_string(workspace.get_interpretations())
                     });
@@ -272,5 +272,7 @@ impl Cli {
 
 #[cfg(test)]
 mod test_cli {
+    use crate::symbol::symbol_type::TypeHierarchy;
+
     use super::*;
 }
