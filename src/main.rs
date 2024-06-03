@@ -42,9 +42,9 @@ fn main() {
             ).arg(
                 Arg::new("output-type").help("Output type to parse into.")
             ).arg(
-                Arg::new("any-integer").short('n')
+                Arg::new("any-integer").short('n').action(ArgAction::SetFalse)
             ).arg(
-                Arg::new("any-numeric").short('f')
+                Arg::new("any-numeric").short('f').action(ArgAction::SetFalse)
                 )
             )
         .subcommand(Command::new("remove-interpretation").about("Remove an Interpretation from the Workspace by its index.")
