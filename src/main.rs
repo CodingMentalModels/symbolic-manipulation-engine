@@ -32,16 +32,21 @@ fn main() {
             ),
         )
         .subcommand(Command::new("ls").about("Lists the workspaces"))
-        .subcommand(Command::new("add-interpretation").about("Takes a condition (string to match), expression type, precedence, and output type and adds it as an interpretation.")
-            .arg(
-                Arg::new("condition").required(true).help("String which the parser will match to trigger the interpretation.")
+        .subcommand(Command::new("add-interpretation").about("Takes a condition (string to match), expression type, precedence, and output type and adds it as an interpretation."
             ).arg(
                 Arg::new("expression-type").required(true).help("Singleton, Prefix, Infix, Postfix, or Functional (case insensitive)")
             ).arg(
                 Arg::new("precedence").required(true).help("Relative precedence for different interpretations. Higher values have higher precedence.")
             ).arg(
-                Arg::new("output-type").required(true).help("Output type to parse into.")
-            ))
+                Arg::new("condition").help("String which the parser will match to trigger the interpretation.")
+            ).arg(
+                Arg::new("output-type").help("Output type to parse into.")
+            ).arg(
+                Arg::new("any-integer").short('n')
+            ).arg(
+                Arg::new("any-numeric").short('f')
+                )
+            )
         .subcommand(Command::new("remove-interpretation").about("Remove an Interpretation from the Workspace by its index.")
             .arg(
                 Arg::new("index").required(true).help("Index of interpretation to remove (0-indexed).")

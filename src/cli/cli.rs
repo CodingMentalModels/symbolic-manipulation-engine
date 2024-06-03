@@ -86,9 +86,53 @@ impl Cli {
 
     pub fn add_interpretation(&mut self, sub_matches: &ArgMatches) -> Result<String, String> {
         let mut workspace = self.load_workspace()?;
-        let condition = match sub_matches.get_one::<String>("condition") {
-            None => return Err("No condition provided.".to_string()),
-            Some(condition) => InterpretationCondition::Matches(condition.into()),
+        let maybe_condition = sub_matches.get_one::<String>("condition");
+        let is_generated_integer = sub_matches.get_flag("any-integer");
+        let is_generated_numeric = sub_matches.get_flag("any-numeric");
+        let maybe_output = sub_matches.get_one::<String>("output-type");
+        let (condition, output_type) = match (
+            maybe_condition,
+            is_generated_integer,
+            is_generated_numeric,
+            maybe_output,
+        ) {
+            (_, true, true, _) => {
+                return Err("Interpretation cannot be both any-integer and any-numeric.".to_string())
+            }
+            (Some(_condition), true, false, _) => {
+                return Err(
+                    "Interpretation with any-integer should not have a condition.".to_string(),
+                );
+            }
+            (Some(_condition), false, true, _) => {
+                return Err(
+                    "Interpretation with any-numeric should not have a condition.".to_string(),
+                );
+            }
+            (_, true, false, Some(_output)) => {
+                return Err(
+                    "Interpretation with any-integer should not have an output type. It uses the value of the integer.".to_string()
+                    );
+            }
+            (_, false, true, Some(_output)) => {
+                return Err(
+                    "Interpretation with any-numeric should not have an output type. It uses the value of the number.".to_string()
+                    );
+            }
+            (_, true, _, None) => (
+                InterpretationCondition::IsInteger,
+                InterpretedType::SameAsValue,
+            ),
+            (_, _, true, None) => (
+                InterpretationCondition::IsNumeric,
+                InterpretedType::SameAsValue,
+            ),
+            (None, false, false, _) => return Err("No condition provided.".to_string()),
+            (_, false, false, None) => return Err("No output type provided.".to_string()),
+            (Some(condition), _, _, Some(output_type)) => (
+                InterpretationCondition::Matches(condition.into()),
+                InterpretedType::Type(output_type.into()),
+            ),
         };
         let expression_type = match sub_matches.get_one::<String>("expression-type") {
             None => return Err("No expression type provided.".to_string()),
@@ -100,10 +144,6 @@ impl Cli {
             Some(precedence) => precedence
                 .parse::<ExpressionPrecedence>()
                 .map_err(|e| format!("Unable to parse precedence: {:?}", e.to_string()))?,
-        };
-        let output_type = match sub_matches.get_one::<String>("output-type") {
-            None => return Err("No output type provided.".to_string()),
-            Some(output_type) => InterpretedType::Type(output_type.into()),
         };
         workspace
             .add_interpretation(Interpretation::new(
