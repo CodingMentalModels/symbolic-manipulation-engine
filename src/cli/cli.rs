@@ -265,12 +265,9 @@ impl Cli {
         match sub_matches.get_one::<String>("statement") {
             None => Err("No statement provided to derive".to_string()),
             Some(statement) => {
-                let tree = workspace
-                    .parse_from_string(statement)
-                    .map_err(|e| format!("Parser Error: {:?}", e).to_string())?;
                 let to_return = workspace
-                    .add_statement(tree)
-                    .map_err(|e| format!("Workspace Error: {:?}", e).to_string())
+                    .add_parsed_statement(statement)
+                    .map_err(|e| format!("Parser Error: {:?}", e).to_string())
                     .map(|_| "Hypthesis added.".to_string());
                 self.update_workspace(workspace)?;
                 to_return
