@@ -159,7 +159,21 @@ impl Workspace {
         Ok(parsed)
     }
 
-    pub fn parse_from_string(&self, s: &str) -> Result<SymbolNode, WorkspaceError> {
+    pub fn add_parsed_transformation(
+        &mut self,
+        from: &str,
+        to: &str,
+    ) -> Result<Transformation, WorkspaceError> {
+        let parsed_from = self.parse_from_string(from)?;
+        self.generate_types(&parsed_from)?;
+        let parsed_to = self.parse_from_string(to)?;
+        self.generate_types(&parsed_to)?;
+        let transformation = Transformation::new(parsed_from, parsed_to);
+        self.add_transformation(transformation.clone())?;
+        Ok(transformation)
+    }
+
+    fn parse_from_string(&self, s: &str) -> Result<SymbolNode, WorkspaceError> {
         let parser = Parser::new(self.interpretations.clone());
         parser
             .parse_from_string(parser.get_interpretation_custom_tokens(), s)
@@ -259,7 +273,9 @@ impl Workspace {
         &mut self,
         desired: &str,
     ) -> Result<SymbolNode, WorkspaceError> {
-        self.try_transform_into(self.parse_from_string(desired)?)
+        let parsed = self.parse_from_string(desired)?;
+        self.generate_types(&parsed)?;
+        self.try_transform_into(parsed)
     }
 
     pub fn try_transform_into(

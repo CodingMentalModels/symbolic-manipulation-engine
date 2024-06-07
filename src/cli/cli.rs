@@ -248,13 +248,7 @@ impl Cli {
             Some(to) => to,
         };
         let from = workspace
-            .parse_from_string(&from_as_string)
-            .map_err(|e| format!("Workspace Error: {:?}", e).to_string())?;
-        let to = workspace
-            .parse_from_string(&to_as_string)
-            .map_err(|e| format!("Workspace Error: {:?}", e).to_string())?;
-        workspace
-            .add_transformation(Transformation::new(from, to))
+            .add_parsed_transformation(&from_as_string, &to_as_string)
             .map_err(|e| format!("Workspace Error: {:?}", e).to_string())?;
         self.update_workspace(workspace)?;
         return Ok("Transformation added.".to_string());
@@ -280,11 +274,8 @@ impl Cli {
         match sub_matches.get_one::<String>("statement") {
             None => return Err("No statement provided to derive".to_string()),
             Some(statement) => {
-                let tree = workspace
-                    .parse_from_string(statement)
-                    .map_err(|e| format!("Parser Error: {:?}", e).to_string())?;
                 let to_return = workspace
-                    .try_transform_into(tree)
+                    .try_transform_into_parsed(statement)
                     .map_err(|e| format!("Workspace error: {:?} (Statement: {})", e, statement))
                     .map(|statement| {
                         statement.to_interpreted_string(workspace.get_interpretations())
