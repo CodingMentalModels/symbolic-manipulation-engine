@@ -757,6 +757,10 @@ impl Symbol {
         Self::new(name, Type::default())
     }
 
+    pub fn new_with_same_type_as_value(name: &str) -> Self {
+        Self::new(name.to_string(), name.into())
+    }
+
     pub fn delimiter(name: SymbolName) -> Self {
         Self::new(name, Type::Delimiter)
     }

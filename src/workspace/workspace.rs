@@ -154,6 +154,7 @@ impl Workspace {
 
     pub fn add_parsed_statement(&mut self, s: &str) -> Result<SymbolNode, WorkspaceError> {
         let parsed = self.parse_from_string(s)?;
+        self.generate_types(&parsed)?;
         self.add_statement(parsed.clone())?;
         Ok(parsed)
     }
@@ -412,7 +413,7 @@ impl Workspace {
         statements: HashSet<SymbolNode>,
     ) -> Result<(), WorkspaceError> {
         for statement in statements {
-            match self.generate_types(statement) {
+            match self.generate_types(&statement) {
                 Ok(()) => {}
                 Err(e) => {
                     return Err(e.into());
@@ -422,10 +423,10 @@ impl Workspace {
         Ok(())
     }
 
-    fn generate_types(&mut self, statement: SymbolNode) -> Result<(), WorkspaceError> {
+    fn generate_types(&mut self, statement: &SymbolNode) -> Result<(), WorkspaceError> {
         for generated_type in self.get_generated_types().clone() {
             let result: Option<WorkspaceError> = generated_type
-                .generate(&statement)
+                .generate(statement)
                 .into_iter()
                 .map(|(t, parents)| self.add_type_to_parents(t, &parents))
                 .filter(|r| match r {
@@ -526,7 +527,10 @@ mod test_workspace {
     use crate::{
         context::context::Context,
         parsing::{interpretation::Interpretation, parser::Parser},
-        symbol::symbol_type::{GeneratedType, GeneratedTypeCondition, TypeHierarchy},
+        symbol::{
+            symbol_node::Symbol,
+            symbol_type::{GeneratedType, GeneratedTypeCondition, TypeHierarchy},
+        },
     };
 
     use super::*;
@@ -621,28 +625,29 @@ mod test_workspace {
     #[test]
     fn test_workspace_adds_statement_with_generated_type() {
         let plus = Interpretation::infix_operator("+".into(), 1, "Integer".into());
-        let integer = GeneratedType::new(
+        let integer_interpretation =
+            Interpretation::generated_type(GeneratedTypeCondition::IsInteger);
+        let integer_generated_type = GeneratedType::new(
             GeneratedTypeCondition::IsInteger,
             vec!["Integer".into()].into_iter().collect(),
         );
 
         let mut types = TypeHierarchy::chain(vec!["Real".into(), "Integer".into()]).unwrap();
         types.add_chain(vec!["+".into()]).unwrap();
-        let mut workspace = Workspace::new(types, vec![integer], vec![]);
+        let mut workspace = Workspace::new(
+            types,
+            vec![integer_generated_type],
+            vec![plus, integer_interpretation],
+        );
 
-        let parser = Parser::new(vec![plus]);
-        let two_plus_two = parser
-            .parse_from_string(vec!["+".to_string()], "2+2")
-            .unwrap();
-
-        assert_eq!(workspace.add_statement(two_plus_two), Ok(()));
+        assert!(workspace.add_parsed_statement("2+2").is_ok());
         let mut expected =
             TypeHierarchy::chain(vec!["Real".into(), "Integer".into(), "2".into()]).unwrap();
         expected.add_chain(vec!["+".into()]).unwrap();
         assert_eq!(workspace.types, expected);
 
         let expected = SymbolNode::new(
-            "+".into(),
+            Symbol::new("+".to_string(), "Integer".into()),
             vec![SymbolNode::singleton("2"), SymbolNode::singleton("2")],
         );
         assert_eq!(workspace.statements, vec![expected]);
