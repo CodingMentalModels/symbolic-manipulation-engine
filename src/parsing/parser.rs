@@ -220,12 +220,9 @@ mod test_parser {
                 vec![
                     SymbolNode::new(
                         Symbol::new("+".to_string(), "Plus".into(),),
-                        vec![
-                            SymbolNode::leaf_object("2".to_string()),
-                            SymbolNode::leaf_object("2".to_string())
-                        ]
+                        vec![SymbolNode::leaf_object("2"), SymbolNode::leaf_object("2")]
                     ),
-                    SymbolNode::leaf_object("4".to_string())
+                    SymbolNode::leaf_object("4")
                 ]
             ))
         )
@@ -250,10 +247,7 @@ mod test_parser {
             parsed,
             Ok(SymbolNode::new(
                 Symbol::new("=>".to_string(), "=>".into(),),
-                vec![
-                    SymbolNode::leaf_object("p".to_string()),
-                    SymbolNode::leaf_object("q".to_string()),
-                ]
+                vec![SymbolNode::leaf_object("p"), SymbolNode::leaf_object("q"),]
             ))
         );
     }
@@ -290,9 +284,9 @@ mod test_parser {
             Ok(SymbolNode::new(
                 Symbol::new("f".to_string(), "Function".into(),),
                 vec![
-                    SymbolNode::leaf_object("x".to_string()),
-                    SymbolNode::leaf_object("y".to_string()),
-                    SymbolNode::leaf_object("z".to_string()),
+                    SymbolNode::leaf_object("x"),
+                    SymbolNode::leaf_object("y"),
+                    SymbolNode::leaf_object("z"),
                 ]
             ))
         );
@@ -380,10 +374,7 @@ mod test_parser {
             a_squared.clone(),
             SymbolNode::new(
                 Symbol::new("^".to_string(), "Operator".into()),
-                vec![
-                    SymbolNode::leaf_object("a".to_string()),
-                    SymbolNode::leaf_object("2".to_string()),
-                ]
+                vec![SymbolNode::leaf_object("a"), SymbolNode::leaf_object("2"),]
             )
         );
 
@@ -407,10 +398,10 @@ mod test_parser {
         let expected = SymbolNode::new(
             Symbol::new("*".to_string(), "Operator".into()),
             vec![
-                SymbolNode::leaf_object("g".to_string()),
+                SymbolNode::leaf_object("g"),
                 SymbolNode::new(
                     Symbol::new("inv".to_string(), "inv".into()),
-                    vec![SymbolNode::leaf_object("g".to_string())],
+                    vec![SymbolNode::leaf_object("g")],
                 ),
             ],
         );
@@ -483,11 +474,11 @@ mod test_parser {
                 vec![
                     SymbolNode::new(
                         Symbol::new("g".to_string(), "Function".into()),
-                        vec![SymbolNode::leaf_object("x".to_string()),]
+                        vec![SymbolNode::leaf_object("x"),]
                     ),
                     SymbolNode::new(
                         Symbol::new("h".to_string(), "Function".into()),
-                        vec![SymbolNode::leaf_object("y".to_string()),]
+                        vec![SymbolNode::leaf_object("y"),]
                     ),
                 ]
             ))
@@ -516,14 +507,14 @@ mod test_parser {
                         SymbolNode::new(
                             Symbol::new("g".to_string(), "Function".into()),
                             vec![
-                                SymbolNode::leaf_object("w".to_string()),
-                                SymbolNode::leaf_object("x".to_string()),
-                                SymbolNode::leaf_object("y".to_string()),
+                                SymbolNode::leaf_object("w"),
+                                SymbolNode::leaf_object("x"),
+                                SymbolNode::leaf_object("y"),
                             ]
                         ),
                         SymbolNode::new(
                             Symbol::new("h".to_string(), "Function".into()),
-                            vec![SymbolNode::leaf_object("z".to_string()),]
+                            vec![SymbolNode::leaf_object("z"),]
                         ),
                     ]
                 )]
@@ -550,7 +541,7 @@ mod test_parser {
             parsed,
             Ok(SymbolNode::new(
                 Symbol::new("|".to_string(), "Absolute Value".into(),),
-                vec![SymbolNode::leaf_object("x".to_string()),]
+                vec![SymbolNode::leaf_object("x"),]
             ))
         );
 
@@ -614,7 +605,7 @@ mod test_parser {
 
         let parsed = parser.parse(&mut tokens);
 
-        assert_eq!(parsed, Ok(SymbolNode::leaf_object("x".to_string())));
+        assert_eq!(parsed, Ok(SymbolNode::leaf_object("x")));
     }
 
     #[test]
@@ -626,7 +617,7 @@ mod test_parser {
 
         let parsed = parser.parse(&mut tokens);
 
-        assert_eq!(parsed, Ok(SymbolNode::leaf_object("\\alpha".to_string())));
+        assert_eq!(parsed, Ok(SymbolNode::leaf_object("\\alpha")));
 
         let operators = vec![("^", 6), ("*", 5), ("/", 5), ("+", 4), ("-", 4), ("=", 3)];
         let operator_names: Vec<_> = operators
@@ -674,8 +665,8 @@ mod test_parser {
             SymbolNode::new(
                 Symbol::new("^".to_string(), "Operator".into()),
                 vec![
-                    SymbolNode::leaf_object("\\alpha".to_string()),
-                    SymbolNode::leaf_object("2".to_string()),
+                    SymbolNode::leaf_object("\\alpha"),
+                    SymbolNode::leaf_object("2"),
                 ]
             )
         );
@@ -741,10 +732,7 @@ mod test_parser {
 
         let expected = SymbolNode::new(
             Symbol::new("+".to_string(), "+".into()),
-            vec![
-                SymbolNode::singleton("2".to_string()),
-                SymbolNode::singleton("2".to_string()),
-            ],
+            vec![SymbolNode::singleton("2"), SymbolNode::singleton("2")],
         );
         assert_eq!(two_plus_two, expected);
     }

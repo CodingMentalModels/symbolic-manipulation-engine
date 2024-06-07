@@ -11,7 +11,10 @@ use crate::{
         },
         parser::Parser,
     },
-    symbol::{symbol_type::Type, transformation::Transformation},
+    symbol::{
+        symbol_type::{GeneratedType, GeneratedTypeCondition, Type},
+        transformation::Transformation,
+    },
     workspace::workspace::Workspace,
 };
 
@@ -86,9 +89,31 @@ impl Cli {
 
     pub fn add_interpretation(&mut self, sub_matches: &ArgMatches) -> Result<String, String> {
         let mut workspace = self.load_workspace()?;
-        let condition = match sub_matches.get_one::<String>("condition") {
-            None => return Err("No condition provided.".to_string()),
-            Some(condition) => InterpretationCondition::Matches(condition.into()),
+        let maybe_condition = sub_matches.get_one::<String>("condition");
+        let is_generated_integer = sub_matches.get_flag("any-integer");
+        let is_generated_numeric = sub_matches.get_flag("any-numeric");
+        let output_type = sub_matches
+            .get_one::<String>("output-type")
+            .map(|o| o.into())
+            .unwrap_or(Type::Object);
+        let condition = match (maybe_condition, is_generated_integer, is_generated_numeric) {
+            (_, true, true) => {
+                return Err("Interpretation cannot be both any-integer and any-numeric.".to_string())
+            }
+            (Some(_condition), true, false) => {
+                return Err(
+                    "Interpretation with any-integer should not have a condition.".to_string(),
+                );
+            }
+            (Some(_condition), false, true) => {
+                return Err(
+                    "Interpretation with any-numeric should not have a condition.".to_string(),
+                );
+            }
+            (_, true, _) => InterpretationCondition::IsInteger,
+            (_, _, true) => InterpretationCondition::IsNumeric,
+            (None, false, false) => return Err("No condition provided.".to_string()),
+            (Some(condition), _, _) => InterpretationCondition::Matches(condition.into()),
         };
         let expression_type = match sub_matches.get_one::<String>("expression-type") {
             None => return Err("No expression type provided.".to_string()),
@@ -101,18 +126,37 @@ impl Cli {
                 .parse::<ExpressionPrecedence>()
                 .map_err(|e| format!("Unable to parse precedence: {:?}", e.to_string()))?,
         };
-        let output_type = match sub_matches.get_one::<String>("output-type") {
-            None => return Err("No output type provided.".to_string()),
-            Some(output_type) => InterpretedType::Type(output_type.into()),
+        let interpretation_output_type = match condition {
+            InterpretationCondition::IsInteger | InterpretationCondition::IsNumeric => {
+                InterpretedType::SameAsValue
+            }
+            _ => output_type.clone().into(),
         };
         workspace
             .add_interpretation(Interpretation::new(
-                condition,
+                condition.clone(),
                 expression_type,
                 precedence,
-                output_type,
+                interpretation_output_type.clone(),
             ))
             .map_err(|e| format!("Workspace Error: {:?}", e).to_string())?;
+        if interpretation_output_type == InterpretedType::SameAsValue {
+            let generated_type_condition = match condition {
+                InterpretationCondition::IsInteger => GeneratedTypeCondition::IsInteger,
+                InterpretationCondition::IsNumeric => GeneratedTypeCondition::IsNumeric,
+                InterpretationCondition::IsObject => {
+                    unimplemented!();
+                }
+                InterpretationCondition::Matches(_) => {
+                    return Err("Attempted to convert InterpretationCondition::Matches to a GeneratedTypeCondition.".to_string());
+                }
+            };
+            let generated_type = GeneratedType::new(
+                generated_type_condition,
+                vec![output_type].into_iter().collect(),
+            );
+            workspace.add_generated_type(generated_type);
+        }
         self.update_workspace(workspace)?;
         return Ok("Interpretation added.".to_string());
     }
@@ -204,13 +248,7 @@ impl Cli {
             Some(to) => to,
         };
         let from = workspace
-            .parse_from_string(&from_as_string)
-            .map_err(|e| format!("Workspace Error: {:?}", e).to_string())?;
-        let to = workspace
-            .parse_from_string(&to_as_string)
-            .map_err(|e| format!("Workspace Error: {:?}", e).to_string())?;
-        workspace
-            .add_transformation(Transformation::new(from, to))
+            .add_parsed_transformation(&from_as_string, &to_as_string)
             .map_err(|e| format!("Workspace Error: {:?}", e).to_string())?;
         self.update_workspace(workspace)?;
         return Ok("Transformation added.".to_string());
@@ -221,12 +259,9 @@ impl Cli {
         match sub_matches.get_one::<String>("statement") {
             None => Err("No statement provided to derive".to_string()),
             Some(statement) => {
-                let tree = workspace
-                    .parse_from_string(statement)
-                    .map_err(|e| format!("Parser Error: {:?}", e).to_string())?;
                 let to_return = workspace
-                    .add_statement(tree)
-                    .map_err(|e| format!("Workspace Error: {:?}", e).to_string())
+                    .add_parsed_statement(statement)
+                    .map_err(|e| format!("Parser Error: {:?}", e).to_string())
                     .map(|_| "Hypthesis added.".to_string());
                 self.update_workspace(workspace)?;
                 to_return
@@ -239,11 +274,8 @@ impl Cli {
         match sub_matches.get_one::<String>("statement") {
             None => return Err("No statement provided to derive".to_string()),
             Some(statement) => {
-                let tree = workspace
-                    .parse_from_string(statement)
-                    .map_err(|e| format!("Parser Error: {:?}", e).to_string())?;
                 let to_return = workspace
-                    .try_transform_into(tree)
+                    .try_transform_into_parsed(statement)
                     .map_err(|e| format!("Workspace error: {:?} (Statement: {})", e, statement))
                     .map(|statement| {
                         statement.to_interpreted_string(workspace.get_interpretations())
