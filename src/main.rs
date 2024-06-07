@@ -38,9 +38,9 @@ fn main() {
             ).arg(
                 Arg::new("precedence").required(true).help("Relative precedence for different interpretations. Higher values have higher precedence.")
             ).arg(
-                Arg::new("condition").help("String which the parser will match to trigger the interpretation.")
+                Arg::new("output-type").help("Output type to parse into (if empty will default to Object).")
             ).arg(
-                Arg::new("output-type").help("Output type to parse into.")
+                Arg::new("condition").help("String which the parser will match to trigger the interpretation.")
             ).arg(
                 Arg::new("any-integer").short('n').action(ArgAction::SetTrue)
             ).arg(

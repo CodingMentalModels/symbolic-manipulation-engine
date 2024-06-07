@@ -368,6 +368,10 @@ impl Workspace {
         &self.generated_types
     }
 
+    pub fn add_generated_type(&mut self, generated_type: GeneratedType) {
+        self.generated_types.push(generated_type);
+    }
+
     pub fn to_json(&self) -> Result<String, WorkspaceError> {
         let display_workspace = DisplayWorkspace::from(self);
         to_string(&display_workspace).map_err(|e| WorkspaceError::UnableToSerialize(e.to_string()))
@@ -604,11 +608,11 @@ mod test_workspace {
     fn test_workspace_adds_and_deletes_statement() {
         let types = TypeHierarchy::new();
         let mut workspace = Workspace::new(types, vec![], vec![]);
-        let statement = SymbolNode::leaf_object("a".to_string());
+        let statement = SymbolNode::leaf_object("a");
         workspace.add_statement(statement).unwrap();
         assert_eq!(workspace.statements.len(), 1);
 
-        let statement = SymbolNode::leaf_object("b".to_string());
+        let statement = SymbolNode::leaf_object("b");
         workspace.add_statement(statement).unwrap();
 
         assert_eq!(workspace.statements.len(), 2);
@@ -636,20 +640,24 @@ mod test_workspace {
             TypeHierarchy::chain(vec!["Real".into(), "Integer".into(), "2".into()]).unwrap();
         expected.add_chain(vec!["+".into()]).unwrap();
         assert_eq!(workspace.types, expected);
+
+        let expected = SymbolNode::new(
+            "+".into(),
+            vec![SymbolNode::singleton("2"), SymbolNode::singleton("2")],
+        );
+        assert_eq!(workspace.statements, vec![expected]);
     }
 
     #[test]
     fn test_workspace_transforms_statement_and_maintains_provenance() {
         let types = TypeHierarchy::new();
         let mut workspace = Workspace::new(types, vec![], vec![]);
-        let statement = SymbolNode::leaf_object("a".to_string());
+        let statement = SymbolNode::leaf_object("a");
         assert_eq!(workspace.add_statement(statement), Ok(()));
         assert_eq!(workspace.statements.len(), 1);
 
-        let transformation = Transformation::new(
-            SymbolNode::leaf_object("a".to_string()),
-            SymbolNode::leaf_object("b".to_string()),
-        );
+        let transformation =
+            Transformation::new(SymbolNode::leaf_object("a"), SymbolNode::leaf_object("b"));
         workspace.add_transformation(transformation).unwrap();
         assert_eq!(workspace.transformations.len(), 1);
 
@@ -657,10 +665,7 @@ mod test_workspace {
         assert_eq!(workspace.statements.len(), 2);
         assert_eq!(
             workspace.statements,
-            vec![
-                SymbolNode::leaf_object("a".to_string()),
-                SymbolNode::leaf_object("b".to_string())
-            ]
+            vec![SymbolNode::leaf_object("a"), SymbolNode::leaf_object("b")]
         );
 
         assert_eq!(workspace.get_provenance(0), Ok(Provenance::Hypothesis));
@@ -683,8 +688,8 @@ mod test_workspace {
 
         workspace
             .add_transformation(Transformation::new(
-                SymbolNode::leaf_object("b".to_string()),
-                SymbolNode::leaf_object("=".to_string()),
+                SymbolNode::leaf_object("b"),
+                SymbolNode::leaf_object("="),
             ))
             .unwrap();
 
@@ -693,9 +698,9 @@ mod test_workspace {
         assert_eq!(
             workspace.statements,
             vec![
-                SymbolNode::leaf_object("a".to_string()),
-                SymbolNode::leaf_object("b".to_string()),
-                SymbolNode::leaf_object("=".to_string())
+                SymbolNode::leaf_object("a"),
+                SymbolNode::leaf_object("b"),
+                SymbolNode::leaf_object("=")
             ]
         );
 

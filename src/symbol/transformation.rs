@@ -554,12 +554,10 @@ mod test_transformation {
 
     #[test]
     fn test_transformation_transforms() {
-        let transformation = Transformation::new(
-            SymbolNode::leaf_object("a".to_string()),
-            SymbolNode::leaf_object("b".to_string()),
-        );
+        let transformation =
+            Transformation::new(SymbolNode::leaf_object("a"), SymbolNode::leaf_object("b"));
 
-        let statement = SymbolNode::leaf_object("c".to_string());
+        let statement = SymbolNode::leaf_object("c");
 
         let transformed = transformation.transform_strict(
             &statement,
@@ -570,31 +568,22 @@ mod test_transformation {
             .into_iter()
             .collect(),
         );
-        assert_eq!(transformed, Ok(SymbolNode::leaf_object("d".to_string())));
+        assert_eq!(transformed, Ok(SymbolNode::leaf_object("d")));
 
         let transformation = Transformation::new(
             SymbolNode::new(
                 "=".into(),
-                vec![
-                    SymbolNode::leaf_object("a".to_string()),
-                    SymbolNode::leaf_object("b".to_string()),
-                ],
+                vec![SymbolNode::leaf_object("a"), SymbolNode::leaf_object("b")],
             ),
             SymbolNode::new(
                 "=".into(),
-                vec![
-                    SymbolNode::leaf_object("b".to_string()),
-                    SymbolNode::leaf_object("a".to_string()),
-                ],
+                vec![SymbolNode::leaf_object("b"), SymbolNode::leaf_object("a")],
             ),
         );
 
         let self_equals_statement = SymbolNode::new(
             "=".into(),
-            vec![
-                SymbolNode::leaf_object("a".to_string()),
-                SymbolNode::leaf_object("a".to_string()),
-            ],
+            vec![SymbolNode::leaf_object("a"), SymbolNode::leaf_object("a")],
         );
 
         let transformed = transformation.transform_strict(
@@ -615,17 +604,11 @@ mod test_transformation {
         let commutativity = Transformation::new(
             SymbolNode::new(
                 "=".into(),
-                vec![
-                    SymbolNode::leaf_object("a".to_string()),
-                    SymbolNode::leaf_object("b".to_string()),
-                ],
+                vec![SymbolNode::leaf_object("a"), SymbolNode::leaf_object("b")],
             ),
             SymbolNode::new(
                 "=".into(),
-                vec![
-                    SymbolNode::leaf_object("b".to_string()),
-                    SymbolNode::leaf_object("a".to_string()),
-                ],
+                vec![SymbolNode::leaf_object("b"), SymbolNode::leaf_object("a")],
             ),
         );
 
@@ -634,12 +617,9 @@ mod test_transformation {
             vec![
                 SymbolNode::new(
                     "=".into(),
-                    vec![
-                        SymbolNode::leaf_object("a".to_string()),
-                        SymbolNode::leaf_object("b".to_string()),
-                    ],
+                    vec![SymbolNode::leaf_object("a"), SymbolNode::leaf_object("b")],
                 ),
-                SymbolNode::leaf_object("c".to_string()),
+                SymbolNode::leaf_object("c"),
             ],
         );
 
@@ -662,12 +642,9 @@ mod test_transformation {
             vec![
                 SymbolNode::new(
                     "=".into(),
-                    vec![
-                        SymbolNode::leaf_object("b".to_string()),
-                        SymbolNode::leaf_object("a".to_string()),
-                    ],
+                    vec![SymbolNode::leaf_object("b"), SymbolNode::leaf_object("a")],
                 ),
-                SymbolNode::leaf_object("c".to_string()),
+                SymbolNode::leaf_object("c"),
             ],
         );
         assert_eq!(transformed, expected);
@@ -677,23 +654,19 @@ mod test_transformation {
     #[test]
     fn test_transformation_generalizes_to_fit() {
         let hierarchy = TypeHierarchy::chain(vec!["Integer".into(), "=".into()]).unwrap();
-        let trivial_t = Transformation::new(
-            SymbolNode::leaf_object("c".to_string()),
-            SymbolNode::leaf_object("d".to_string()),
-        );
+        let trivial_t =
+            Transformation::new(SymbolNode::leaf_object("c"), SymbolNode::leaf_object("d"));
 
-        let trivial = SymbolNode::leaf_object("c".to_string());
+        let trivial = SymbolNode::leaf_object("c");
         assert_eq!(
             trivial_t.generalize_to_fit(&hierarchy, &trivial).unwrap(),
             trivial_t
         );
 
-        let different_t = Transformation::new(
-            SymbolNode::leaf_object("a".to_string()),
-            SymbolNode::leaf_object("d".to_string()),
-        );
+        let different_t =
+            Transformation::new(SymbolNode::leaf_object("a"), SymbolNode::leaf_object("d"));
 
-        let different_name = SymbolNode::leaf_object("a".to_string());
+        let different_name = SymbolNode::leaf_object("a");
         assert_eq!(
             different_t
                 .generalize_to_fit(&hierarchy, &different_name)
@@ -701,11 +674,9 @@ mod test_transformation {
             different_t
         );
 
-        let overloaded_t = Transformation::new(
-            SymbolNode::leaf_object("d".to_string()),
-            SymbolNode::leaf_object("d".to_string()),
-        );
-        let overloaded_name = SymbolNode::leaf_object("d".to_string());
+        let overloaded_t =
+            Transformation::new(SymbolNode::leaf_object("d"), SymbolNode::leaf_object("d"));
+        let overloaded_name = SymbolNode::leaf_object("d");
         assert_eq!(
             overloaded_t
                 .generalize_to_fit(&hierarchy, &overloaded_name)
@@ -794,25 +765,17 @@ mod test_transformation {
     fn test_transformation_typed_transforms_at() {
         let hierarchy =
             TypeHierarchy::chain(vec!["Real".into(), "Integer".into(), "=".into()]).unwrap();
-        let transformation = Transformation::new(
-            SymbolNode::leaf_object("c".to_string()),
-            SymbolNode::leaf_object("d".to_string()),
-        );
+        let transformation =
+            Transformation::new(SymbolNode::leaf_object("c"), SymbolNode::leaf_object("d"));
 
         let a_equals_b = SymbolNode::new(
             "=".into(),
-            vec![
-                SymbolNode::leaf_object("a".to_string()),
-                SymbolNode::leaf_object("b".to_string()),
-            ],
+            vec![SymbolNode::leaf_object("a"), SymbolNode::leaf_object("b")],
         );
 
         let d_equals_b = SymbolNode::new(
             "=".into(),
-            vec![
-                SymbolNode::leaf_object("d".to_string()),
-                SymbolNode::leaf_object("b".to_string()),
-            ],
+            vec![SymbolNode::leaf_object("d"), SymbolNode::leaf_object("b")],
         );
 
         let transformed = transformation.typed_transform_at(&hierarchy, &a_equals_b, vec![0]);
@@ -824,12 +787,9 @@ mod test_transformation {
             vec![
                 SymbolNode::new(
                     "=".into(),
-                    vec![
-                        SymbolNode::leaf_object("a".to_string()),
-                        SymbolNode::leaf_object("b".to_string()),
-                    ],
+                    vec![SymbolNode::leaf_object("a"), SymbolNode::leaf_object("b")],
                 ),
-                SymbolNode::leaf_object("c".to_string()),
+                SymbolNode::leaf_object("c"),
             ],
         );
 
@@ -838,12 +798,9 @@ mod test_transformation {
             vec![
                 SymbolNode::new(
                     "=".into(),
-                    vec![
-                        SymbolNode::leaf_object("a".to_string()),
-                        SymbolNode::leaf_object("d".to_string()),
-                    ],
+                    vec![SymbolNode::leaf_object("a"), SymbolNode::leaf_object("d")],
                 ),
-                SymbolNode::leaf_object("c".to_string()),
+                SymbolNode::leaf_object("c"),
             ],
         );
         let transformed =
@@ -921,25 +878,17 @@ mod test_transformation {
 
     #[test]
     fn test_transformation_transforms_at() {
-        let transformation = Transformation::new(
-            SymbolNode::leaf_object("c".to_string()),
-            SymbolNode::leaf_object("d".to_string()),
-        );
+        let transformation =
+            Transformation::new(SymbolNode::leaf_object("c"), SymbolNode::leaf_object("d"));
 
         let a_equals_b = SymbolNode::new(
             "=".into(),
-            vec![
-                SymbolNode::leaf_object("a".to_string()),
-                SymbolNode::leaf_object("b".to_string()),
-            ],
+            vec![SymbolNode::leaf_object("a"), SymbolNode::leaf_object("b")],
         );
 
         let d_equals_b = SymbolNode::new(
             "=".into(),
-            vec![
-                SymbolNode::leaf_object("d".to_string()),
-                SymbolNode::leaf_object("b".to_string()),
-            ],
+            vec![SymbolNode::leaf_object("d"), SymbolNode::leaf_object("b")],
         );
 
         let transformed = transformation.transform_at(&a_equals_b, vec![0]);
@@ -951,12 +900,9 @@ mod test_transformation {
             vec![
                 SymbolNode::new(
                     "=".into(),
-                    vec![
-                        SymbolNode::leaf_object("a".to_string()),
-                        SymbolNode::leaf_object("b".to_string()),
-                    ],
+                    vec![SymbolNode::leaf_object("a"), SymbolNode::leaf_object("b")],
                 ),
-                SymbolNode::leaf_object("c".to_string()),
+                SymbolNode::leaf_object("c"),
             ],
         );
 
@@ -965,12 +911,9 @@ mod test_transformation {
             vec![
                 SymbolNode::new(
                     "=".into(),
-                    vec![
-                        SymbolNode::leaf_object("a".to_string()),
-                        SymbolNode::leaf_object("d".to_string()),
-                    ],
+                    vec![SymbolNode::leaf_object("a"), SymbolNode::leaf_object("d")],
                 ),
-                SymbolNode::leaf_object("c".to_string()),
+                SymbolNode::leaf_object("c"),
             ],
         );
         let transformed = transformation.transform_at(&a_equals_b_equals_c, vec![0, 1]);

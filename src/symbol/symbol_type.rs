@@ -661,38 +661,28 @@ mod test_type {
         let trivial_hierarchy = TypeHierarchy::new();
 
         assert_eq!(
-            trivial_hierarchy.instantiate(
-                &SymbolNode::leaf_object("x".to_string()),
-                &SymbolNode::leaf_object("x".to_string()),
-            ),
-            Ok(SymbolNode::leaf_object("x".to_string()))
+            trivial_hierarchy
+                .instantiate(&SymbolNode::leaf_object("x"), &SymbolNode::leaf_object("x"),),
+            Ok(SymbolNode::leaf_object("x"))
+        );
+
+        assert_eq!(
+            trivial_hierarchy
+                .instantiate(&SymbolNode::leaf_object("y"), &SymbolNode::leaf_object("x"),),
+            Ok(SymbolNode::leaf_object("x"))
         );
 
         assert_eq!(
             trivial_hierarchy.instantiate(
-                &SymbolNode::leaf_object("y".to_string()),
-                &SymbolNode::leaf_object("x".to_string()),
-            ),
-            Ok(SymbolNode::leaf_object("x".to_string()))
-        );
-
-        assert_eq!(
-            trivial_hierarchy.instantiate(
-                &SymbolNode::leaf_object("y".to_string()),
+                &SymbolNode::leaf_object("y"),
                 &SymbolNode::new(
                     Symbol::new("op".to_string(), Type::Object),
-                    vec![
-                        SymbolNode::leaf_object("x".to_string()),
-                        SymbolNode::leaf_object("y".to_string())
-                    ]
+                    vec![SymbolNode::leaf_object("x"), SymbolNode::leaf_object("y")]
                 ),
             ),
             Ok(SymbolNode::new(
                 Symbol::new("op".to_string(), Type::Object),
-                vec![
-                    SymbolNode::leaf_object("x".to_string()),
-                    SymbolNode::leaf_object("y".to_string())
-                ]
+                vec![SymbolNode::leaf_object("x"), SymbolNode::leaf_object("y")]
             ),)
         );
 
@@ -797,10 +787,7 @@ mod test_type {
         type_hierarchy.add_chain(vec!["Boolean".into()]);
         let a_equals_b = SymbolNode::new(
             "=".into(),
-            vec![
-                SymbolNode::leaf_object("a".to_string()),
-                SymbolNode::leaf_object("b".to_string()),
-            ],
+            vec![SymbolNode::leaf_object("a"), SymbolNode::leaf_object("b")],
         );
 
         assert!(type_hierarchy
