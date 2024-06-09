@@ -32,6 +32,10 @@ fn main() {
             ),
         )
         .subcommand(Command::new("ls").about("Lists the workspaces"))
+        .subcommand(Command::new("import-context").about("Imports a Context into a Workspace."
+            ).arg(
+                Arg::new("name").required(true).help("Name of the context to be used to fetch the file.")
+            ))
         .subcommand(Command::new("export-context").about("Outputs the current Workspace's types, generated types, interpretations, and transformations as a Context to '{name}_context.toml'."
             ).arg(
                 Arg::new("name").required(true).help("Name to use for the file ('{name}_context.toml' will be used).")
@@ -97,6 +101,7 @@ fn main() {
         Some(("init", _sub_matches)) => cli.init(),
         Some(("rmws", sub_matches)) => cli.rmws(sub_matches),
         Some(("ls", _sub_matches)) => cli.ls(),
+        Some(("import-context", sub_matches)) => cli.import_context(sub_matches),
         Some(("export-context", sub_matches)) => cli.export_context(sub_matches),
         Some(("add-interpretation", sub_matches)) => cli.add_interpretation(sub_matches),
         Some(("remove-interpretation", sub_matches)) => cli.remove_interpretation(sub_matches),

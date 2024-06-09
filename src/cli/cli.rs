@@ -299,7 +299,7 @@ impl Cli {
             }
             Some(name) => name,
         };
-        let filename = format!("{}_context.toml", name);
+        let filename = Self::get_context_filename(name);
         self.filesystem
             .write_file(
                 STATE_DIRECTORY_RELATIVE_PATH,
@@ -308,6 +308,27 @@ impl Cli {
                 sub_matches.get_flag("force"),
             )
             .map(|_| format!("Context exported to '{}'.", filename).to_string())
+    }
+
+    pub fn import_context(&self, sub_matches: &ArgMatches) -> Result<String, String> {
+        let mut workspace = self.load_workspace()?;
+        let name = match sub_matches.get_one::<String>("name") {
+            None => {
+                return Err("No name provided.".to_string());
+            }
+            Some(name) => name,
+        };
+        let filename = Self::get_context_filename(name);
+        let serialized_context = self
+            .filesystem
+            .read_file(STATE_DIRECTORY_RELATIVE_PATH, &filename)?;
+        let context = Context::deserialize(&serialized_context)
+            .map_err(|e| format!("Couldn't deserialize context: {:?}.", e))?;
+        workspace
+            .try_import_context(context)
+            .map_err(|e| format!("Error importing context: {:?}", e))?;
+        self.update_workspace(workspace)?;
+        Ok("Context imported.".to_string())
     }
 
     fn update_workspace(&self, workspace: Workspace) -> Result<(), String> {
@@ -338,6 +359,10 @@ impl Cli {
                 return Err("Couldn't read workspace.toml".to_string());
             }
         };
+    }
+
+    fn get_context_filename(name: &str) -> String {
+        format!("{}_context.toml", name).to_string()
     }
 }
 
