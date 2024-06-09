@@ -5,7 +5,7 @@ use serde_json::to_string;
 
 use crate::{
     cli::filesystem::FileSystem,
-    config::STATE_DIRECTORY_RELATIVE_PATH,
+    config::{CONTEXT_DIRECTORY_RELATIVE_PATH, STATE_DIRECTORY_RELATIVE_PATH},
     context::context::Context,
     parsing::{
         interpretation::{
@@ -302,7 +302,7 @@ impl Cli {
         let filename = Self::get_context_filename(name);
         self.filesystem
             .write_file(
-                STATE_DIRECTORY_RELATIVE_PATH,
+                CONTEXT_DIRECTORY_RELATIVE_PATH,
                 &filename,
                 context.serialize(),
                 sub_matches.get_flag("force"),
@@ -321,7 +321,7 @@ impl Cli {
         let filename = Self::get_context_filename(name);
         let serialized_context = self
             .filesystem
-            .read_file(STATE_DIRECTORY_RELATIVE_PATH, &filename)?;
+            .read_file(CONTEXT_DIRECTORY_RELATIVE_PATH, &filename)?;
         let context = Context::deserialize(&serialized_context)
             .map_err(|e| format!("Couldn't deserialize context: {:?}.", e))?;
         workspace
@@ -362,7 +362,7 @@ impl Cli {
     }
 
     fn get_context_filename(name: &str) -> String {
-        format!("{}_context.toml", name).to_string()
+        format!("{}.toml", name).to_string()
     }
 }
 

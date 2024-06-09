@@ -38,7 +38,7 @@ fn main() {
             ))
         .subcommand(Command::new("export-context").about("Outputs the current Workspace's types, generated types, interpretations, and transformations as a Context to '{name}_context.toml'."
             ).arg(
-                Arg::new("name").required(true).help("Name to use for the file ('{name}_context.toml' will be used).")
+                Arg::new("name").required(true).help("Name to use for the file ('/contexts/{name}.toml' will be used).")
             ).arg(
                 Arg::new("force").short('f').action(ArgAction::SetTrue).help("Force the export, even if an existing version of the Context is already saved.")
             ))
