@@ -8,6 +8,7 @@ use crate::{
         symbol_type::{GeneratedType, Type, TypeError, TypeHierarchy},
         transformation::Transformation,
     },
+    workspace::workspace::Workspace,
 };
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
@@ -47,6 +48,15 @@ impl Context {
             }),
             Some(Err(e)) => Err(ContextError::from(e)),
         }
+    }
+
+    pub fn from_workspace(workspace: &Workspace) -> Result<Self, ContextError> {
+        Self::new(
+            workspace.get_types().clone(),
+            workspace.get_generated_types().clone(),
+            workspace.get_interpretations().clone(),
+            workspace.get_transformations().clone(),
+        )
     }
 
     pub fn get_types(&self) -> &TypeHierarchy {
