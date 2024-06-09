@@ -299,7 +299,7 @@ impl Cli {
             }
             Some(name) => name,
         };
-        let filename = format!("{:?}_context.toml", name);
+        let filename = format!("{}_context.toml", name);
         self.filesystem
             .write_file(
                 STATE_DIRECTORY_RELATIVE_PATH,

@@ -32,12 +32,12 @@ fn main() {
             ),
         )
         .subcommand(Command::new("ls").about("Lists the workspaces"))
-        .subcommand(Command::new("export-context").about("Outputs the current Workspace's types, generated types, interpretations, and transformations as a Context to '{name}_context.toml'.")
+        .subcommand(Command::new("export-context").about("Outputs the current Workspace's types, generated types, interpretations, and transformations as a Context to '{name}_context.toml'."
             ).arg(
                 Arg::new("name").required(true).help("Name to use for the file ('{name}_context.toml' will be used).")
             ).arg(
                 Arg::new("force").short('f').action(ArgAction::SetTrue).help("Force the export, even if an existing version of the Context is already saved.")
-                )
+            ))
         .subcommand(Command::new("add-interpretation").about("Takes a condition (string to match), expression type, precedence, and output type and adds it as an interpretation."
             ).arg(
                 Arg::new("expression-type").required(true).help("Singleton, Prefix, Infix, Postfix, or Functional (case insensitive)")
