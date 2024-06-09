@@ -300,6 +300,10 @@ impl Cli {
             Some(name) => name,
         };
         let filename = Self::get_context_filename(name);
+        if !self.filesystem.path_exists(CONTEXT_DIRECTORY_RELATIVE_PATH) {
+            self.filesystem
+                .create_directory(CONTEXT_DIRECTORY_RELATIVE_PATH);
+        }
         self.filesystem
             .write_file(
                 CONTEXT_DIRECTORY_RELATIVE_PATH,
