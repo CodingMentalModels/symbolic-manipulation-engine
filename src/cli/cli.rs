@@ -1,9 +1,12 @@
+use std::path::PathBuf;
+
 use clap::ArgMatches;
 use serde_json::to_string;
 
 use crate::{
     cli::filesystem::FileSystem,
     config::STATE_DIRECTORY_RELATIVE_PATH,
+    context::context::Context,
     parsing::{
         interpretation::{
             ExpressionPrecedence, ExpressionType, Interpretation, InterpretationCondition,
@@ -286,18 +289,34 @@ impl Cli {
         }
     }
 
+    pub fn export_context(&self, sub_matches: &ArgMatches) -> Result<String, String> {
+        let workspace = self.load_workspace()?;
+        let context = Context::from_workspace(&workspace)
+            .map_err(|e| format!("Error exporting workspace: {:?}", e))?;
+        let name = match sub_matches.get_one::<String>("name") {
+            None => {
+                return Err("No name provided.".to_string());
+            }
+            Some(name) => name,
+        };
+        let filename = format!("{:?}_context.toml", name);
+        self.filesystem
+            .write_file(
+                STATE_DIRECTORY_RELATIVE_PATH,
+                &filename,
+                context.serialize(),
+                sub_matches.get_flag("force"),
+            )
+            .map(|_| format!("Context exported to '{}'.", filename).to_string())
+    }
+
     fn update_workspace(&self, workspace: Workspace) -> Result<(), String> {
-        match self.filesystem.write_file(
+        self.filesystem.write_file(
             STATE_DIRECTORY_RELATIVE_PATH,
             "workspace.toml",
             workspace.serialize().map_err(|e| format!("{:?}", e))?,
-        ) {
-            true => println!("Overwrote workspace.toml"),
-            false => {
-                return Err("Couldn't create workspace.toml".to_string());
-            }
-        }
-        Ok(())
+            true,
+        )
     }
 
     fn load_workspace(&self) -> Result<Workspace, String> {

@@ -32,6 +32,12 @@ fn main() {
             ),
         )
         .subcommand(Command::new("ls").about("Lists the workspaces"))
+        .subcommand(Command::new("export-context").about("Outputs the current Workspace's types, generated types, interpretations, and transformations as a Context to '{name}_context.toml'.")
+            ).arg(
+                Arg::new("name").required(true).help("Name to use for the file ('{name}_context.toml' will be used).")
+            ).arg(
+                Arg::new("force").short('f').action(ArgAction::SetTrue).help("Force the export, even if an existing version of the Context is already saved.")
+                )
         .subcommand(Command::new("add-interpretation").about("Takes a condition (string to match), expression type, precedence, and output type and adds it as an interpretation."
             ).arg(
                 Arg::new("expression-type").required(true).help("Singleton, Prefix, Infix, Postfix, or Functional (case insensitive)")
@@ -58,9 +64,8 @@ fn main() {
                 Arg::new("parent-type-name").help("Optional name of the parent type to add the type to. Must already exist in the Type Hierarchy of the Workspace.")
             ))
         .subcommand(Command::new("hypothesize").about("Takes a statement and adds it to the Workspace as a new hypothesis").arg(
-                Arg::new("statement").required(true)
-                )
-                    )
+            Arg::new("statement").required(true)
+            ))
         .subcommand(Command::new("add-transformation").about("Add a Transformation to the Workspace via a 'from' and a 'to' statement, parsed using the Workspace's Interpretations.")
             .arg(
                 Arg::new("from").required(true).help("Starting point of the Transformation.")
@@ -92,6 +97,7 @@ fn main() {
         Some(("init", _sub_matches)) => cli.init(),
         Some(("rmws", sub_matches)) => cli.rmws(sub_matches),
         Some(("ls", _sub_matches)) => cli.ls(),
+        Some(("export-context", sub_matches)) => cli.export_context(sub_matches),
         Some(("add-interpretation", sub_matches)) => cli.add_interpretation(sub_matches),
         Some(("remove-interpretation", sub_matches)) => cli.remove_interpretation(sub_matches),
         Some(("add-type", sub_matches)) => cli.add_type(sub_matches),
