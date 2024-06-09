@@ -45,6 +45,29 @@ impl FileSystem {
         fs::remove_dir_all(path).is_ok()
     }
 
+    pub fn ls(&self, path: &str) -> Result<Vec<String>, String> {
+        let path = self.root_directory.join(path);
+
+        let entries = fs::read_dir(path)
+            .map_err(|e| format!("Unable to read directory.  Error: {:?}", e).to_string())?;
+
+        let mut filenames = Vec::new();
+        for entry in entries {
+            let entry = entry.map_err(|_| "Unable to read an entry.".to_string())?;
+            let path = entry.path();
+
+            if path.is_file() {
+                let filename = match path.file_name() {
+                    Some(f) => f,
+                    None => return Err("Unable to get file name.".to_string()),
+                };
+                filenames.push(filename.to_string_lossy().into_owned());
+            }
+        }
+
+        Ok(filenames)
+    }
+
     pub fn write_file(
         &self,
         path: &str,

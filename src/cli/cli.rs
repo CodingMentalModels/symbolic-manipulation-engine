@@ -335,6 +335,19 @@ impl Cli {
         Ok("Context imported.".to_string())
     }
 
+    pub fn ls_contexts(&self) -> Result<String, String> {
+        let names: Vec<String> = self
+            .filesystem
+            .ls(CONTEXT_DIRECTORY_RELATIVE_PATH)
+            .map_err(|e| format!("Error reading context directory path: {:?}.", e).to_string())?
+            .iter()
+            .filter_map(|path| path.strip_suffix(".toml"))
+            .map(|s| s.to_string())
+            .collect();
+        serde_json::to_string(&names)
+            .map_err(|e| format!("Serialization Error: {:?}", e).to_string())
+    }
+
     fn update_workspace(&self, workspace: Workspace) -> Result<(), String> {
         self.filesystem.write_file(
             STATE_DIRECTORY_RELATIVE_PATH,
