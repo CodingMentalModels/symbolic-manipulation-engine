@@ -61,11 +61,7 @@ impl From<&Workspace> for DisplayWorkspace {
                 .iter()
                 .map(|t| t.to_interpreted_string(&workspace.interpretations))
                 .collect(),
-            provenance: workspace
-                .provenance
-                .iter()
-                .map(|p| DisplayProvenance::from(p))
-                .collect(),
+            provenance: workspace.get_display_provenances(),
         }
     }
 }
@@ -184,6 +180,14 @@ impl Workspace {
         &self.statements
     }
 
+    pub fn get_statement(&self, index: StatementIndex) -> Result<SymbolNode, WorkspaceError> {
+        if self.statement_index_is_invalid(index) {
+            Err(WorkspaceError::InvalidStatementIndex)
+        } else {
+            Ok(self.statements[index].clone())
+        }
+    }
+
     pub fn add_interpretation(
         &mut self,
         interpretation: Interpretation,
@@ -228,6 +232,17 @@ impl Workspace {
 
     pub fn get_transformations(&self) -> &Vec<Transformation> {
         &self.transformations
+    }
+
+    pub fn get_transformation(
+        &self,
+        index: TransformationIndex,
+    ) -> Result<Transformation, WorkspaceError> {
+        if self.transformation_index_is_invalid(index) {
+            Err(WorkspaceError::InvalidTransformationIndex)
+        } else {
+            Ok(self.transformations[index].clone())
+        }
     }
 
     pub fn add_transformation(
@@ -319,11 +334,11 @@ impl Workspace {
             .map_err(|e| WorkspaceError::TransformationError(e))?;
 
         self.statements.push(transformed_statement.clone());
-        self.provenance.push(Provenance::Derived((
+        self.provenance.push(Provenance::Derived(
             statement_index,
             transformation_index,
             transformed_addresses,
-        )));
+        ));
 
         return Ok(transformed_statement);
     }
@@ -347,11 +362,11 @@ impl Workspace {
             .map_err(|_| WorkspaceError::InvalidTransformationAddress)?;
 
         self.statements.push(transformed_statement.clone());
-        self.provenance.push(Provenance::Derived((
+        self.provenance.push(Provenance::Derived(
             statement_index,
             transformation_index,
             vec![address],
-        )));
+        ));
 
         return Ok(transformed_statement);
     }
@@ -367,7 +382,7 @@ impl Workspace {
             provenance.push(current_provenance.clone());
             match current_provenance {
                 Provenance::Hypothesis => break,
-                Provenance::Derived((parent_index, _, _)) => current_index = parent_index,
+                Provenance::Derived(parent_index, _, _) => current_index = parent_index,
             }
         }
         Ok(provenance)
@@ -379,6 +394,37 @@ impl Workspace {
         }
 
         Ok(self.provenance[index].clone())
+    }
+
+    pub fn get_display_provenances(&self) -> Vec<DisplayProvenance> {
+        let mut to_return = Vec::new();
+        for i in 0..self.statements.len() {
+            // TODO Ensure that this expectation is always valid
+            let provenance = self
+                .get_display_provenance(i)
+                .expect("We control the statements and provenance generation.");
+            to_return.push(provenance);
+        }
+        to_return
+    }
+
+    pub fn get_display_provenance(
+        &self,
+        index: StatementIndex,
+    ) -> Result<DisplayProvenance, WorkspaceError> {
+        let provenance = self.get_provenance(index)?;
+        match provenance {
+            Provenance::Hypothesis => Ok(DisplayProvenance::Hypothesis),
+            Provenance::Derived(s, t, indices) => {
+                let statement = self.get_statement(s)?;
+                let transformation = self.get_transformation(t)?;
+                Ok(DisplayProvenance::Derived((
+                    statement.to_interpreted_string(&self.interpretations),
+                    transformation.to_interpreted_string(&self.interpretations),
+                    indices,
+                )))
+            }
+        }
     }
 
     pub fn get_generated_types(&self) -> &Vec<GeneratedType> {
@@ -469,24 +515,19 @@ impl Workspace {
 #[ts(export)]
 pub enum DisplayProvenance {
     Hypothesis,
-    Derived((TransformationIndex, StatementIndex, Vec<SymbolNodeAddress>)),
-}
-
-impl From<&Provenance> for DisplayProvenance {
-    fn from(value: &Provenance) -> Self {
-        match value {
-            Provenance::Hypothesis => Self::Hypothesis,
-            Provenance::Derived((t, s, addresses)) => {
-                Self::Derived((t.clone(), s.clone(), addresses.clone()))
-            }
-        }
-    }
+    Derived(
+        (
+            DisplayTransformation,
+            DisplaySymbolNode,
+            Vec<SymbolNodeAddress>,
+        ),
+    ),
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub enum Provenance {
     Hypothesis,
-    Derived((TransformationIndex, StatementIndex, Vec<SymbolNodeAddress>)),
+    Derived(TransformationIndex, StatementIndex, Vec<SymbolNodeAddress>),
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -692,7 +733,7 @@ mod test_workspace {
         assert_eq!(workspace.get_provenance(0), Ok(Provenance::Hypothesis));
         assert_eq!(
             workspace.get_provenance(1),
-            Ok(Provenance::Derived((0, 0, vec![vec![]])))
+            Ok(Provenance::Derived(0, 0, vec![vec![]]))
         );
 
         assert_eq!(
@@ -702,7 +743,7 @@ mod test_workspace {
         assert_eq!(
             workspace.get_provenance_lineage(1),
             Ok(vec![
-                Provenance::Derived((0, 0, vec![vec![]])),
+                Provenance::Derived(0, 0, vec![vec![]]),
                 Provenance::Hypothesis
             ])
         );
@@ -727,7 +768,7 @@ mod test_workspace {
 
         assert_eq!(
             workspace.get_provenance(2),
-            Ok(Provenance::Derived((1, 1, vec![vec![]])))
+            Ok(Provenance::Derived(1, 1, vec![vec![]]))
         );
     }
 
