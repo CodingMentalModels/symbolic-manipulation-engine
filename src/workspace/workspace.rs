@@ -20,7 +20,8 @@ use crate::{
     },
 };
 
-type DisplaySymbolNode = String;
+type SymbolNodeString = String;
+type ProvenanceString = String;
 type DisplayTransformation = String;
 type StatementIndex = usize;
 type TransformationIndex = usize;
@@ -51,11 +52,7 @@ impl From<&Workspace> for DisplayWorkspace {
                 .iter()
                 .map(|i| DisplayInterpretation::from(i))
                 .collect(),
-            statements: workspace
-                .statements
-                .iter()
-                .map(|n| n.to_interpreted_string(&workspace.interpretations))
-                .collect(),
+            statements: workspace.get_display_symbol_nodes(),
             transformations: workspace
                 .transformations
                 .iter()
@@ -427,6 +424,28 @@ impl Workspace {
         }
     }
 
+    pub fn get_display_symbol_nodes(&self) -> Vec<DisplaySymbolNode> {
+        let mut to_return = Vec::new();
+        for i in 0..self.statements.len() {
+            let node = self
+                .get_display_symbol_node(i)
+                .expect("We control which indices are provided.");
+            to_return.push(node);
+        }
+        to_return
+    }
+
+    pub fn get_display_symbol_node(
+        &self,
+        index: usize,
+    ) -> Result<DisplaySymbolNode, WorkspaceError> {
+        let statement = self.get_statement(index)?;
+        let (interpreted_string, type_map) =
+            statement.to_interpreted_string_and_type_map(&self.interpretations);
+        let provenance = self.get_display_provenance(index)?;
+        DisplaySymbolNode::new(interpreted_string, type_map, provenance)
+    }
+
     pub fn get_generated_types(&self) -> &Vec<GeneratedType> {
         &self.generated_types
     }
@@ -518,7 +537,7 @@ pub enum DisplayProvenance {
     Derived(
         (
             DisplayTransformation,
-            DisplaySymbolNode,
+            SymbolNodeString,
             Vec<SymbolNodeAddress>,
         ),
     ),
@@ -528,6 +547,29 @@ pub enum DisplayProvenance {
 pub enum Provenance {
     Hypothesis,
     Derived(TransformationIndex, StatementIndex, Vec<SymbolNodeAddress>),
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub struct DisplaySymbolNode {
+    interpreted_string: String,
+    types: HashMap<String, Type>,
+    provenance: DisplayProvenance,
+}
+
+impl DisplaySymbolNode {
+    pub fn new(
+        symbol_node_string: String,
+        types: HashMap<String, Type>,
+        provenance: DisplayProvenance,
+    ) -> Self {
+        Self {
+            interpreted_string: symbol_node_string,
+            types,
+            provenance,
+        }
+    }
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
