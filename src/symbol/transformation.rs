@@ -386,6 +386,32 @@ mod test_transformation {
     use super::*;
 
     #[test]
+    fn test_transformation_applies_algorithm() {
+        let algorithm = AdditionTransformation::new("+", "Real".into());
+        let parser = Parser::new(vec![Interpretation::infix_operator(
+            "+".into(),
+            1,
+            "Real".into(),
+        )]);
+        let from = parser.parse_from_string(vec!["+".to_string()], "a+b+c");
+        assert!(!algorithm.is_applicable(from));
+        assert_eq!(
+            algorithm.apply(from),
+            Err(TransformationError::NotApplicable)
+        );
+
+        let from = parser.parse_from_string(vec!["+".to_string()], "1+2");
+        assert!(algorithm.is_applicable(from));
+        assert_eq!(
+            algorithm.apply(from),
+            Ok(SymbolNode::leaf(Symbol::new(
+                "4".to_string(),
+                "Real".into()
+            )))
+        );
+    }
+
+    #[test]
     fn test_transformation_gets_valid_transformations() {
         let hierarchy =
             TypeHierarchy::chain(vec!["Real".into(), "Integer".into(), "=".into()]).unwrap();
