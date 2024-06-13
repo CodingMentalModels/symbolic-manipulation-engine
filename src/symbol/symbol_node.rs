@@ -389,7 +389,7 @@ impl SymbolNode {
                         format!("{}{}", self.get_root_name(), interpreted_children[0]).to_string()
                     }
                     ExpressionType::Infix => format!(
-                        "{}{}{}",
+                        "({}{}{})",
                         interpreted_children[0],
                         self.get_root_name(),
                         interpreted_children[1]
@@ -829,7 +829,7 @@ mod test_statement {
         let x_equals_y = parser
             .parse_from_string(custom_tokens.clone(), "x=y")
             .unwrap();
-        assert_eq!(x_equals_y.to_interpreted_string(&interpretations), "x=y");
+        assert_eq!(x_equals_y.to_interpreted_string(&interpretations), "(x=y)");
 
         let abs_x = parser
             .parse_from_string(custom_tokens.clone(), "|x|")
@@ -892,7 +892,7 @@ mod test_statement {
         let x_equals_y = parser
             .parse_from_string(custom_tokens.clone(), "x=y")
             .unwrap();
-        assert_eq!(x_equals_y.to_interpreted_string(&interpretations), "x=y");
+        assert_eq!(x_equals_y.to_interpreted_string(&interpretations), "(x=y)");
 
         let plus = Interpretation::infix_operator("+".into(), 1, "+".into());
         let integer_condition = GeneratedTypeCondition::IsInteger;
@@ -903,12 +903,27 @@ mod test_statement {
         let interpretations = vec![plus, integer];
         let parser = Parser::new(interpretations.clone());
         let two_plus_two = parser
-            .parse_from_string(vec!["+".to_string()], "2+2")
+            .parse_from_string(vec!["+".to_string()], "(2+2)")
             .unwrap();
 
         assert_eq!(
             two_plus_two.to_interpreted_string(&interpretations),
-            "2+2".to_string()
+            "(2+2)".to_string()
+        );
+
+        let one_plus_two_then_plus_three = parser
+            .parse_from_string(vec!["+".to_string()], "(1+2)+3")
+            .unwrap();
+        let then_one_plus_two_plus_three = parser
+            .parse_from_string(vec!["+".to_string()], "1+(2+3)")
+            .unwrap();
+        assert_eq!(
+            one_plus_two_then_plus_three.to_interpreted_string(&interpretations),
+            "((1+2)+3)"
+        );
+        assert_eq!(
+            then_one_plus_two_plus_three.to_interpreted_string(&interpretations),
+            "(1+(2+3))"
         );
     }
 
