@@ -447,7 +447,8 @@ impl Workspace {
         Ok(DisplaySymbolNode::new(
             interpreted_string,
             type_map,
-            provenance,
+            provenance.get_from_statement(),
+            provenance.get_from_transformation(),
         ))
     }
 
@@ -548,6 +549,22 @@ pub enum DisplayProvenance {
     ),
 }
 
+impl DisplayProvenance {
+    pub fn get_from_statement(&self) -> Option<String> {
+        match self {
+            Self::Hypothesis => None,
+            Self::Derived((_, s, _)) => Some(s.clone()),
+        }
+    }
+
+    pub fn get_from_transformation(&self) -> Option<String> {
+        match self {
+            Self::Hypothesis => None,
+            Self::Derived((t, _, _)) => Some(t.clone()),
+        }
+    }
+}
+
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub enum Provenance {
     Hypothesis,
@@ -560,19 +577,22 @@ pub enum Provenance {
 pub struct DisplaySymbolNode {
     interpreted_string: String,
     types: Vec<(String, Type)>,
-    provenance: DisplayProvenance,
+    from_statement: Option<String>,
+    from_transformation: Option<String>,
 }
 
 impl DisplaySymbolNode {
     pub fn new(
         symbol_node_string: String,
         types: Vec<(String, Type)>,
-        provenance: DisplayProvenance,
+        from_statement: Option<String>,
+        from_transformation: Option<String>,
     ) -> Self {
         Self {
             interpreted_string: symbol_node_string,
             types,
-            provenance,
+            from_statement,
+            from_transformation,
         }
     }
 }
