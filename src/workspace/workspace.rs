@@ -11,7 +11,7 @@ use crate::{
         parser::{Parser, ParserError},
     },
     symbol::{
-        symbol_node::{SymbolNode, SymbolNodeAddress},
+        symbol_node::{SymbolNode, SymbolNodeAddress, SymbolNodeError},
         symbol_type::{
             DisplayGeneratedType, DisplayTypeHierarchyNode, GeneratedType, Type, TypeError,
             TypeHierarchy,
@@ -440,10 +440,15 @@ impl Workspace {
         index: usize,
     ) -> Result<DisplaySymbolNode, WorkspaceError> {
         let statement = self.get_statement(index)?;
-        let (interpreted_string, type_map) =
-            statement.to_interpreted_string_and_type_map(&self.interpretations);
+        let (interpreted_string, type_map) = statement
+            .to_interpreted_string_and_type_map(&self.interpretations)
+            .map_err(|e| Into::<WorkspaceError>::into(e))?;
         let provenance = self.get_display_provenance(index)?;
-        DisplaySymbolNode::new(interpreted_string, type_map, provenance)
+        Ok(DisplaySymbolNode::new(
+            interpreted_string,
+            type_map,
+            provenance,
+        ))
     }
 
     pub fn get_generated_types(&self) -> &Vec<GeneratedType> {
@@ -554,14 +559,14 @@ pub enum Provenance {
 #[ts(export)]
 pub struct DisplaySymbolNode {
     interpreted_string: String,
-    types: HashMap<String, Type>,
+    types: Vec<(String, Type)>,
     provenance: DisplayProvenance,
 }
 
 impl DisplaySymbolNode {
     pub fn new(
         symbol_node_string: String,
-        types: HashMap<String, Type>,
+        types: Vec<(String, Type)>,
         provenance: DisplayProvenance,
     ) -> Self {
         Self {
@@ -583,12 +588,14 @@ pub enum WorkspaceError {
     TransformationError(TransformationError),
     StatementContainsTypesNotInHierarchy(HashSet<Type>),
     IncompatibleTypeRelationships(HashSet<Type>),
+    ConflictingTypes(String, Type, Type),
     StatementsAlreadyInclude(SymbolNode),
     TypeHierarchyAlreadyIncludes(Type),
     InvalidType(Type),
     ParentTypeNotFound(Type),
     NoTransformationsPossible,
     InvalidTypeError(TypeError),
+    InvalidSymbolNodeError(SymbolNodeError),
     AttemptedToImportAmbiguousTypes(HashSet<Type>),
     UnsupportedOperation(String),
 }
@@ -596,6 +603,17 @@ pub enum WorkspaceError {
 impl From<ParserError> for WorkspaceError {
     fn from(value: ParserError) -> Self {
         Self::ParserError(value)
+    }
+}
+
+impl From<SymbolNodeError> for WorkspaceError {
+    fn from(value: SymbolNodeError) -> Self {
+        match value {
+            SymbolNodeError::ConflictingTypes(name, t_0, t_1) => {
+                WorkspaceError::ConflictingTypes(name, t_0, t_1)
+            }
+            e => WorkspaceError::InvalidSymbolNodeError(e),
+        }
     }
 }
 
