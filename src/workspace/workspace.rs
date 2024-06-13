@@ -11,10 +11,10 @@ use crate::{
         parser::{Parser, ParserError},
     },
     symbol::{
-        symbol_node::{SymbolNode, SymbolNodeAddress, SymbolNodeError},
+        symbol_node::{SymbolName, SymbolNode, SymbolNodeAddress, SymbolNodeError},
         symbol_type::{
             DisplayGeneratedType, DisplayTypeHierarchyNode, GeneratedType, Type, TypeError,
-            TypeHierarchy,
+            TypeHierarchy, TypeName,
         },
         transformation::{Transformation, TransformationError},
     },
@@ -446,7 +446,10 @@ impl Workspace {
         let provenance = self.get_display_provenance(index)?;
         Ok(DisplaySymbolNode::new(
             interpreted_string,
-            type_map,
+            type_map
+                .into_iter()
+                .map(|(name, t)| (name, t.to_string()))
+                .collect(),
             provenance.get_from_statement(),
             provenance.get_from_transformation(),
         ))
@@ -576,7 +579,7 @@ pub enum Provenance {
 #[ts(export)]
 pub struct DisplaySymbolNode {
     interpreted_string: String,
-    types: Vec<(String, Type)>,
+    types: Vec<(SymbolName, TypeName)>,
     from_statement: Option<String>,
     from_transformation: Option<String>,
 }
@@ -584,7 +587,7 @@ pub struct DisplaySymbolNode {
 impl DisplaySymbolNode {
     pub fn new(
         symbol_node_string: String,
-        types: Vec<(String, Type)>,
+        types: Vec<(SymbolName, TypeName)>,
         from_statement: Option<String>,
         from_transformation: Option<String>,
     ) -> Self {
