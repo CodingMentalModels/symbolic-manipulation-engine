@@ -148,7 +148,7 @@ impl Workspace {
     pub fn add_parsed_statement(&mut self, s: &str) -> Result<SymbolNode, WorkspaceError> {
         let parsed = self.parse_from_string(s)?;
         self.generate_types(&parsed)?;
-        self.add_statement(parsed.clone())?;
+        self.add_hypothesis(parsed.clone())?;
         Ok(parsed)
     }
 
@@ -217,7 +217,7 @@ impl Workspace {
             .map_err(|e| e.into())
     }
 
-    pub fn add_statement(&mut self, statement: SymbolNode) -> Result<(), WorkspaceError> {
+    pub fn add_hypothesis(&mut self, statement: SymbolNode) -> Result<(), WorkspaceError> {
         self.types
             .binds_statement_or_error(&statement)
             .map_err(|x| WorkspaceError::from(x))?;
@@ -225,6 +225,11 @@ impl Workspace {
         self.statements.push(statement);
         self.provenance.push(Provenance::Hypothesis);
         Ok(())
+    }
+
+    fn add_derived_statement(&mut self, statement: SymbolNode, provenance: Provenance) {
+        self.statements.push(statement);
+        self.provenance.push(provenance);
     }
 
     pub fn get_transformations(&self) -> &Vec<Transformation> {
@@ -294,14 +299,17 @@ impl Workspace {
         &mut self,
         desired: SymbolNode,
     ) -> Result<SymbolNode, WorkspaceError> {
-        for statement in self.statements.iter() {
-            for transform in self.transformations.iter() {
+        for (statement_idx, statement) in self.statements.iter().enumerate() {
+            for (transform_idx, transform) in self.transformations.iter().enumerate() {
                 match transform.try_transform_into(self.get_types(), &statement, &desired) {
                     Ok(output) => {
                         if self.statements.contains(&output) {
                             return Err(WorkspaceError::StatementsAlreadyInclude(output.clone()));
                         } else {
-                            self.add_statement(output.clone())?;
+                            // TODO Derive the appropriate transform addresses
+                            let provenance =
+                                Provenance::Derived(statement_idx, transform_idx, vec![]);
+                            self.add_derived_statement(output.clone(), provenance);
                             return Ok(output);
                         }
                     }
@@ -312,62 +320,6 @@ impl Workspace {
         }
         return Err(WorkspaceError::NoTransformationsPossible);
     }
-
-    //    pub fn transform_all(
-    //        &mut self,
-    //        transformation_index: TransformationIndex,
-    //        statement_index: StatementIndex,
-    //        substitutions: HashMap<String, String>,
-    //    ) -> Result<SymbolNode, WorkspaceError> {
-    //        if self.transformation_index_is_invalid(transformation_index) {
-    //            return Err(WorkspaceError::InvalidTransformationIndex);
-    //        }
-    //        if self.statement_index_is_invalid(statement_index) {
-    //            return Err(WorkspaceError::InvalidStatementIndex);
-    //        }
-    //        let transformation = self.transformations[transformation_index].clone();
-    //        let statement = self.statements[statement_index].clone();
-    //        let (transformed_statement, transformed_addresses) = transformation
-    //            .transform_all(&statement, &substitutions)
-    //            .map_err(|e| WorkspaceError::TransformationError(e))?;
-    //
-    //        self.statements.push(transformed_statement.clone());
-    //        self.provenance.push(Provenance::Derived(
-    //            statement_index,
-    //            transformation_index,
-    //            transformed_addresses,
-    //        ));
-    //
-    //        return Ok(transformed_statement);
-    //    }
-    //
-    //    pub fn transform_at(
-    //        &mut self,
-    //        transformation_index: TransformationIndex,
-    //        statement_index: StatementIndex,
-    //        address: SymbolNodeAddress,
-    //    ) -> Result<SymbolNode, WorkspaceError> {
-    //        if self.transformation_index_is_invalid(transformation_index) {
-    //            return Err(WorkspaceError::InvalidTransformationIndex);
-    //        }
-    //        if self.statement_index_is_invalid(statement_index) {
-    //            return Err(WorkspaceError::InvalidStatementIndex);
-    //        }
-    //        let transformation = self.transformations[transformation_index].clone();
-    //        let statement = self.statements[statement_index].clone();
-    //        let transformed_statement = transformation
-    //            .relabel_and_transform_at(&statement, address.clone())
-    //            .map_err(|_| WorkspaceError::InvalidTransformationAddress)?;
-    //
-    //        self.statements.push(transformed_statement.clone());
-    //        self.provenance.push(Provenance::Derived(
-    //            statement_index,
-    //            transformation_index,
-    //            vec![address],
-    //        ));
-    //
-    //        return Ok(transformed_statement);
-    //    }
 
     pub fn get_provenance_lineage(
         &self,
@@ -754,11 +706,11 @@ mod test_workspace {
         let types = TypeHierarchy::new();
         let mut workspace = Workspace::new(types, vec![], vec![]);
         let statement = SymbolNode::leaf_object("a");
-        workspace.add_statement(statement).unwrap();
+        workspace.add_hypothesis(statement).unwrap();
         assert_eq!(workspace.statements.len(), 1);
 
         let statement = SymbolNode::leaf_object("b");
-        workspace.add_statement(statement).unwrap();
+        workspace.add_hypothesis(statement).unwrap();
 
         assert_eq!(workspace.statements.len(), 2);
     }
@@ -794,68 +746,40 @@ mod test_workspace {
         assert_eq!(workspace.statements, vec![expected]);
     }
 
-    //    #[test]
-    //    fn test_workspace_transforms_statement_and_maintains_provenance() {
-    //        let types = TypeHierarchy::new();
-    //        let mut workspace = Workspace::new(types, vec![], vec![]);
-    //        let statement = SymbolNode::leaf_object("a");
-    //        assert_eq!(workspace.add_statement(statement), Ok(()));
-    //        assert_eq!(workspace.statements.len(), 1);
-    //
-    //        let transformation =
-    //            Transformation::new(SymbolNode::leaf_object("a"), SymbolNode::leaf_object("b"));
-    //        workspace.add_transformation(transformation).unwrap();
-    //        assert_eq!(workspace.transformations.len(), 1);
-    //
-    //        let _transformed = workspace.transform_all(0, 0, HashMap::new());
-    //        assert_eq!(workspace.statements.len(), 2);
-    //        assert_eq!(
-    //            workspace.statements,
-    //            vec![SymbolNode::leaf_object("a"), SymbolNode::leaf_object("b")]
-    //        );
-    //
-    //        assert_eq!(workspace.get_provenance(0), Ok(Provenance::Hypothesis));
-    //        assert_eq!(
-    //            workspace.get_provenance(1),
-    //            Ok(Provenance::Derived(0, 0, vec![vec![]]))
-    //        );
-    //
-    //        assert_eq!(
-    //            workspace.get_provenance_lineage(0),
-    //            Ok(vec![Provenance::Hypothesis])
-    //        );
-    //        assert_eq!(
-    //            workspace.get_provenance_lineage(1),
-    //            Ok(vec![
-    //                Provenance::Derived(0, 0, vec![vec![]]),
-    //                Provenance::Hypothesis
-    //            ])
-    //        );
-    //
-    //        workspace
-    //            .add_transformation(Transformation::new(
-    //                SymbolNode::leaf_object("b"),
-    //                SymbolNode::leaf_object("="),
-    //            ))
-    //            .unwrap();
-    //
-    //        let _transformed = workspace.transform_at(1, 1, vec![]);
-    //        assert_eq!(workspace.statements.len(), 3);
-    //        assert_eq!(
-    //            workspace.statements,
-    //            vec![
-    //                SymbolNode::leaf_object("a"),
-    //                SymbolNode::leaf_object("b"),
-    //                SymbolNode::leaf_object("=")
-    //            ]
-    //        );
-    //
-    //        assert_eq!(
-    //            workspace.get_provenance(2),
-    //            Ok(Provenance::Derived(1, 1, vec![vec![]]))
-    //        );
-    //    }
-    //
+    #[test]
+    fn test_workspace_transforms_statement_and_maintains_provenance() {
+        let types = TypeHierarchy::new();
+        let mut workspace = Workspace::new(types, vec![], vec![]);
+        let statement = SymbolNode::leaf_object("a");
+        assert_eq!(workspace.add_hypothesis(statement), Ok(()));
+        assert_eq!(workspace.statements.len(), 1);
+
+        let transformation =
+            Transformation::new(SymbolNode::leaf_object("a"), SymbolNode::leaf_object("b"));
+        workspace.add_transformation(transformation).unwrap();
+        assert_eq!(workspace.transformations.len(), 1);
+
+        let _transformed = workspace.try_transform_into_parsed("b").unwrap();
+        assert_eq!(workspace.statements.len(), 2);
+        assert_eq!(
+            workspace.statements,
+            vec![SymbolNode::leaf_object("a"), SymbolNode::leaf_object("b")]
+        );
+
+        assert_eq!(workspace.get_provenance(0), Ok(Provenance::Hypothesis));
+        // TODO Currently we don't derive the transformation addresses but this assertion should
+        // fail
+        assert_eq!(
+            workspace.get_provenance(1),
+            Ok(Provenance::Derived(0, 0, vec![]))
+        );
+
+        assert_eq!(
+            workspace.get_provenance_lineage(0),
+            Ok(vec![Provenance::Hypothesis])
+        );
+    }
+
     #[test]
     fn test_workspace_imports_context() {
         let types = TypeHierarchy::new();
