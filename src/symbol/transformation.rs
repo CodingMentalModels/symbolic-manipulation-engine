@@ -219,7 +219,7 @@ impl Transformation {
         }
     }
 
-    pub fn relabel_and_transform_at(
+    fn relabel_and_transform_at(
         &self,
         statement: &SymbolNode,
         address: SymbolNodeAddress,
@@ -243,7 +243,7 @@ impl Transformation {
         generalized_transform.relabel_and_transform(statement)
     }
 
-    pub fn relabel_and_transform(
+    fn relabel_and_transform(
         &self,
         statement: &SymbolNode,
     ) -> Result<SymbolNode, TransformationError> {
@@ -269,7 +269,7 @@ impl Transformation {
         Ok(Self::new(new_from, new_to))
     }
 
-    pub fn transform_all(
+    fn transform_all(
         &self,
         statement: &SymbolNode,
         relabellings: &HashMap<String, String>,
@@ -277,7 +277,7 @@ impl Transformation {
         self.transform_all_from_address(statement, relabellings, Vec::new())
     }
 
-    pub fn transform_all_from_address(
+    fn transform_all_from_address(
         &self,
         statement: &SymbolNode,
         relabellings: &HashMap<String, String>,
@@ -322,7 +322,7 @@ impl Transformation {
         }
     }
 
-    pub fn try_transform(
+    fn try_transform(
         &self,
         statement: &SymbolNode,
         relabelling: &HashMap<String, String>,
@@ -334,7 +334,7 @@ impl Transformation {
         }
     }
 
-    pub fn transform_strict(
+    fn transform_strict(
         &self,
         statement: &SymbolNode,
         relabellings: &HashMap<String, String>,
@@ -346,7 +346,7 @@ impl Transformation {
         self.transform(statement, relabellings)
     }
 
-    pub fn transform(
+    fn transform(
         &self,
         statement: &SymbolNode,
         relabellings: &HashMap<String, String>,
