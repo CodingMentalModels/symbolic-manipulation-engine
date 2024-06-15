@@ -945,10 +945,10 @@ mod test_type {
 
     #[test]
     fn test_type_hierarchy_unions() {
-        let mut trivial = TypeHierarchy::new();
+        let trivial = TypeHierarchy::new();
         assert_eq!(trivial.union(&trivial), Ok(trivial.clone()));
 
-        let mut chain =
+        let chain =
             TypeHierarchy::chain(vec!["Real".into(), "Rational".into(), "Integer".into()]).unwrap();
 
         assert_eq!(trivial.union(&chain), chain.union(&trivial));
@@ -956,7 +956,7 @@ mod test_type {
 
         assert_eq!(chain.union(&chain), Ok(chain.clone()));
 
-        let mut chain_with_complex = TypeHierarchy::chain(vec![
+        let chain_with_complex = TypeHierarchy::chain(vec![
             "Complex".into(),
             "Real".into(),
             "Rational".into(),

@@ -7,7 +7,7 @@ use crate::parsing::parser::Parser;
 use crate::symbol::symbol_node::{Symbol, SymbolNode, SymbolNodeError};
 use crate::symbol::symbol_type::{Type, TypeError};
 
-use super::symbol_node::SymbolNodeAddress;
+use super::symbol_node::{SymbolName, SymbolNodeAddress};
 use super::symbol_type::TypeHierarchy;
 
 pub trait Transformation {
@@ -16,6 +16,59 @@ pub trait Transformation {
         hierarchy: &TypeHierarchy,
         statement: &SymbolNode,
     ) -> Result<SymbolNode, TransformationError>;
+}
+
+#[derive(Clone, Debug)]
+pub struct AdditionAlgorithm {
+    operator: Symbol,
+    input_type: Type,
+}
+
+impl Transformation for AdditionAlgorithm {
+    fn transform(
+        &self,
+        hierarchy: &TypeHierarchy,
+        statement: &SymbolNode,
+    ) -> Result<SymbolNode, TransformationError> {
+        if !statement.has_children() {
+            if hierarchy
+                .is_subtype_of(
+                    &statement.get_symbol().get_evaluates_to_type(),
+                    &self.input_type,
+                )
+                .map_err(|e| Into::<TransformationError>::into(e))?
+            {
+                return Ok(statement.clone());
+            } else {
+                return Err(TransformationError::NoValidTransformations);
+            }
+        }
+
+        if statement.get_n_children() != 2 {
+            return Err(TransformationError::NoValidTransformations);
+        }
+
+        let children = statement.get_children().clone();
+        let left = self.transform(hierarchy, &children[0])?;
+        let right = self.transform(hierarchy, &children[1])?;
+
+        let left_value = Self::try_parse_number(&left.get_root_name())?;
+        let right_value = Self::try_parse_number(&right.get_root_name())?;
+        let final_value = left_value + right_value;
+        Ok(SymbolNode::leaf(Symbol::new(
+            final_value.to_string(),
+            self.input_type.clone(),
+        )))
+    }
+}
+
+impl AdditionAlgorithm {
+    fn try_parse_number(symbol_name: &SymbolName) -> Result<f64, TransformationError> {
+        // TODO: This will fail on big enough numbers
+        return symbol_name
+            .parse::<f64>()
+            .map_err(|_| TransformationError::UnableToParse(symbol_name.clone()));
+    }
 }
 
 #[derive(Clone, Debug, Hash, PartialEq, Eq, Serialize, Deserialize)]
@@ -400,6 +453,7 @@ pub enum TransformationError {
     StatementDoesNotMatch(SymbolNode, SymbolNode),
     StatementTypesDoNotMatch,
     NoValidTransformations,
+    UnableToParse(SymbolName),
 }
 
 impl From<SymbolNodeError> for TransformationError {
@@ -425,31 +479,31 @@ mod test_transformation {
 
     use super::*;
 
-    //    #[test]
-    //    fn test_transformation_applies_algorithm() {
-    //        let algorithm = AdditionTransformation::new("+", "Real".into());
-    //        let parser = Parser::new(vec![Interpretation::infix_operator(
-    //            "+".into(),
-    //            1,
-    //            "Real".into(),
-    //        )]);
-    //        let from = parser.parse_from_string(vec!["+".to_string()], "a+b+c");
-    //        assert!(!algorithm.is_applicable(from));
-    //        assert_eq!(
-    //            algorithm.apply(from),
-    //            Err(TransformationError::NotApplicable)
-    //        );
-    //
-    //        let from = parser.parse_from_string(vec!["+".to_string()], "1+2");
-    //        assert!(algorithm.is_applicable(from));
-    //        assert_eq!(
-    //            algorithm.apply(from),
-    //            Ok(SymbolNode::leaf(Symbol::new(
-    //                "4".to_string(),
-    //                "Real".into()
-    //            )))
-    //        );
-    //    }
+    #[test]
+    fn test_transformation_applies_algorithm() {
+        let algorithm = AdditionAlgorithm::new("+", "Real".into());
+        let parser = Parser::new(vec![Interpretation::infix_operator(
+            "+".into(),
+            1,
+            "Real".into(),
+        )]);
+        let from = parser.parse_from_string(vec!["+".to_string()], "a+b+c");
+        assert!(!algorithm.is_applicable(from));
+        assert_eq!(
+            algorithm.transform(hierarchy, from),
+            Err(TransformationError::NotApplicable)
+        );
+
+        let from = parser.parse_from_string(vec!["+".to_string()], "1+2");
+        assert!(algorithm.is_applicable(from));
+        assert_eq!(
+            algorithm.apply(from),
+            Ok(SymbolNode::leaf(Symbol::new(
+                "4".to_string(),
+                "Real".into()
+            )))
+        );
+    }
 
     #[test]
     fn test_transformation_gets_valid_transformations() {
