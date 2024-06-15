@@ -145,7 +145,7 @@ impl Workspace {
         Ok(())
     }
 
-    pub fn add_parsed_statement(&mut self, s: &str) -> Result<SymbolNode, WorkspaceError> {
+    pub fn add_parsed_hypothesis(&mut self, s: &str) -> Result<SymbolNode, WorkspaceError> {
         let parsed = self.parse_from_string(s)?;
         self.generate_types(&parsed)?;
         self.add_hypothesis(parsed.clone())?;
@@ -658,7 +658,7 @@ mod test_workspace {
             ))
             .unwrap();
 
-        workspace.add_parsed_statement("x+y").unwrap();
+        workspace.add_parsed_hypothesis("x+y").unwrap();
         let expected = workspace.parse_from_string("y+x").unwrap();
         assert_eq!(
             workspace.try_transform_into_parsed("y+x").unwrap(),
@@ -666,7 +666,7 @@ mod test_workspace {
         );
         assert!(workspace.get_statements().contains(&expected));
 
-        workspace.add_parsed_statement("j+k").unwrap();
+        workspace.add_parsed_hypothesis("j+k").unwrap();
         let expected = workspace.parse_from_string("k+j").unwrap();
         assert_eq!(
             workspace.try_transform_into_parsed("k+j").unwrap(),
@@ -674,7 +674,7 @@ mod test_workspace {
         );
         assert!(workspace.get_statements().contains(&expected));
 
-        workspace.add_parsed_statement("a+(b+c)").unwrap();
+        workspace.add_parsed_hypothesis("a+(b+c)").unwrap();
         let expected = workspace.parse_from_string("(b+c)+a").unwrap();
         assert_eq!(
             workspace.try_transform_into_parsed("(b+c)+a").unwrap(),
@@ -692,7 +692,7 @@ mod test_workspace {
             ))
             .unwrap();
 
-        workspace.add_parsed_statement("a+(b+c)").unwrap();
+        workspace.add_parsed_hypothesis("a+(b+c)").unwrap();
         let expected = workspace.parse_from_string("a+(c+b)").unwrap();
         assert_eq!(
             workspace.try_transform_into_parsed("a+(c+b)").unwrap(),
@@ -702,7 +702,7 @@ mod test_workspace {
     }
 
     #[test]
-    fn test_workspace_adds_and_deletes_statement() {
+    fn test_workspace_adds_hypotheses() {
         let types = TypeHierarchy::new();
         let mut workspace = Workspace::new(types, vec![], vec![]);
         let statement = SymbolNode::leaf_object("a");
@@ -733,7 +733,7 @@ mod test_workspace {
             vec![plus, integer_interpretation],
         );
 
-        assert!(workspace.add_parsed_statement("2+2").is_ok());
+        assert!(workspace.add_parsed_hypothesis("2+2").is_ok());
         let mut expected =
             TypeHierarchy::chain(vec!["Real".into(), "Integer".into(), "2".into()]).unwrap();
         expected.add_chain(vec!["+".into()]).unwrap();

@@ -250,7 +250,7 @@ impl Cli {
             None => return Err("No to provided.".to_string()),
             Some(to) => to,
         };
-        let from = workspace
+        let _from = workspace
             .add_parsed_transformation(&from_as_string, &to_as_string)
             .map_err(|e| format!("Workspace Error: {:?}", e).to_string())?;
         self.update_workspace(workspace)?;
@@ -263,7 +263,7 @@ impl Cli {
             None => Err("No statement provided to derive".to_string()),
             Some(statement) => {
                 let to_return = workspace
-                    .add_parsed_statement(statement)
+                    .add_parsed_hypothesis(statement)
                     .map_err(|e| format!("Parser Error: {:?}", e).to_string())
                     .map(|_| "Hypthesis added.".to_string());
                 self.update_workspace(workspace)?;
