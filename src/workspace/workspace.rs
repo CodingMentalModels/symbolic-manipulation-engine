@@ -355,7 +355,7 @@ impl Workspace {
         let transformation = self.transformations[transformation_index].clone();
         let statement = self.statements[statement_index].clone();
         let transformed_statement = transformation
-            .transform_at(&statement, address.clone())
+            .relabel_and_transform_at(&statement, address.clone())
             .map_err(|_| WorkspaceError::InvalidTransformationAddress)?;
 
         self.statements.push(transformed_statement.clone());
