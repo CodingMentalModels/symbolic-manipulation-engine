@@ -11,7 +11,7 @@ use ts_rs::TS;
 
 use super::{
     symbol_node::{Symbol, SymbolNode},
-    transformation::Transformation,
+    transformation::ExplicitTransformation,
 };
 use crate::constants::*;
 
@@ -323,7 +323,7 @@ impl TypeHierarchy {
 
     pub fn binds_transformation_or_error(
         &self,
-        transformation: &Transformation,
+        transformation: &ExplicitTransformation,
     ) -> Result<(), TypeError> {
         self.binds_statement_or_error(transformation.get_from())?;
         self.binds_statement_or_error(transformation.get_to())
@@ -647,7 +647,7 @@ mod test_type {
 
         let custom_tokens = vec!["=".to_string()];
 
-        let symmetry = Transformation::symmetry(
+        let symmetry = ExplicitTransformation::symmetry(
             "=".to_string(),
             "=".into(),
             ("a".to_string(), "b".to_string()),
@@ -700,7 +700,7 @@ mod test_type {
 
         let custom_tokens = vec!["=_real".to_string(), "=".to_string()];
 
-        let symmetry = Transformation::symmetry(
+        let symmetry = ExplicitTransformation::symmetry(
             "=".to_string(),
             "=".into(),
             ("a".to_string(), "b".to_string()),
@@ -750,7 +750,7 @@ mod test_type {
             ))
         );
 
-        let real_symmetry = Transformation::symmetry(
+        let real_symmetry = ExplicitTransformation::symmetry(
             "=_real".to_string(),
             "=_real".into(),
             ("a".to_string(), "b".to_string()),

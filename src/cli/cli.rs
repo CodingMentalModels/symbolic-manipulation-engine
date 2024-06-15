@@ -16,7 +16,7 @@ use crate::{
     },
     symbol::{
         symbol_type::{GeneratedType, GeneratedTypeCondition, Type},
-        transformation::Transformation,
+        transformation::ExplicitTransformation,
     },
     workspace::workspace::Workspace,
 };

@@ -10,27 +10,45 @@ use crate::symbol::symbol_type::{Type, TypeError};
 use super::symbol_node::SymbolNodeAddress;
 use super::symbol_type::TypeHierarchy;
 
+pub trait Transformation {
+    fn transform(
+        &self,
+        hierarchy: &TypeHierarchy,
+        statement: &SymbolNode,
+    ) -> Result<SymbolNode, TransformationError>;
+}
+
 #[derive(Clone, Debug, Hash, PartialEq, Eq, Serialize, Deserialize)]
-pub struct Transformation {
+pub struct ExplicitTransformation {
     pub from: SymbolNode,
     pub to: SymbolNode,
 }
 
-impl From<(SymbolNode, SymbolNode)> for Transformation {
+impl From<(SymbolNode, SymbolNode)> for ExplicitTransformation {
     fn from(value: (SymbolNode, SymbolNode)) -> Self {
         Self::new(value.0, value.1)
     }
 }
 
-impl From<(Symbol, SymbolNode)> for Transformation {
+impl From<(Symbol, SymbolNode)> for ExplicitTransformation {
     fn from(value: (Symbol, SymbolNode)) -> Self {
         Self::new(value.0.into(), value.1)
     }
 }
 
-impl Transformation {
-    pub fn new(from: SymbolNode, to: SymbolNode) -> Transformation {
-        Transformation { from, to }
+impl Transformation for ExplicitTransformation {
+    fn transform(
+        &self,
+        hierarchy: &TypeHierarchy,
+        statement: &SymbolNode,
+    ) -> Result<SymbolNode, TransformationError> {
+        self.typed_relabel_and_transform(hierarchy, statement)
+    }
+}
+
+impl ExplicitTransformation {
+    pub fn new(from: SymbolNode, to: SymbolNode) -> ExplicitTransformation {
+        ExplicitTransformation { from, to }
     }
 
     pub fn get_from(&self) -> &SymbolNode {
@@ -52,7 +70,7 @@ impl Transformation {
             Symbol::new(operator_name, operator_type),
             vec![object.clone(), object.clone()],
         );
-        Transformation::new(node.clone(), node)
+        ExplicitTransformation::new(node.clone(), node)
     }
 
     pub fn symmetry(
@@ -66,7 +84,7 @@ impl Transformation {
         let operator = Symbol::new(operator_name, operator_type);
         let from = SymbolNode::new(operator.clone(), vec![left.clone(), right.clone()]);
         let to = SymbolNode::new(operator, vec![right.clone(), left.clone()]);
-        Transformation::new(from, to)
+        ExplicitTransformation::new(from, to)
     }
 
     pub fn commutivity(
@@ -95,7 +113,7 @@ impl Transformation {
         let b_c = SymbolNode::new(operator.clone(), vec![b.clone(), c.clone()]);
         let a_then_b_c = SymbolNode::new(operator.clone(), vec![a.clone(), b_c.clone()]);
 
-        Transformation::new(a_b_then_c, a_then_b_c)
+        ExplicitTransformation::new(a_b_then_c, a_then_b_c)
     }
 
     pub fn to_string(&self) -> String {
@@ -447,7 +465,7 @@ mod test_transformation {
 
         let custom_tokens = vec!["=".to_string()];
 
-        let irrelevant_transform = Transformation::associativity(
+        let irrelevant_transform = ExplicitTransformation::associativity(
             "*".to_string(),
             "*".into(),
             ("j".to_string(), "l".to_string(), "k".to_string()),
@@ -462,7 +480,7 @@ mod test_transformation {
             irrelevant_transform.get_valid_transformations(&hierarchy, &x_equals_y),
             vec![x_equals_y.clone()].into_iter().collect()
         );
-        let transformation = Transformation::commutivity(
+        let transformation = ExplicitTransformation::commutivity(
             "=".to_string(),
             "=".into(),
             ("a".to_string(), "b".to_string()),
@@ -556,7 +574,7 @@ mod test_transformation {
         );
 
         // Using overloaded names shouldn't matter
-        let transformation = Transformation::commutivity(
+        let transformation = ExplicitTransformation::commutivity(
             "=".to_string(),
             "=".into(),
             ("x".to_string(), "y".to_string()),
@@ -603,7 +621,7 @@ mod test_transformation {
     #[test]
     fn test_transformation_transforms() {
         let transformation =
-            Transformation::new(SymbolNode::leaf_object("a"), SymbolNode::leaf_object("b"));
+            ExplicitTransformation::new(SymbolNode::leaf_object("a"), SymbolNode::leaf_object("b"));
 
         let statement = SymbolNode::leaf_object("c");
 
@@ -618,7 +636,7 @@ mod test_transformation {
         );
         assert_eq!(transformed, Ok(SymbolNode::leaf_object("d")));
 
-        let transformation = Transformation::new(
+        let transformation = ExplicitTransformation::new(
             SymbolNode::new(
                 "=".into(),
                 vec![SymbolNode::leaf_object("a"), SymbolNode::leaf_object("b")],
@@ -649,7 +667,7 @@ mod test_transformation {
 
     #[test]
     fn test_transformation_transforms_all() {
-        let commutativity = Transformation::new(
+        let commutativity = ExplicitTransformation::new(
             SymbolNode::new(
                 "=".into(),
                 vec![SymbolNode::leaf_object("a"), SymbolNode::leaf_object("b")],
@@ -703,7 +721,7 @@ mod test_transformation {
     fn test_transformation_generalizes_to_fit() {
         let hierarchy = TypeHierarchy::chain(vec!["Integer".into(), "=".into()]).unwrap();
         let trivial_t =
-            Transformation::new(SymbolNode::leaf_object("c"), SymbolNode::leaf_object("d"));
+            ExplicitTransformation::new(SymbolNode::leaf_object("c"), SymbolNode::leaf_object("d"));
 
         let trivial = SymbolNode::leaf_object("c");
         assert_eq!(
@@ -712,7 +730,7 @@ mod test_transformation {
         );
 
         let different_t =
-            Transformation::new(SymbolNode::leaf_object("a"), SymbolNode::leaf_object("d"));
+            ExplicitTransformation::new(SymbolNode::leaf_object("a"), SymbolNode::leaf_object("d"));
 
         let different_name = SymbolNode::leaf_object("a");
         assert_eq!(
@@ -723,7 +741,7 @@ mod test_transformation {
         );
 
         let overloaded_t =
-            Transformation::new(SymbolNode::leaf_object("d"), SymbolNode::leaf_object("d"));
+            ExplicitTransformation::new(SymbolNode::leaf_object("d"), SymbolNode::leaf_object("d"));
         let overloaded_name = SymbolNode::leaf_object("d");
         assert_eq!(
             overloaded_t
@@ -742,7 +760,7 @@ mod test_transformation {
 
         let custom_tokens = vec!["=".to_string()];
 
-        let symmetry = Transformation::symmetry(
+        let symmetry = ExplicitTransformation::symmetry(
             "=".to_string(),
             "=".into(),
             ("a".to_string(), "b".to_string()),
@@ -761,16 +779,17 @@ mod test_transformation {
             symmetry
                 .generalize_to_fit(&hierarchy, &x_equals_y_equals_z)
                 .unwrap(),
-            Transformation::new(x_equals_y_equals_z.clone(), z_equals_x_equals_y.clone()),
+            ExplicitTransformation::new(x_equals_y_equals_z.clone(), z_equals_x_equals_y.clone()),
             "\n\n{} \nvs. \n{}",
             symmetry
                 .generalize_to_fit(&hierarchy, &x_equals_y_equals_z)
                 .unwrap()
                 .to_string(),
-            Transformation::new(x_equals_y_equals_z, z_equals_x_equals_y.clone()).to_string(),
+            ExplicitTransformation::new(x_equals_y_equals_z, z_equals_x_equals_y.clone())
+                .to_string(),
         );
 
-        let symmetry = Transformation::symmetry(
+        let symmetry = ExplicitTransformation::symmetry(
             "=".to_string(),
             "=".into(),
             ("x".to_string(), "y".to_string()),
@@ -781,13 +800,14 @@ mod test_transformation {
             symmetry
                 .generalize_to_fit(&hierarchy, &x_equals_y_equals_z)
                 .unwrap(),
-            Transformation::new(x_equals_y_equals_z.clone(), z_equals_x_equals_y.clone()),
+            ExplicitTransformation::new(x_equals_y_equals_z.clone(), z_equals_x_equals_y.clone()),
             "\n\n{} \nvs. \n{}",
             symmetry
                 .generalize_to_fit(&hierarchy, &x_equals_y_equals_z)
                 .unwrap()
                 .to_string(),
-            Transformation::new(x_equals_y_equals_z, z_equals_x_equals_y.clone()).to_string(),
+            ExplicitTransformation::new(x_equals_y_equals_z, z_equals_x_equals_y.clone())
+                .to_string(),
         );
 
         // TODO: Figure out whether this needs to work
@@ -814,7 +834,7 @@ mod test_transformation {
         let hierarchy =
             TypeHierarchy::chain(vec!["Real".into(), "Integer".into(), "=".into()]).unwrap();
         let transformation =
-            Transformation::new(SymbolNode::leaf_object("c"), SymbolNode::leaf_object("d"));
+            ExplicitTransformation::new(SymbolNode::leaf_object("c"), SymbolNode::leaf_object("d"));
 
         let a_equals_b = SymbolNode::new(
             "=".into(),
@@ -870,7 +890,7 @@ mod test_transformation {
 
         let custom_tokens = vec!["=".to_string()];
 
-        let transformation = Transformation::symmetry(
+        let transformation = ExplicitTransformation::symmetry(
             "=".to_string(),
             "=".into(),
             ("a".to_string(), "b".to_string()),
@@ -903,7 +923,7 @@ mod test_transformation {
             Ok(y_equals_x_equals_z)
         );
 
-        let transformation = Transformation::symmetry(
+        let transformation = ExplicitTransformation::symmetry(
             "=".to_string(),
             "=".into(),
             ("x".to_string(), "y".to_string()),
@@ -935,7 +955,7 @@ mod test_transformation {
     #[test]
     fn test_transformation_transforms_at() {
         let transformation =
-            Transformation::new(SymbolNode::leaf_object("c"), SymbolNode::leaf_object("d"));
+            ExplicitTransformation::new(SymbolNode::leaf_object("c"), SymbolNode::leaf_object("d"));
 
         let a_equals_b = SymbolNode::new(
             "=".into(),
@@ -979,7 +999,7 @@ mod test_transformation {
 
     #[test]
     fn test_transformation_reflexivity() {
-        let transformation = Transformation::reflexivity(
+        let transformation = ExplicitTransformation::reflexivity(
             "=".to_string(),
             "Rational".into(),
             "x".to_string(),
@@ -1003,7 +1023,7 @@ mod test_transformation {
 
     #[test]
     fn test_transformation_symmetry() {
-        let transformation = Transformation::symmetry(
+        let transformation = ExplicitTransformation::symmetry(
             "+".to_string(),
             "Complex".into(),
             ("x".to_string(), "y".to_string()),

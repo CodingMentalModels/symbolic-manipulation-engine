@@ -16,7 +16,7 @@ use crate::{
             DisplayGeneratedType, DisplayTypeHierarchyNode, GeneratedType, Type, TypeError,
             TypeHierarchy, TypeName,
         },
-        transformation::{Transformation, TransformationError},
+        transformation::{ExplicitTransformation, TransformationError},
     },
 };
 
@@ -69,7 +69,7 @@ pub struct Workspace {
     generated_types: Vec<GeneratedType>,
     interpretations: Vec<Interpretation>,
     statements: Vec<SymbolNode>,
-    transformations: Vec<Transformation>,
+    transformations: Vec<ExplicitTransformation>,
     provenance: Vec<Provenance>,
 }
 
@@ -156,12 +156,12 @@ impl Workspace {
         &mut self,
         from: &str,
         to: &str,
-    ) -> Result<Transformation, WorkspaceError> {
+    ) -> Result<ExplicitTransformation, WorkspaceError> {
         let parsed_from = self.parse_from_string(from)?;
         self.generate_types(&parsed_from)?;
         let parsed_to = self.parse_from_string(to)?;
         self.generate_types(&parsed_to)?;
-        let transformation = Transformation::new(parsed_from, parsed_to);
+        let transformation = ExplicitTransformation::new(parsed_from, parsed_to);
         self.add_transformation(transformation.clone())?;
         Ok(transformation)
     }
@@ -232,14 +232,14 @@ impl Workspace {
         self.provenance.push(provenance);
     }
 
-    pub fn get_transformations(&self) -> &Vec<Transformation> {
+    pub fn get_transformations(&self) -> &Vec<ExplicitTransformation> {
         &self.transformations
     }
 
     pub fn get_transformation(
         &self,
         index: TransformationIndex,
-    ) -> Result<Transformation, WorkspaceError> {
+    ) -> Result<ExplicitTransformation, WorkspaceError> {
         if self.transformation_index_is_invalid(index) {
             Err(WorkspaceError::InvalidTransformationIndex)
         } else {
@@ -249,7 +249,7 @@ impl Workspace {
 
     pub fn add_transformation(
         &mut self,
-        transformation: Transformation,
+        transformation: ExplicitTransformation,
     ) -> Result<(), WorkspaceError> {
         self.types.binds_transformation_or_error(&transformation)?;
         self.generate_types_in_bulk(
@@ -650,7 +650,7 @@ mod test_workspace {
         ];
         let mut workspace = Workspace::new(types.clone(), vec![], interpretations.clone());
         workspace
-            .add_transformation(Transformation::symmetry(
+            .add_transformation(ExplicitTransformation::symmetry(
                 "+".to_string(),
                 "+".into(),
                 ("a".to_string(), "b".to_string()),
@@ -684,7 +684,7 @@ mod test_workspace {
 
         let mut workspace = Workspace::new(types.clone(), vec![], interpretations);
         workspace
-            .add_transformation(Transformation::symmetry(
+            .add_transformation(ExplicitTransformation::symmetry(
                 "+".to_string(),
                 "+".into(),
                 ("a".to_string(), "b".to_string()),
@@ -755,7 +755,7 @@ mod test_workspace {
         assert_eq!(workspace.statements.len(), 1);
 
         let transformation =
-            Transformation::new(SymbolNode::leaf_object("a"), SymbolNode::leaf_object("b"));
+            ExplicitTransformation::new(SymbolNode::leaf_object("a"), SymbolNode::leaf_object("b"));
         workspace.add_transformation(transformation).unwrap();
         assert_eq!(workspace.transformations.len(), 1);
 
@@ -794,14 +794,14 @@ mod test_workspace {
             .add_chain_to_parent(vec!["+".into()], "Operator".into())
             .unwrap();
 
-        let equality_reflexivity = Transformation::reflexivity(
+        let equality_reflexivity = ExplicitTransformation::reflexivity(
             "=".to_string(),
             "=".into(),
             "x".to_string(),
             "Real".into(),
         );
 
-        let equality_symmetry = Transformation::symmetry(
+        let equality_symmetry = ExplicitTransformation::symmetry(
             "=".to_string(),
             "=".into(),
             ("x".to_string(), "y".to_string()),
