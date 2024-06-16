@@ -1,11 +1,10 @@
 use std::collections::{HashMap, HashSet};
 
-use serde::{Deserialize, Serialize};
-
 use crate::parsing::interpretation::Interpretation;
 use crate::parsing::parser::Parser;
 use crate::symbol::symbol_node::{Symbol, SymbolNode, SymbolNodeError};
 use crate::symbol::symbol_type::{Type, TypeError};
+use serde::{Deserialize, Serialize};
 
 use super::symbol_node::{SymbolName, SymbolNodeAddress};
 use super::symbol_type::TypeHierarchy;
@@ -16,6 +15,108 @@ pub trait Transformation {
         hierarchy: &TypeHierarchy,
         statement: &SymbolNode,
     ) -> Result<SymbolNode, TransformationError>;
+
+    fn try_transform_into(
+        &self,
+        hierarchy: &TypeHierarchy,
+        from: &SymbolNode,
+        to: &SymbolNode,
+    ) -> Result<SymbolNode, TransformationError> {
+        let valid_transformations = self.get_valid_transformations(hierarchy, from);
+        if valid_transformations.contains(to) {
+            Ok(to.clone())
+        } else {
+            Err(TransformationError::NoValidTransformations)
+        }
+    }
+
+    fn get_valid_transformations(
+        &self,
+        hierarchy: &TypeHierarchy,
+        statement: &SymbolNode,
+    ) -> HashSet<SymbolNode> {
+        let mut base_case = vec![statement.clone()].into_iter().collect::<HashSet<_>>();
+        match self.typed_relabel_and_transform_at(hierarchy, statement, vec![]) {
+            Ok(result) => {
+                base_case.insert(result);
+            }
+            _ => {}
+        };
+
+        let mut to_return = base_case.clone();
+        for potentially_transformed in base_case.iter() {
+            let new_statements =
+                self.get_valid_child_transformations(hierarchy, potentially_transformed);
+            to_return = to_return.union(&new_statements).cloned().collect();
+        }
+
+        return to_return;
+    }
+
+    fn get_valid_child_transformations(
+        &self,
+        hierarchy: &TypeHierarchy,
+        statement: &SymbolNode,
+    ) -> HashSet<SymbolNode> {
+        let mut child_to_valid_transformations = HashMap::new();
+        for child in statement.get_children() {
+            let possible_transformations = self.get_valid_transformations(hierarchy, child);
+            child_to_valid_transformations.insert(child, possible_transformations);
+        }
+        let mut new_statements = vec![statement.clone()].into_iter().collect::<HashSet<_>>();
+
+        let n_subsets = 1 << child_to_valid_transformations.len();
+        for bitmask in 0..n_subsets {
+            // Bitmask indicates whether to take the child or its transformed versions
+            // TODO: There's a massive opportunity for optimization here by eliminating the cases where
+            // there are no transformations
+
+            let mut transformed_statements =
+                vec![statement.clone()].into_iter().collect::<HashSet<_>>();
+            for (i, child) in statement.get_children().iter().enumerate() {
+                let mut updated_statements = transformed_statements.clone();
+                let should_transform_ith_child = bitmask & (1 << i) != 0;
+                if should_transform_ith_child {
+                    let transformed_children_set = child_to_valid_transformations
+                        .get(child)
+                        .expect("We constructed the map from the same vector.");
+                    for c in transformed_children_set {
+                        for transformed_statement in transformed_statements.iter() {
+                            let updated_statement = transformed_statement
+                                .clone()
+                                .with_child_replaced(i, c.clone())
+                                .expect("Child index is guaranteed to be in range.");
+                            updated_statements.insert(updated_statement);
+                        }
+                    }
+                } else {
+                    // Do nothing; child is fine as is
+                }
+                transformed_statements = updated_statements;
+            }
+            new_statements = new_statements
+                .union(&transformed_statements)
+                .cloned()
+                .collect();
+        }
+        new_statements
+    }
+
+    fn typed_relabel_and_transform_at(
+        &self,
+        hierarchy: &TypeHierarchy,
+        statement: &SymbolNode,
+        address: SymbolNodeAddress,
+    ) -> Result<SymbolNode, TransformationError> {
+        let substatement_to_transform = statement.get_node(address.clone()).ok_or_else(|| {
+            TransformationError::InvalidSymbolNodeError(SymbolNodeError::InvalidAddress)
+        })?;
+        let transformed_substatement = self.transform(hierarchy, &substatement_to_transform)?;
+        match statement.replace_node(&address, &transformed_substatement) {
+            Ok(transformed_statement) => Ok(transformed_statement),
+            Err(e) => Err(TransformationError::InvalidSymbolNodeError(e)),
+        }
+    }
 }
 
 #[derive(Clone, Debug)]
@@ -193,109 +294,6 @@ impl ExplicitTransformation {
         let mut variables = self.from.get_symbols();
         variables.extend(self.to.get_symbols());
         variables.into_iter().map(|s| s.get_name()).collect()
-    }
-
-    pub fn try_transform_into(
-        &self,
-        hierarchy: &TypeHierarchy,
-        from: &SymbolNode,
-        to: &SymbolNode,
-    ) -> Result<SymbolNode, TransformationError> {
-        let valid_transformations = self.get_valid_transformations(hierarchy, from);
-        if valid_transformations.contains(to) {
-            Ok(to.clone())
-        } else {
-            Err(TransformationError::NoValidTransformations)
-        }
-    }
-
-    pub fn get_valid_transformations(
-        &self,
-        hierarchy: &TypeHierarchy,
-        statement: &SymbolNode,
-    ) -> HashSet<SymbolNode> {
-        let mut base_case = vec![statement.clone()].into_iter().collect::<HashSet<_>>();
-        match self.typed_relabel_and_transform_at(hierarchy, statement, vec![]) {
-            Ok(result) => {
-                base_case.insert(result);
-            }
-            _ => {}
-        };
-
-        let mut to_return = base_case.clone();
-        for potentially_transformed in base_case.iter() {
-            let new_statements =
-                self.get_valid_child_transformations(hierarchy, potentially_transformed);
-            to_return = to_return.union(&new_statements).cloned().collect();
-        }
-
-        return to_return;
-    }
-
-    fn get_valid_child_transformations(
-        &self,
-        hierarchy: &TypeHierarchy,
-        statement: &SymbolNode,
-    ) -> HashSet<SymbolNode> {
-        let mut child_to_valid_transformations = HashMap::new();
-        for child in statement.get_children() {
-            let possible_transformations = self.get_valid_transformations(hierarchy, child);
-            child_to_valid_transformations.insert(child, possible_transformations);
-        }
-        let mut new_statements = vec![statement.clone()].into_iter().collect::<HashSet<_>>();
-
-        let n_subsets = 1 << child_to_valid_transformations.len();
-        for bitmask in 0..n_subsets {
-            // Bitmask indicates whether to take the child or its transformed versions
-            // TODO: There's a massive opportunity for optimization here by eliminating the cases where
-            // there are no transformations
-
-            let mut transformed_statements =
-                vec![statement.clone()].into_iter().collect::<HashSet<_>>();
-            for (i, child) in statement.get_children().iter().enumerate() {
-                let mut updated_statements = transformed_statements.clone();
-                let should_transform_ith_child = bitmask & (1 << i) != 0;
-                if should_transform_ith_child {
-                    let transformed_children_set = child_to_valid_transformations
-                        .get(child)
-                        .expect("We constructed the map from the same vector.");
-                    for c in transformed_children_set {
-                        for transformed_statement in transformed_statements.iter() {
-                            let updated_statement = transformed_statement
-                                .clone()
-                                .with_child_replaced(i, c.clone())
-                                .expect("Child index is guaranteed to be in range.");
-                            updated_statements.insert(updated_statement);
-                        }
-                    }
-                } else {
-                    // Do nothing; child is fine as is
-                }
-                transformed_statements = updated_statements;
-            }
-            new_statements = new_statements
-                .union(&transformed_statements)
-                .cloned()
-                .collect();
-        }
-        new_statements
-    }
-
-    pub fn typed_relabel_and_transform_at(
-        &self,
-        hierarchy: &TypeHierarchy,
-        statement: &SymbolNode,
-        address: SymbolNodeAddress,
-    ) -> Result<SymbolNode, TransformationError> {
-        let substatement_to_transform = statement.get_node(address.clone()).ok_or_else(|| {
-            TransformationError::InvalidSymbolNodeError(SymbolNodeError::InvalidAddress)
-        })?;
-        let transformed_substatement =
-            self.typed_relabel_and_transform(hierarchy, &substatement_to_transform)?;
-        match statement.replace_node(&address, &transformed_substatement) {
-            Ok(transformed_statement) => Ok(transformed_statement),
-            Err(e) => Err(TransformationError::InvalidSymbolNodeError(e)),
-        }
     }
 
     fn relabel_and_transform_at(
