@@ -16,7 +16,7 @@ use crate::{
             DisplayGeneratedType, DisplayTypeHierarchyNode, GeneratedType, Type, TypeError,
             TypeHierarchy, TypeName,
         },
-        transformation::{ExplicitTransformation, TransformationError},
+        transformation::{ExplicitTransformation, Transformation, TransformationError},
     },
 };
 
@@ -69,7 +69,7 @@ pub struct Workspace {
     generated_types: Vec<GeneratedType>,
     interpretations: Vec<Interpretation>,
     statements: Vec<SymbolNode>,
-    transformations: Vec<ExplicitTransformation>,
+    transformations: Vec<Transformation>,
     provenance: Vec<Provenance>,
 }
 
