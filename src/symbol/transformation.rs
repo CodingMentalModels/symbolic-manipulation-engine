@@ -54,6 +54,7 @@ impl Transformation for AdditionAlgorithm {
 
         let left_value = Self::try_parse_number(&left.get_root_name())?;
         let right_value = Self::try_parse_number(&right.get_root_name())?;
+        // TODO This will overflow on big enough numbers
         let final_value = left_value + right_value;
         Ok(SymbolNode::leaf(Symbol::new(
             final_value.to_string(),
@@ -63,6 +64,13 @@ impl Transformation for AdditionAlgorithm {
 }
 
 impl AdditionAlgorithm {
+    pub fn new(operator: Symbol, input_type: Type) -> Self {
+        Self {
+            operator,
+            input_type,
+        }
+    }
+
     fn try_parse_number(symbol_name: &SymbolName) -> Result<f64, TransformationError> {
         // TODO: This will fail on big enough numbers
         return symbol_name
@@ -475,31 +483,41 @@ impl From<TypeError> for TransformationError {
 
 #[cfg(test)]
 mod test_transformation {
-    use crate::parsing::{interpretation::Interpretation, tokenizer::Token};
+    use crate::{
+        parsing::{interpretation::Interpretation, tokenizer::Token},
+        symbol::symbol_type::GeneratedTypeCondition,
+    };
 
     use super::*;
 
     #[test]
     fn test_transformation_applies_algorithm() {
-        let algorithm = AdditionAlgorithm::new("+", "Real".into());
-        let parser = Parser::new(vec![Interpretation::infix_operator(
-            "+".into(),
-            1,
-            "Real".into(),
-        )]);
-        let from = parser.parse_from_string(vec!["+".to_string()], "a+b+c");
-        assert!(!algorithm.is_applicable(from));
+        let algorithm =
+            AdditionAlgorithm::new(Symbol::new("+".to_string(), "Real".into()), "Real".into());
+        let parser = Parser::new(vec![
+            Interpretation::singleton("a", "Real".into()),
+            Interpretation::singleton("b", "Real".into()),
+            Interpretation::singleton("c", "Real".into()),
+            Interpretation::singleton("1", "Real".into()),
+            Interpretation::singleton("2", "Real".into()),
+            Interpretation::infix_operator("+".into(), 1, "Real".into()),
+        ]);
+        let from = parser
+            .parse_from_string(vec!["+".to_string()], "a+b+c")
+            .unwrap();
+        let hierarchy = TypeHierarchy::chain(vec!["Real".into()]).unwrap();
         assert_eq!(
-            algorithm.transform(hierarchy, from),
-            Err(TransformationError::NotApplicable)
+            algorithm.transform(&hierarchy, &from),
+            Err(TransformationError::UnableToParse("a".to_string()))
         );
 
-        let from = parser.parse_from_string(vec!["+".to_string()], "1+2");
-        assert!(algorithm.is_applicable(from));
+        let from = parser
+            .parse_from_string(vec!["+".to_string()], "1+2")
+            .unwrap();
         assert_eq!(
-            algorithm.apply(from),
+            algorithm.transform(&hierarchy, &from),
             Ok(SymbolNode::leaf(Symbol::new(
-                "4".to_string(),
+                "3".to_string(),
                 "Real".into()
             )))
         );
