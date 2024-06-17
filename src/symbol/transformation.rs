@@ -569,7 +569,7 @@ mod test_transformation {
             .parse_from_string(custom_tokens.clone(), "y = x")
             .unwrap();
         assert_eq!(
-            transformation.relabel_and_transform_at(&x_equals_y, vec![]),
+            transformation.transform(&hierarchy, &x_equals_y),
             Ok(y_equals_x.clone())
         );
         assert_eq!(
@@ -653,7 +653,7 @@ mod test_transformation {
         );
 
         // Using overloaded names shouldn't matter
-        let transformation = ExplicitTransformation::commutivity(
+        let transformation: Transformation = ExplicitTransformation::commutivity(
             "=".to_string(),
             "=".into(),
             ("x".to_string(), "y".to_string()),
@@ -913,8 +913,9 @@ mod test_transformation {
     fn test_transformation_typed_transforms_at() {
         let hierarchy =
             TypeHierarchy::chain(vec!["Real".into(), "Integer".into(), "=".into()]).unwrap();
-        let transformation =
-            ExplicitTransformation::new(SymbolNode::leaf_object("c"), SymbolNode::leaf_object("d"));
+        let transformation: Transformation =
+            ExplicitTransformation::new(SymbolNode::leaf_object("c"), SymbolNode::leaf_object("d"))
+                .into();
 
         let a_equals_b = SymbolNode::new(
             "=".into(),
@@ -970,12 +971,13 @@ mod test_transformation {
 
         let custom_tokens = vec!["=".to_string()];
 
-        let transformation = ExplicitTransformation::symmetry(
+        let transformation: Transformation = ExplicitTransformation::symmetry(
             "=".to_string(),
             "=".into(),
             ("a".to_string(), "b".to_string()),
             "Integer".into(),
-        );
+        )
+        .into();
 
         let x_equals_y_equals_z = parser
             .parse_from_string(custom_tokens.clone(), "(x=y)=z")
@@ -1003,12 +1005,13 @@ mod test_transformation {
             Ok(y_equals_x_equals_z)
         );
 
-        let transformation = ExplicitTransformation::symmetry(
+        let transformation: Transformation = ExplicitTransformation::symmetry(
             "=".to_string(),
             "=".into(),
             ("x".to_string(), "y".to_string()),
             "Integer".into(),
-        );
+        )
+        .into();
 
         assert_eq!(
             transformation.typed_relabel_and_transform_at(&hierarchy, &x_equals_y_equals_z, vec![]),
@@ -1034,8 +1037,9 @@ mod test_transformation {
 
     #[test]
     fn test_transformation_transforms_at() {
-        let transformation =
-            ExplicitTransformation::new(SymbolNode::leaf_object("c"), SymbolNode::leaf_object("d"));
+        let transformation: Transformation =
+            ExplicitTransformation::new(SymbolNode::leaf_object("c"), SymbolNode::leaf_object("d"))
+                .into();
 
         let a_equals_b = SymbolNode::new(
             "=".into(),
