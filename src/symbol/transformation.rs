@@ -139,6 +139,13 @@ impl Transformation {
             Err(e) => Err(TransformationError::InvalidSymbolNodeError(e)),
         }
     }
+
+    pub fn to_interpreted_string(&self, interpretations: &Vec<Interpretation>) -> String {
+        match self {
+            Self::ExplicitTransformation(t) => t.to_interpreted_string(interpretations),
+            Self::AdditionAlgorithm(a) => a.to_string(),
+        }
+    }
 }
 
 #[derive(Clone, Debug, Hash, PartialEq, Eq, Serialize, Deserialize)]
@@ -190,6 +197,16 @@ impl AdditionAlgorithm {
             final_value.to_string(),
             self.input_type.clone(),
         )))
+    }
+
+    pub fn to_string(&self) -> String {
+        format!(
+            "{} {} {}",
+            self.input_type.to_string(),
+            self.operator.get_name(),
+            self.input_type.to_string()
+        )
+        .to_string()
     }
 
     fn try_parse_number(symbol_name: &SymbolName) -> Result<f64, TransformationError> {
