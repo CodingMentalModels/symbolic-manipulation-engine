@@ -162,6 +162,14 @@ impl AdditionAlgorithm {
         }
     }
 
+    pub fn get_operator(&self) -> Symbol {
+        self.operator.clone()
+    }
+
+    pub fn get_input_type(&self) -> Type {
+        self.input_type.clone()
+    }
+
     pub fn transform(
         &self,
         hierarchy: &TypeHierarchy,
@@ -1054,9 +1062,8 @@ mod test_transformation {
 
     #[test]
     fn test_transformation_transforms_at() {
-        let transformation: Transformation =
-            ExplicitTransformation::new(SymbolNode::leaf_object("c"), SymbolNode::leaf_object("d"))
-                .into();
+        let transformation =
+            ExplicitTransformation::new(SymbolNode::leaf_object("c"), SymbolNode::leaf_object("d"));
 
         let a_equals_b = SymbolNode::new(
             "=".into(),

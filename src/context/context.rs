@@ -6,7 +6,7 @@ use crate::{
     parsing::interpretation::Interpretation,
     symbol::{
         symbol_type::{GeneratedType, Type, TypeError, TypeHierarchy},
-        transformation::ExplicitTransformation,
+        transformation::Transformation,
     },
     workspace::workspace::Workspace,
 };
@@ -16,7 +16,7 @@ pub struct Context {
     types: TypeHierarchy,
     generated_types: Vec<GeneratedType>,
     interpretations: Vec<Interpretation>,
-    transformations: Vec<ExplicitTransformation>,
+    transformations: Vec<Transformation>,
 }
 
 impl Context {
@@ -33,7 +33,7 @@ impl Context {
         types: TypeHierarchy,
         generated_types: Vec<GeneratedType>,
         interpretations: Vec<Interpretation>,
-        transformations: Vec<ExplicitTransformation>,
+        transformations: Vec<Transformation>,
     ) -> Result<Self, ContextError> {
         match transformations
             .iter()
@@ -71,7 +71,7 @@ impl Context {
         &self.interpretations
     }
 
-    pub fn get_transformations(&self) -> &Vec<ExplicitTransformation> {
+    pub fn get_transformations(&self) -> &Vec<Transformation> {
         &self.transformations
     }
 
@@ -103,7 +103,10 @@ impl From<TypeError> for ContextError {
 
 #[cfg(test)]
 mod tests {
-    use crate::parsing::{interpretation::Interpretation, parser::Parser, tokenizer::Tokenizer};
+    use crate::{
+        parsing::{interpretation::Interpretation, parser::Parser, tokenizer::Tokenizer},
+        symbol::transformation::ExplicitTransformation,
+    };
 
     use super::*;
 
@@ -161,7 +164,10 @@ mod tests {
             .unwrap();
         let inverse = ExplicitTransformation::new(inverse_from, inverse_to);
 
-        let transformations = vec![commutativity, associativity, identity, inverse];
+        let transformations = vec![commutativity, associativity, identity, inverse]
+            .into_iter()
+            .map(|t| t.into())
+            .collect::<Vec<Transformation>>();
 
         let context = Context::new(types.clone(), vec![], vec![], transformations.clone());
 
@@ -225,7 +231,10 @@ mod tests {
             .unwrap();
         let multiplicative_commutativity = ExplicitTransformation::new(a_times_b, b_times_a);
 
-        let transformations = vec![additive_commutativity, multiplicative_commutativity];
+        let transformations = vec![additive_commutativity, multiplicative_commutativity]
+            .into_iter()
+            .map(|t| t.into())
+            .collect::<Vec<Transformation>>();
 
         let context = Context::new(types.clone(), vec![], vec![], transformations.clone());
 

@@ -156,12 +156,13 @@ impl Workspace {
         &mut self,
         from: &str,
         to: &str,
-    ) -> Result<ExplicitTransformation, WorkspaceError> {
+    ) -> Result<Transformation, WorkspaceError> {
         let parsed_from = self.parse_from_string(from)?;
         self.generate_types(&parsed_from)?;
         let parsed_to = self.parse_from_string(to)?;
         self.generate_types(&parsed_to)?;
-        let transformation = ExplicitTransformation::new(parsed_from, parsed_to);
+        let transformation: Transformation =
+            ExplicitTransformation::new(parsed_from, parsed_to).into();
         self.add_transformation(transformation.clone())?;
         Ok(transformation)
     }
@@ -232,14 +233,14 @@ impl Workspace {
         self.provenance.push(provenance);
     }
 
-    pub fn get_transformations(&self) -> &Vec<ExplicitTransformation> {
+    pub fn get_transformations(&self) -> &Vec<Transformation> {
         &self.transformations
     }
 
     pub fn get_transformation(
         &self,
         index: TransformationIndex,
-    ) -> Result<ExplicitTransformation, WorkspaceError> {
+    ) -> Result<Transformation, WorkspaceError> {
         if self.transformation_index_is_invalid(index) {
             Err(WorkspaceError::InvalidTransformationIndex)
         } else {
@@ -249,17 +250,21 @@ impl Workspace {
 
     pub fn add_transformation(
         &mut self,
-        transformation: ExplicitTransformation,
+        transformation: Transformation,
     ) -> Result<(), WorkspaceError> {
         self.types.binds_transformation_or_error(&transformation)?;
-        self.generate_types_in_bulk(
-            vec![
-                transformation.get_from().clone(),
-                transformation.get_to().clone(),
-            ]
-            .into_iter()
-            .collect(),
-        )?;
+        match &transformation {
+            Transformation::ExplicitTransformation(t) => {
+                self.generate_types_in_bulk(
+                    vec![t.get_from().clone(), t.get_to().clone()]
+                        .into_iter()
+                        .collect(),
+                )?;
+            }
+            Transformation::AdditionAlgorithm(_) => {
+                // Nothing to generate
+            }
+        }
         self.transformations.push(transformation);
         Ok(())
     }
@@ -650,12 +655,15 @@ mod test_workspace {
         ];
         let mut workspace = Workspace::new(types.clone(), vec![], interpretations.clone());
         workspace
-            .add_transformation(ExplicitTransformation::symmetry(
-                "+".to_string(),
-                "+".into(),
-                ("a".to_string(), "b".to_string()),
-                "Real".into(),
-            ))
+            .add_transformation(
+                ExplicitTransformation::symmetry(
+                    "+".to_string(),
+                    "+".into(),
+                    ("a".to_string(), "b".to_string()),
+                    "Real".into(),
+                )
+                .into(),
+            )
             .unwrap();
 
         workspace.add_parsed_hypothesis("x+y").unwrap();
@@ -684,12 +692,15 @@ mod test_workspace {
 
         let mut workspace = Workspace::new(types.clone(), vec![], interpretations);
         workspace
-            .add_transformation(ExplicitTransformation::symmetry(
-                "+".to_string(),
-                "+".into(),
-                ("a".to_string(), "b".to_string()),
-                "Real".into(),
-            ))
+            .add_transformation(
+                ExplicitTransformation::symmetry(
+                    "+".to_string(),
+                    "+".into(),
+                    ("a".to_string(), "b".to_string()),
+                    "Real".into(),
+                )
+                .into(),
+            )
             .unwrap();
 
         workspace.add_parsed_hypothesis("a+(b+c)").unwrap();
@@ -756,7 +767,7 @@ mod test_workspace {
 
         let transformation =
             ExplicitTransformation::new(SymbolNode::leaf_object("a"), SymbolNode::leaf_object("b"));
-        workspace.add_transformation(transformation).unwrap();
+        workspace.add_transformation(transformation.into()).unwrap();
         assert_eq!(workspace.transformations.len(), 1);
 
         let _transformed = workspace.try_transform_into_parsed("b").unwrap();
@@ -812,7 +823,10 @@ mod test_workspace {
             types.clone(),
             vec![],
             vec![],
-            vec![equality_reflexivity.clone(), equality_symmetry.clone()],
+            vec![
+                equality_reflexivity.clone().into(),
+                equality_symmetry.clone().into(),
+            ],
         )
         .unwrap();
 
@@ -838,7 +852,7 @@ mod test_workspace {
             complex_types,
             vec![],
             vec![],
-            vec![equality_reflexivity, equality_symmetry],
+            vec![equality_reflexivity.into(), equality_symmetry.into()],
         )
         .unwrap();
 

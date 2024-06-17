@@ -9,6 +9,7 @@ use serde::{
 };
 use ts_rs::TS;
 
+use super::transformation::Transformation;
 use super::{
     symbol_node::{Symbol, SymbolNode},
     transformation::ExplicitTransformation,
@@ -323,10 +324,23 @@ impl TypeHierarchy {
 
     pub fn binds_transformation_or_error(
         &self,
-        transformation: &ExplicitTransformation,
+        transformation: &Transformation,
     ) -> Result<(), TypeError> {
-        self.binds_statement_or_error(transformation.get_from())?;
-        self.binds_statement_or_error(transformation.get_to())
+        match transformation {
+            Transformation::ExplicitTransformation(t) => {
+                self.binds_statement_or_error(t.get_from())?;
+                self.binds_statement_or_error(t.get_to())
+            }
+            Transformation::AdditionAlgorithm(a) => {
+                if self.contains_type(&a.get_input_type()) {
+                    Ok(())
+                } else {
+                    Err(TypeError::StatementIncludesTypesNotInHierarchy(
+                        vec![a.get_input_type()].into_iter().collect(),
+                    ))
+                }
+            }
+        }
     }
 
     pub fn binds_statement_or_error(&self, statement: &SymbolNode) -> Result<(), TypeError> {
