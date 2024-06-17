@@ -1,7 +1,6 @@
 use std::collections::{HashMap, HashSet};
 
 use crate::parsing::interpretation::Interpretation;
-use crate::parsing::parser::Parser;
 use crate::symbol::symbol_node::{Symbol, SymbolNode, SymbolNodeError};
 use crate::symbol::symbol_type::{Type, TypeError};
 use serde::{Deserialize, Serialize};
@@ -9,14 +8,37 @@ use serde::{Deserialize, Serialize};
 use super::symbol_node::{SymbolName, SymbolNodeAddress};
 use super::symbol_type::TypeHierarchy;
 
-pub trait Transformation {
-    fn transform(
+#[derive(Clone, Debug, Hash, PartialEq, Eq, Serialize, Deserialize)]
+pub enum Transformation {
+    ExplicitTransformation(ExplicitTransformation),
+    AdditionAlgorithm(AdditionAlgorithm),
+}
+
+impl From<ExplicitTransformation> for Transformation {
+    fn from(t: ExplicitTransformation) -> Self {
+        Self::ExplicitTransformation(t)
+    }
+}
+
+impl From<AdditionAlgorithm> for Transformation {
+    fn from(algorithm: AdditionAlgorithm) -> Self {
+        Self::AdditionAlgorithm(algorithm)
+    }
+}
+
+impl Transformation {
+    pub fn transform(
         &self,
         hierarchy: &TypeHierarchy,
         statement: &SymbolNode,
-    ) -> Result<SymbolNode, TransformationError>;
+    ) -> Result<SymbolNode, TransformationError> {
+        match self {
+            Self::ExplicitTransformation(t) => t.typed_relabel_and_transform(hierarchy, statement),
+            Self::AdditionAlgorithm(t) => t.transform(hierarchy, statement),
+        }
+    }
 
-    fn try_transform_into(
+    pub fn try_transform_into(
         &self,
         hierarchy: &TypeHierarchy,
         from: &SymbolNode,
@@ -30,7 +52,7 @@ pub trait Transformation {
         }
     }
 
-    fn get_valid_transformations(
+    pub fn get_valid_transformations(
         &self,
         hierarchy: &TypeHierarchy,
         statement: &SymbolNode,
@@ -53,7 +75,7 @@ pub trait Transformation {
         return to_return;
     }
 
-    fn get_valid_child_transformations(
+    pub fn get_valid_child_transformations(
         &self,
         hierarchy: &TypeHierarchy,
         statement: &SymbolNode,
@@ -102,7 +124,7 @@ pub trait Transformation {
         new_statements
     }
 
-    fn typed_relabel_and_transform_at(
+    pub fn typed_relabel_and_transform_at(
         &self,
         hierarchy: &TypeHierarchy,
         statement: &SymbolNode,
@@ -119,14 +141,21 @@ pub trait Transformation {
     }
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Hash, PartialEq, Eq, Serialize, Deserialize)]
 pub struct AdditionAlgorithm {
     operator: Symbol,
     input_type: Type,
 }
 
-impl Transformation for AdditionAlgorithm {
-    fn transform(
+impl AdditionAlgorithm {
+    pub fn new(operator: Symbol, input_type: Type) -> Self {
+        Self {
+            operator,
+            input_type,
+        }
+    }
+
+    pub fn transform(
         &self,
         hierarchy: &TypeHierarchy,
         statement: &SymbolNode,
@@ -162,15 +191,6 @@ impl Transformation for AdditionAlgorithm {
             self.input_type.clone(),
         )))
     }
-}
-
-impl AdditionAlgorithm {
-    pub fn new(operator: Symbol, input_type: Type) -> Self {
-        Self {
-            operator,
-            input_type,
-        }
-    }
 
     fn try_parse_number(symbol_name: &SymbolName) -> Result<f64, TransformationError> {
         // TODO: This will fail on big enough numbers
@@ -195,16 +215,6 @@ impl From<(SymbolNode, SymbolNode)> for ExplicitTransformation {
 impl From<(Symbol, SymbolNode)> for ExplicitTransformation {
     fn from(value: (Symbol, SymbolNode)) -> Self {
         Self::new(value.0.into(), value.1)
-    }
-}
-
-impl Transformation for ExplicitTransformation {
-    fn transform(
-        &self,
-        hierarchy: &TypeHierarchy,
-        statement: &SymbolNode,
-    ) -> Result<SymbolNode, TransformationError> {
-        self.typed_relabel_and_transform(hierarchy, statement)
     }
 }
 
@@ -481,10 +491,7 @@ impl From<TypeError> for TransformationError {
 
 #[cfg(test)]
 mod test_transformation {
-    use crate::{
-        parsing::{interpretation::Interpretation, tokenizer::Token},
-        symbol::symbol_type::GeneratedTypeCondition,
-    };
+    use crate::parsing::{interpretation::Interpretation, parser::Parser, tokenizer::Token};
 
     use super::*;
 
@@ -535,12 +542,13 @@ mod test_transformation {
 
         let custom_tokens = vec!["=".to_string()];
 
-        let irrelevant_transform = ExplicitTransformation::associativity(
+        let irrelevant_transform: Transformation = ExplicitTransformation::associativity(
             "*".to_string(),
             "*".into(),
             ("j".to_string(), "l".to_string(), "k".to_string()),
             "Irrelevant".into(),
-        );
+        )
+        .into();
 
         let x_equals_y = parser
             .parse_from_string(custom_tokens.clone(), "x=y")
@@ -550,12 +558,13 @@ mod test_transformation {
             irrelevant_transform.get_valid_transformations(&hierarchy, &x_equals_y),
             vec![x_equals_y.clone()].into_iter().collect()
         );
-        let transformation = ExplicitTransformation::commutivity(
+        let transformation: Transformation = ExplicitTransformation::commutivity(
             "=".to_string(),
             "=".into(),
             ("a".to_string(), "b".to_string()),
             "Integer".into(),
-        );
+        )
+        .into();
         let y_equals_x = parser
             .parse_from_string(custom_tokens.clone(), "y = x")
             .unwrap();
@@ -649,7 +658,8 @@ mod test_transformation {
             "=".into(),
             ("x".to_string(), "y".to_string()),
             "Integer".into(),
-        );
+        )
+        .into();
 
         let x_equals_y = parser
             .parse_from_string(custom_tokens.clone(), "x=y")
