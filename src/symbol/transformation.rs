@@ -12,6 +12,7 @@ use super::symbol_type::TypeHierarchy;
 pub enum Transformation {
     ExplicitTransformation(ExplicitTransformation),
     AdditionAlgorithm(AdditionAlgorithm),
+    ApplyToBothSidesTransformation(ApplyToBothSidesTransformation),
 }
 
 impl From<ExplicitTransformation> for Transformation {
@@ -26,6 +27,12 @@ impl From<AdditionAlgorithm> for Transformation {
     }
 }
 
+impl From<ApplyToBothSidesTransformation> for Transformation {
+    fn from(t: ApplyToBothSidesTransformation) -> Self {
+        Self::ApplyToBothSidesTransformation(t)
+    }
+}
+
 impl Transformation {
     pub fn transform(
         &self,
@@ -35,6 +42,7 @@ impl Transformation {
         match self {
             Self::ExplicitTransformation(t) => t.typed_relabel_and_transform(hierarchy, statement),
             Self::AdditionAlgorithm(t) => t.transform(hierarchy, statement),
+            Self::ApplyToBothSidesTransformation(t) => t.transform(hierarchy, statement),
         }
     }
 
@@ -144,6 +152,7 @@ impl Transformation {
         match self {
             Self::ExplicitTransformation(t) => t.to_interpreted_string(interpretations),
             Self::AdditionAlgorithm(a) => a.to_string(),
+            Self::ApplyToBothSidesTransformation(t) => t.to_interpreted_string(interpretations),
         }
     }
 }
@@ -222,6 +231,66 @@ impl AdditionAlgorithm {
         return symbol_name
             .parse::<f64>()
             .map_err(|_| TransformationError::UnableToParse(symbol_name.clone()));
+    }
+}
+
+#[derive(Clone, Debug, Hash, PartialEq, Eq, Serialize, Deserialize)]
+pub struct ApplyToBothSidesTransformation {
+    symbol: Symbol,
+    transformation: ExplicitTransformation,
+}
+
+impl ApplyToBothSidesTransformation {
+    pub fn new(symbol: Symbol, transformation: ExplicitTransformation) -> Self {
+        Self {
+            symbol,
+            transformation,
+        }
+    }
+
+    pub fn get_transformation(&self) -> &ExplicitTransformation {
+        &self.transformation
+    }
+
+    pub fn transform(
+        &self,
+        hierarchy: &TypeHierarchy,
+        statement: &SymbolNode,
+    ) -> Result<SymbolNode, TransformationError> {
+        if statement.get_symbol() != &self.symbol {
+            return Err(TransformationError::SymbolDoesntMatch(
+                statement.get_symbol().clone(),
+            ));
+        }
+
+        if statement.get_n_children() != 2 {
+            return Err(TransformationError::ApplyToBothSidesCalledOnNChildren(
+                statement.get_n_children(),
+            ));
+        }
+
+        let left = statement.get_children()[0].clone();
+        let right = statement.get_children()[1].clone();
+
+        let left_transformed = self
+            .transformation
+            .typed_relabel_and_transform(hierarchy, &left)?;
+        let right_transformed = self
+            .transformation
+            .typed_relabel_and_transform(hierarchy, &right)?;
+
+        Ok(SymbolNode::new(
+            self.symbol.clone(),
+            vec![left_transformed, right_transformed],
+        ))
+    }
+
+    pub fn to_interpreted_string(&self, interpretations: &Vec<Interpretation>) -> String {
+        format!(
+            "Apply {} to Both Sides of {}",
+            self.transformation.to_interpreted_string(interpretations),
+            self.symbol.to_string()
+        )
     }
 }
 
@@ -492,6 +561,8 @@ pub enum TransformationError {
     InvalidTypes(TypeError),
     RelabellingsKeysMismatch,
     StatementDoesNotMatch(SymbolNode, SymbolNode),
+    SymbolDoesntMatch(Symbol),
+    ApplyToBothSidesCalledOnNChildren(usize),
     StatementTypesDoNotMatch,
     NoValidTransformations,
     UnableToParse(SymbolName),

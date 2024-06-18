@@ -264,6 +264,17 @@ impl Workspace {
             Transformation::AdditionAlgorithm(_) => {
                 // Nothing to generate
             }
+            Transformation::ApplyToBothSidesTransformation(t) => {
+                let transformation = t.get_transformation();
+                self.generate_types_in_bulk(
+                    vec![
+                        transformation.get_from().clone(),
+                        transformation.get_to().clone(),
+                    ]
+                    .into_iter()
+                    .collect(),
+                )?;
+            }
         }
         self.transformations.push(transformation);
         Ok(())

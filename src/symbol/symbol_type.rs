@@ -340,6 +340,28 @@ impl TypeHierarchy {
                     ))
                 }
             }
+            Transformation::ApplyToBothSidesTransformation(t) => {
+                let mut to_return = vec![];
+                if !self.contains_type(t.get_symbol_type()) {
+                    to_return.push(t.get_symbol_type().clone());
+                }
+                let inner = t.get_transformation();
+                if let Err(TypeError::StatementIncludesTypesNotInHierarchy(ts)) =
+                    self.binds_statement_or_error(inner.get_from())
+                {
+                    to_return.append(ts);
+                }
+                if let Err(TypeError::StatementIncludesTypesNotInHierarchy(ts)) =
+                    self.binds_statement_or_error(inner.get_to())
+                {
+                    to_return.append(ts);
+                }
+                if to_return.len() > 0 {
+                    return Err(TypeError::StatementIncludesTypesNotInHierarchy(to_return));
+                } else {
+                    return Ok(());
+                }
+            }
         }
     }
 
