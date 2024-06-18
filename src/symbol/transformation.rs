@@ -248,6 +248,14 @@ impl ApplyToBothSidesTransformation {
         }
     }
 
+    pub fn get_symbol(&self) -> &Symbol {
+        &self.symbol
+    }
+
+    pub fn get_symbol_type(&self) -> Type {
+        self.symbol.get_evaluates_to_type()
+    }
+
     pub fn get_transformation(&self) -> &ExplicitTransformation {
         &self.transformation
     }

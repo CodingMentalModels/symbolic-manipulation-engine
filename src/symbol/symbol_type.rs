@@ -341,23 +341,25 @@ impl TypeHierarchy {
                 }
             }
             Transformation::ApplyToBothSidesTransformation(t) => {
-                let mut to_return = vec![];
-                if !self.contains_type(t.get_symbol_type()) {
-                    to_return.push(t.get_symbol_type().clone());
+                let mut missing_types = vec![];
+                if !self.contains_type(&t.get_symbol_type()) {
+                    missing_types.push(t.get_symbol_type().clone());
                 }
                 let inner = t.get_transformation();
                 if let Err(TypeError::StatementIncludesTypesNotInHierarchy(ts)) =
                     self.binds_statement_or_error(inner.get_from())
                 {
-                    to_return.append(ts);
+                    missing_types.append(&mut ts.into_iter().collect());
                 }
                 if let Err(TypeError::StatementIncludesTypesNotInHierarchy(ts)) =
                     self.binds_statement_or_error(inner.get_to())
                 {
-                    to_return.append(ts);
+                    missing_types.append(&mut ts.into_iter().collect());
                 }
-                if to_return.len() > 0 {
-                    return Err(TypeError::StatementIncludesTypesNotInHierarchy(to_return));
+                if missing_types.len() > 0 {
+                    return Err(TypeError::StatementIncludesTypesNotInHierarchy(
+                        missing_types.into_iter().collect(),
+                    ));
                 } else {
                     return Ok(());
                 }
