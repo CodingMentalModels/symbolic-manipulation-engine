@@ -83,7 +83,7 @@ impl Transformation {
         return to_return;
     }
 
-    pub fn get_valid_child_transformations(
+    fn get_valid_child_transformations(
         &self,
         hierarchy: &TypeHierarchy,
         statement: &SymbolNode,
