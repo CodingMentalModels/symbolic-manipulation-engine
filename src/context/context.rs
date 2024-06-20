@@ -103,7 +103,10 @@ impl From<TypeError> for ContextError {
 
 #[cfg(test)]
 mod tests {
-    use crate::parsing::{interpretation::Interpretation, parser::Parser, tokenizer::Tokenizer};
+    use crate::{
+        parsing::{interpretation::Interpretation, parser::Parser, tokenizer::Tokenizer},
+        symbol::transformation::ExplicitTransformation,
+    };
 
     use super::*;
 
@@ -131,14 +134,14 @@ mod tests {
             one_interpretation,
         ]);
 
-        let commutativity = Transformation::symmetry(
+        let commutativity = ExplicitTransformation::symmetry(
             "*".to_string(),
             "*".into(),
             ("a".to_string(), "b".to_string()),
             "Group Element".into(),
         );
 
-        let associativity = Transformation::associativity(
+        let associativity = ExplicitTransformation::associativity(
             "*".to_string(),
             "*".into(),
             ("a".to_string(), "b".to_string(), "c".to_string()),
@@ -151,7 +154,7 @@ mod tests {
         let identity_to = parser
             .parse_from_string(vec!["*".to_string()], "g")
             .unwrap();
-        let identity = Transformation::new(identity_from, identity_to);
+        let identity = ExplicitTransformation::new(identity_from, identity_to);
 
         let inverse_from = parser
             .parse_from_string(vec!["*".to_string()], "g*inv(g)")
@@ -159,9 +162,12 @@ mod tests {
         let inverse_to = parser
             .parse_from_string(vec!["*".to_string()], "1")
             .unwrap();
-        let inverse = Transformation::new(inverse_from, inverse_to);
+        let inverse = ExplicitTransformation::new(inverse_from, inverse_to);
 
-        let transformations = vec![commutativity, associativity, identity, inverse];
+        let transformations = vec![commutativity, associativity, identity, inverse]
+            .into_iter()
+            .map(|t| t.into())
+            .collect::<Vec<Transformation>>();
 
         let context = Context::new(types.clone(), vec![], vec![], transformations.clone());
 
@@ -209,7 +215,7 @@ mod tests {
                     .tokenize("b + a"),
             )
             .unwrap();
-        let additive_commutativity = Transformation::new(a_plus_b, b_plus_a);
+        let additive_commutativity = ExplicitTransformation::new(a_plus_b, b_plus_a);
 
         let a_times_b = parser
             .parse(
@@ -223,9 +229,12 @@ mod tests {
                     .tokenize("b * a"),
             )
             .unwrap();
-        let multiplicative_commutativity = Transformation::new(a_times_b, b_times_a);
+        let multiplicative_commutativity = ExplicitTransformation::new(a_times_b, b_times_a);
 
-        let transformations = vec![additive_commutativity, multiplicative_commutativity];
+        let transformations = vec![additive_commutativity, multiplicative_commutativity]
+            .into_iter()
+            .map(|t| t.into())
+            .collect::<Vec<Transformation>>();
 
         let context = Context::new(types.clone(), vec![], vec![], transformations.clone());
 

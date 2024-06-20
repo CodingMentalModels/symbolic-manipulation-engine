@@ -16,7 +16,7 @@ use crate::{
             DisplayGeneratedType, DisplayTypeHierarchyNode, GeneratedType, Type, TypeError,
             TypeHierarchy, TypeName,
         },
-        transformation::{Transformation, TransformationError},
+        transformation::{ExplicitTransformation, Transformation, TransformationError},
     },
 };
 
@@ -145,10 +145,10 @@ impl Workspace {
         Ok(())
     }
 
-    pub fn add_parsed_statement(&mut self, s: &str) -> Result<SymbolNode, WorkspaceError> {
+    pub fn add_parsed_hypothesis(&mut self, s: &str) -> Result<SymbolNode, WorkspaceError> {
         let parsed = self.parse_from_string(s)?;
         self.generate_types(&parsed)?;
-        self.add_statement(parsed.clone())?;
+        self.add_hypothesis(parsed.clone())?;
         Ok(parsed)
     }
 
@@ -161,7 +161,8 @@ impl Workspace {
         self.generate_types(&parsed_from)?;
         let parsed_to = self.parse_from_string(to)?;
         self.generate_types(&parsed_to)?;
-        let transformation = Transformation::new(parsed_from, parsed_to);
+        let transformation: Transformation =
+            ExplicitTransformation::new(parsed_from, parsed_to).into();
         self.add_transformation(transformation.clone())?;
         Ok(transformation)
     }
@@ -217,7 +218,7 @@ impl Workspace {
             .map_err(|e| e.into())
     }
 
-    pub fn add_statement(&mut self, statement: SymbolNode) -> Result<(), WorkspaceError> {
+    pub fn add_hypothesis(&mut self, statement: SymbolNode) -> Result<(), WorkspaceError> {
         self.types
             .binds_statement_or_error(&statement)
             .map_err(|x| WorkspaceError::from(x))?;
@@ -225,6 +226,11 @@ impl Workspace {
         self.statements.push(statement);
         self.provenance.push(Provenance::Hypothesis);
         Ok(())
+    }
+
+    fn add_derived_statement(&mut self, statement: SymbolNode, provenance: Provenance) {
+        self.statements.push(statement);
+        self.provenance.push(provenance);
     }
 
     pub fn get_transformations(&self) -> &Vec<Transformation> {
@@ -247,14 +253,29 @@ impl Workspace {
         transformation: Transformation,
     ) -> Result<(), WorkspaceError> {
         self.types.binds_transformation_or_error(&transformation)?;
-        self.generate_types_in_bulk(
-            vec![
-                transformation.get_from().clone(),
-                transformation.get_to().clone(),
-            ]
-            .into_iter()
-            .collect(),
-        )?;
+        match &transformation {
+            Transformation::ExplicitTransformation(t) => {
+                self.generate_types_in_bulk(
+                    vec![t.get_from().clone(), t.get_to().clone()]
+                        .into_iter()
+                        .collect(),
+                )?;
+            }
+            Transformation::AdditionAlgorithm(_) => {
+                // Nothing to generate
+            }
+            Transformation::ApplyToBothSidesTransformation(t) => {
+                let transformation = t.get_transformation();
+                self.generate_types_in_bulk(
+                    vec![
+                        transformation.get_from().clone(),
+                        transformation.get_to().clone(),
+                    ]
+                    .into_iter()
+                    .collect(),
+                )?;
+            }
+        }
         self.transformations.push(transformation);
         Ok(())
     }
@@ -294,78 +315,26 @@ impl Workspace {
         &mut self,
         desired: SymbolNode,
     ) -> Result<SymbolNode, WorkspaceError> {
-        for statement in self.statements.iter() {
-            for transform in self.transformations.iter() {
+        for (statement_idx, statement) in self.statements.iter().enumerate() {
+            for (transform_idx, transform) in self.transformations.iter().enumerate() {
                 match transform.try_transform_into(self.get_types(), &statement, &desired) {
                     Ok(output) => {
                         if self.statements.contains(&output) {
                             return Err(WorkspaceError::StatementsAlreadyInclude(output.clone()));
                         } else {
-                            self.add_statement(output.clone())?;
+                            // TODO Derive the appropriate transform addresses
+                            let provenance =
+                                Provenance::Derived(statement_idx, transform_idx, vec![]);
+                            self.add_derived_statement(output.clone(), provenance);
                             return Ok(output);
                         }
                     }
-                    Err(e) => {}
+                    Err(_) => { // Do nothing, keep trying transformations
+                    }
                 }
             }
         }
         return Err(WorkspaceError::NoTransformationsPossible);
-    }
-
-    pub fn transform_all(
-        &mut self,
-        transformation_index: TransformationIndex,
-        statement_index: StatementIndex,
-        substitutions: HashMap<String, String>,
-    ) -> Result<SymbolNode, WorkspaceError> {
-        if self.transformation_index_is_invalid(transformation_index) {
-            return Err(WorkspaceError::InvalidTransformationIndex);
-        }
-        if self.statement_index_is_invalid(statement_index) {
-            return Err(WorkspaceError::InvalidStatementIndex);
-        }
-        let transformation = self.transformations[transformation_index].clone();
-        let statement = self.statements[statement_index].clone();
-        let (transformed_statement, transformed_addresses) = transformation
-            .transform_all(&statement, &substitutions)
-            .map_err(|e| WorkspaceError::TransformationError(e))?;
-
-        self.statements.push(transformed_statement.clone());
-        self.provenance.push(Provenance::Derived(
-            statement_index,
-            transformation_index,
-            transformed_addresses,
-        ));
-
-        return Ok(transformed_statement);
-    }
-
-    pub fn transform_at(
-        &mut self,
-        transformation_index: TransformationIndex,
-        statement_index: StatementIndex,
-        address: SymbolNodeAddress,
-    ) -> Result<SymbolNode, WorkspaceError> {
-        if self.transformation_index_is_invalid(transformation_index) {
-            return Err(WorkspaceError::InvalidTransformationIndex);
-        }
-        if self.statement_index_is_invalid(statement_index) {
-            return Err(WorkspaceError::InvalidStatementIndex);
-        }
-        let transformation = self.transformations[transformation_index].clone();
-        let statement = self.statements[statement_index].clone();
-        let transformed_statement = transformation
-            .transform_at(&statement, address.clone())
-            .map_err(|_| WorkspaceError::InvalidTransformationAddress)?;
-
-        self.statements.push(transformed_statement.clone());
-        self.provenance.push(Provenance::Derived(
-            statement_index,
-            transformation_index,
-            vec![address],
-        ));
-
-        return Ok(transformed_statement);
     }
 
     pub fn get_provenance_lineage(
@@ -697,15 +666,18 @@ mod test_workspace {
         ];
         let mut workspace = Workspace::new(types.clone(), vec![], interpretations.clone());
         workspace
-            .add_transformation(Transformation::symmetry(
-                "+".to_string(),
-                "+".into(),
-                ("a".to_string(), "b".to_string()),
-                "Real".into(),
-            ))
+            .add_transformation(
+                ExplicitTransformation::symmetry(
+                    "+".to_string(),
+                    "+".into(),
+                    ("a".to_string(), "b".to_string()),
+                    "Real".into(),
+                )
+                .into(),
+            )
             .unwrap();
 
-        workspace.add_parsed_statement("x+y").unwrap();
+        workspace.add_parsed_hypothesis("x+y").unwrap();
         let expected = workspace.parse_from_string("y+x").unwrap();
         assert_eq!(
             workspace.try_transform_into_parsed("y+x").unwrap(),
@@ -713,7 +685,7 @@ mod test_workspace {
         );
         assert!(workspace.get_statements().contains(&expected));
 
-        workspace.add_parsed_statement("j+k").unwrap();
+        workspace.add_parsed_hypothesis("j+k").unwrap();
         let expected = workspace.parse_from_string("k+j").unwrap();
         assert_eq!(
             workspace.try_transform_into_parsed("k+j").unwrap(),
@@ -721,7 +693,7 @@ mod test_workspace {
         );
         assert!(workspace.get_statements().contains(&expected));
 
-        workspace.add_parsed_statement("a+(b+c)").unwrap();
+        workspace.add_parsed_hypothesis("a+(b+c)").unwrap();
         let expected = workspace.parse_from_string("(b+c)+a").unwrap();
         assert_eq!(
             workspace.try_transform_into_parsed("(b+c)+a").unwrap(),
@@ -731,15 +703,18 @@ mod test_workspace {
 
         let mut workspace = Workspace::new(types.clone(), vec![], interpretations);
         workspace
-            .add_transformation(Transformation::symmetry(
-                "+".to_string(),
-                "+".into(),
-                ("a".to_string(), "b".to_string()),
-                "Real".into(),
-            ))
+            .add_transformation(
+                ExplicitTransformation::symmetry(
+                    "+".to_string(),
+                    "+".into(),
+                    ("a".to_string(), "b".to_string()),
+                    "Real".into(),
+                )
+                .into(),
+            )
             .unwrap();
 
-        workspace.add_parsed_statement("a+(b+c)").unwrap();
+        workspace.add_parsed_hypothesis("a+(b+c)").unwrap();
         let expected = workspace.parse_from_string("a+(c+b)").unwrap();
         assert_eq!(
             workspace.try_transform_into_parsed("a+(c+b)").unwrap(),
@@ -749,15 +724,15 @@ mod test_workspace {
     }
 
     #[test]
-    fn test_workspace_adds_and_deletes_statement() {
+    fn test_workspace_adds_hypotheses() {
         let types = TypeHierarchy::new();
         let mut workspace = Workspace::new(types, vec![], vec![]);
         let statement = SymbolNode::leaf_object("a");
-        workspace.add_statement(statement).unwrap();
+        workspace.add_hypothesis(statement).unwrap();
         assert_eq!(workspace.statements.len(), 1);
 
         let statement = SymbolNode::leaf_object("b");
-        workspace.add_statement(statement).unwrap();
+        workspace.add_hypothesis(statement).unwrap();
 
         assert_eq!(workspace.statements.len(), 2);
     }
@@ -780,7 +755,7 @@ mod test_workspace {
             vec![plus, integer_interpretation],
         );
 
-        assert!(workspace.add_parsed_statement("2+2").is_ok());
+        assert!(workspace.add_parsed_hypothesis("2+2").is_ok());
         let mut expected =
             TypeHierarchy::chain(vec!["Real".into(), "Integer".into(), "2".into()]).unwrap();
         expected.add_chain(vec!["+".into()]).unwrap();
@@ -798,15 +773,15 @@ mod test_workspace {
         let types = TypeHierarchy::new();
         let mut workspace = Workspace::new(types, vec![], vec![]);
         let statement = SymbolNode::leaf_object("a");
-        assert_eq!(workspace.add_statement(statement), Ok(()));
+        assert_eq!(workspace.add_hypothesis(statement), Ok(()));
         assert_eq!(workspace.statements.len(), 1);
 
         let transformation =
-            Transformation::new(SymbolNode::leaf_object("a"), SymbolNode::leaf_object("b"));
-        workspace.add_transformation(transformation).unwrap();
+            ExplicitTransformation::new(SymbolNode::leaf_object("a"), SymbolNode::leaf_object("b"));
+        workspace.add_transformation(transformation.into()).unwrap();
         assert_eq!(workspace.transformations.len(), 1);
 
-        let _transformed = workspace.transform_all(0, 0, HashMap::new());
+        let _transformed = workspace.try_transform_into_parsed("b").unwrap();
         assert_eq!(workspace.statements.len(), 2);
         assert_eq!(
             workspace.statements,
@@ -814,44 +789,16 @@ mod test_workspace {
         );
 
         assert_eq!(workspace.get_provenance(0), Ok(Provenance::Hypothesis));
+        // TODO Currently we don't derive the transformation addresses but this assertion should
+        // fail
         assert_eq!(
             workspace.get_provenance(1),
-            Ok(Provenance::Derived(0, 0, vec![vec![]]))
+            Ok(Provenance::Derived(0, 0, vec![]))
         );
 
         assert_eq!(
             workspace.get_provenance_lineage(0),
             Ok(vec![Provenance::Hypothesis])
-        );
-        assert_eq!(
-            workspace.get_provenance_lineage(1),
-            Ok(vec![
-                Provenance::Derived(0, 0, vec![vec![]]),
-                Provenance::Hypothesis
-            ])
-        );
-
-        workspace
-            .add_transformation(Transformation::new(
-                SymbolNode::leaf_object("b"),
-                SymbolNode::leaf_object("="),
-            ))
-            .unwrap();
-
-        let _transformed = workspace.transform_at(1, 1, vec![]);
-        assert_eq!(workspace.statements.len(), 3);
-        assert_eq!(
-            workspace.statements,
-            vec![
-                SymbolNode::leaf_object("a"),
-                SymbolNode::leaf_object("b"),
-                SymbolNode::leaf_object("=")
-            ]
-        );
-
-        assert_eq!(
-            workspace.get_provenance(2),
-            Ok(Provenance::Derived(1, 1, vec![vec![]]))
         );
     }
 
@@ -869,14 +816,14 @@ mod test_workspace {
             .add_chain_to_parent(vec!["+".into()], "Operator".into())
             .unwrap();
 
-        let equality_reflexivity = Transformation::reflexivity(
+        let equality_reflexivity = ExplicitTransformation::reflexivity(
             "=".to_string(),
             "=".into(),
             "x".to_string(),
             "Real".into(),
         );
 
-        let equality_symmetry = Transformation::symmetry(
+        let equality_symmetry = ExplicitTransformation::symmetry(
             "=".to_string(),
             "=".into(),
             ("x".to_string(), "y".to_string()),
@@ -887,7 +834,10 @@ mod test_workspace {
             types.clone(),
             vec![],
             vec![],
-            vec![equality_reflexivity.clone(), equality_symmetry.clone()],
+            vec![
+                equality_reflexivity.clone().into(),
+                equality_symmetry.clone().into(),
+            ],
         )
         .unwrap();
 
@@ -913,7 +863,7 @@ mod test_workspace {
             complex_types,
             vec![],
             vec![],
-            vec![equality_reflexivity, equality_symmetry],
+            vec![equality_reflexivity.into(), equality_symmetry.into()],
         )
         .unwrap();
 

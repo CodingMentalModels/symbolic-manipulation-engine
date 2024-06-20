@@ -9,9 +9,10 @@ use serde::{
 };
 use ts_rs::TS;
 
+use super::transformation::Transformation;
 use super::{
     symbol_node::{Symbol, SymbolNode},
-    transformation::Transformation,
+    transformation::ExplicitTransformation,
 };
 use crate::constants::*;
 
@@ -325,8 +326,45 @@ impl TypeHierarchy {
         &self,
         transformation: &Transformation,
     ) -> Result<(), TypeError> {
-        self.binds_statement_or_error(transformation.get_from())?;
-        self.binds_statement_or_error(transformation.get_to())
+        match transformation {
+            Transformation::ExplicitTransformation(t) => {
+                self.binds_statement_or_error(t.get_from())?;
+                self.binds_statement_or_error(t.get_to())
+            }
+            Transformation::AdditionAlgorithm(a) => {
+                if self.contains_type(&a.get_input_type()) {
+                    Ok(())
+                } else {
+                    Err(TypeError::StatementIncludesTypesNotInHierarchy(
+                        vec![a.get_input_type()].into_iter().collect(),
+                    ))
+                }
+            }
+            Transformation::ApplyToBothSidesTransformation(t) => {
+                let mut missing_types = vec![];
+                if !self.contains_type(&t.get_symbol_type()) {
+                    missing_types.push(t.get_symbol_type().clone());
+                }
+                let inner = t.get_transformation();
+                if let Err(TypeError::StatementIncludesTypesNotInHierarchy(ts)) =
+                    self.binds_statement_or_error(inner.get_from())
+                {
+                    missing_types.append(&mut ts.into_iter().collect());
+                }
+                if let Err(TypeError::StatementIncludesTypesNotInHierarchy(ts)) =
+                    self.binds_statement_or_error(inner.get_to())
+                {
+                    missing_types.append(&mut ts.into_iter().collect());
+                }
+                if missing_types.len() > 0 {
+                    return Err(TypeError::StatementIncludesTypesNotInHierarchy(
+                        missing_types.into_iter().collect(),
+                    ));
+                } else {
+                    return Ok(());
+                }
+            }
+        }
     }
 
     pub fn binds_statement_or_error(&self, statement: &SymbolNode) -> Result<(), TypeError> {
@@ -647,7 +685,7 @@ mod test_type {
 
         let custom_tokens = vec!["=".to_string()];
 
-        let symmetry = Transformation::symmetry(
+        let symmetry = ExplicitTransformation::symmetry(
             "=".to_string(),
             "=".into(),
             ("a".to_string(), "b".to_string()),
@@ -700,7 +738,7 @@ mod test_type {
 
         let custom_tokens = vec!["=_real".to_string(), "=".to_string()];
 
-        let symmetry = Transformation::symmetry(
+        let symmetry = ExplicitTransformation::symmetry(
             "=".to_string(),
             "=".into(),
             ("a".to_string(), "b".to_string()),
@@ -750,7 +788,7 @@ mod test_type {
             ))
         );
 
-        let real_symmetry = Transformation::symmetry(
+        let real_symmetry = ExplicitTransformation::symmetry(
             "=_real".to_string(),
             "=_real".into(),
             ("a".to_string(), "b".to_string()),
@@ -945,10 +983,10 @@ mod test_type {
 
     #[test]
     fn test_type_hierarchy_unions() {
-        let mut trivial = TypeHierarchy::new();
+        let trivial = TypeHierarchy::new();
         assert_eq!(trivial.union(&trivial), Ok(trivial.clone()));
 
-        let mut chain =
+        let chain =
             TypeHierarchy::chain(vec!["Real".into(), "Rational".into(), "Integer".into()]).unwrap();
 
         assert_eq!(trivial.union(&chain), chain.union(&trivial));
@@ -956,7 +994,7 @@ mod test_type {
 
         assert_eq!(chain.union(&chain), Ok(chain.clone()));
 
-        let mut chain_with_complex = TypeHierarchy::chain(vec![
+        let chain_with_complex = TypeHierarchy::chain(vec![
             "Complex".into(),
             "Real".into(),
             "Rational".into(),
