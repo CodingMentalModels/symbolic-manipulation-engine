@@ -600,34 +600,31 @@ mod test_transformation {
     use super::*;
 
     #[test]
-    fn test_transformation_multi_input_transforms() {
+    fn test_transformation_joint_transforms() {
         let hierarchy = TypeHierarchy::chain(vec!["Proposition".into()]).unwrap();
         let parser = Parser::new(vec![
             Interpretation::singleton("p", "Proposition".into()),
             Interpretation::singleton("q", "Proposition".into()),
             Interpretation::infix_operator("^".into(), 1, "Proposition".into()),
+            Interpretation::infix_operator("=>".into(), 2, "Proposition".into()),
             Interpretation::singleton("a", "Proposition".into()),
             Interpretation::singleton("b", "Proposition".into()),
             Interpretation::singleton("c", "Proposition".into()),
         ]);
 
-        let get_proposition =
-            |name: &str| Symbol::new("p".to_string(), "Proposition".into()).into();
-        let from = SymbolNode::new(
-            Symbol::Join,
-            vec![get_proposition("p"), get_proposition("q")],
-        );
+        let as_proposition = |name: &str| Symbol::new("p".to_string(), "Proposition".into()).into();
+        let from = SymbolNode::new(Symbol::Join, vec![as_proposition("p"), as_proposition("q")]);
         let p_and_q = parser
             .parse_from_string(vec!["^".to_string()], "p^q")
             .unwrap();
         let transform: Transformation = ExplicitTransformation::new(from, p_and_q.clone()).into();
         let actual = transform
-            .joint_transform(&hierarchy, get_proposition("p"), get_proposition("q"))
+            .joint_transform(&hierarchy, as_proposition("p"), as_proposition("q"))
             .unwrap();
         assert_eq!(actual, p_and_q);
 
         let actual = transform
-            .joint_transform(&hierarchy, get_proposition("a"), get_proposition("b"))
+            .joint_transform(&hierarchy, as_proposition("a"), as_proposition("b"))
             .unwrap();
         let expected = parser
             .parse_from_string(vec!["^".to_string()], "a^b")
@@ -635,12 +632,30 @@ mod test_transformation {
         assert_eq!(actual, expected);
 
         let actual = transform
-            .joint_transform(&hierarchy, p_and_q, get_proposition("b"))
+            .joint_transform(&hierarchy, p_and_q, as_proposition("b"))
             .unwrap();
         let expected = parser
             .parse_from_string(vec!["^".to_string()], "(p^q)^b")
             .unwrap();
         assert_eq!(actual, expected);
+
+        let p_implies_q = parser
+            .parse_from_string(vec!["=>".to_string()], "p=>q")
+            .unwrap();
+        let from = SymbolNode::new(Symbol::Join, vec![as_proposition("p"), p_implies_q]);
+        let transform: Transformation =
+            ExplicitTransformation::new(from, as_proposition("q")).into();
+
+        let expected = as_proposition("q");
+        assert_eq!(
+            transform.joint_transform(hierarchy, as_proposition("p"), p_implies_q),
+            expected
+        );
+        // Order shouldn't matter
+        assert_eq!(
+            transform.joint_transform(hierarchy, p_implies_q, as_proposition("p")),
+            expected
+        );
     }
 
     #[test]
