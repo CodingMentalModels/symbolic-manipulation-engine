@@ -595,7 +595,10 @@ impl From<TypeError> for TransformationError {
 
 #[cfg(test)]
 mod test_transformation {
-    use crate::parsing::{interpretation::Interpretation, parser::Parser, tokenizer::Token};
+    use crate::{
+        parsing::{interpretation::Interpretation, parser::Parser, tokenizer::Token},
+        symbol::symbol_node::SymbolNodeElement,
+    };
 
     use super::*;
 
@@ -613,7 +616,10 @@ mod test_transformation {
         ]);
 
         let as_proposition = |name: &str| Symbol::new("p".to_string(), "Proposition".into()).into();
-        let from = SymbolNode::new(Symbol::Join, vec![as_proposition("p"), as_proposition("q")]);
+        let from = SymbolNode::new(
+            SymbolNodeElement::Join,
+            vec![as_proposition("p"), as_proposition("q")],
+        );
         let p_and_q = parser
             .parse_from_string(vec!["^".to_string()], "p^q")
             .unwrap();

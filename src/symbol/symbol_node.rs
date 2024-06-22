@@ -31,13 +31,22 @@ pub enum SymbolNodeError {
 
 #[derive(Clone, Hash, PartialEq, Eq, Serialize, Deserialize)]
 pub struct SymbolNode {
-    root: Symbol,
+    root: SymbolNodeRoot,
     children: Vec<SymbolNode>,
+}
+
+impl From<SymbolNodeRoot> for SymbolNode {
+    fn from(value: SymbolNodeRoot) -> Self {
+        Self {
+            root: value,
+            children: vec![],
+        }
+    }
 }
 
 impl From<Symbol> for SymbolNode {
     fn from(value: Symbol) -> Self {
-        Self::leaf(value)
+        Self::leaf(value.into())
     }
 }
 
@@ -77,30 +86,30 @@ impl Debug for SymbolNode {
 }
 
 impl SymbolNode {
-    pub fn new(root: Symbol, children: Vec<SymbolNode>) -> Self {
+    pub fn new(root: SymbolNodeRoot, children: Vec<SymbolNode>) -> Self {
         SymbolNode { root, children }
     }
 
     pub fn singleton(s: &str) -> Self {
-        Self::leaf(Symbol::new(s.to_string(), s.into()))
+        Self::leaf(Symbol::new(s.to_string(), s.into()).into())
     }
 
     pub fn leaf(root: Symbol) -> Self {
-        Self::new(root, Vec::new())
+        Self::new(root.into(), Vec::new())
     }
 
     pub fn with_single_child(root: Symbol, child: Symbol) -> Self {
-        Self::new(root, vec![SymbolNode::leaf(child)])
+        Self::new(root.into(), vec![SymbolNode::leaf(child)])
     }
 
     pub fn leaf_object(root: &str) -> Self {
-        Self::leaf(Symbol::new_object(root.to_string()))
+        Self::leaf(Symbol::new_object(root.to_string()).into())
     }
 
     pub fn object_with_single_child_object(root: &str, child: &str) -> Self {
         Self::with_single_child(
-            Symbol::new_object(root.to_string()),
-            Symbol::new_object(child.to_string()),
+            Symbol::new_object(root.to_string()).into(),
+            Symbol::new_object(child.to_string()).into(),
         )
     }
 
@@ -147,7 +156,13 @@ impl SymbolNode {
     }
 
     pub fn get_symbol(&self) -> &Symbol {
-        &self.root
+        match &self.root {
+            SymbolNodeRoot::Join => {
+                // TODO Ensure this never happens
+                unimplemented!()
+            }
+            SymbolNodeRoot::Symbol(s) => &s,
+        }
     }
 
     pub fn get_root_name(&self) -> String {
@@ -155,7 +170,13 @@ impl SymbolNode {
     }
 
     pub fn get_evaluates_to_type(&self) -> Type {
-        self.root.get_evaluates_to_type()
+        match &self.root {
+            SymbolNodeRoot::Join => {
+                // TODO Ensure this never happens
+                unimplemented!();
+            }
+            SymbolNodeRoot::Symbol(s) => s.get_evaluates_to_type(),
+        }
     }
 
     pub fn has_conflicting_arities(&self) -> bool {
@@ -165,13 +186,16 @@ impl SymbolNode {
         }
     }
 
-    pub fn get_arities(&self) -> Result<HashMap<Symbol, usize>, SymbolNodeError> {
+    pub fn get_arities(&self) -> Result<HashMap<SymbolNodeRoot, usize>, SymbolNodeError> {
         let mut arities = HashMap::new();
         self.collect_arities(&mut arities)?;
         Ok(arities)
     }
 
-    fn collect_arities(&self, arities: &mut HashMap<Symbol, usize>) -> Result<(), SymbolNodeError> {
+    fn collect_arities(
+        &self,
+        arities: &mut HashMap<SymbolNodeRoot, usize>,
+    ) -> Result<(), SymbolNodeError> {
         // Check if the symbol already exists with a different arity
         match arities.entry(self.root.clone()) {
             std::collections::hash_map::Entry::Vacant(e) => {
@@ -194,7 +218,7 @@ impl SymbolNode {
     }
 
     pub fn split_delimiters(&self) -> Self {
-        let mut to_return = Self::leaf(self.root.clone());
+        let mut to_return: Self = self.root.clone().into();
         for child in self.children.iter() {
             to_return.push_child(child.split_delimiters());
         }
@@ -266,12 +290,12 @@ impl SymbolNode {
                 child.replace_by_name(from, to).map(|c| acc.push(c))?;
                 Ok(acc)
             })?;
-        Ok(Self::new(self.get_symbol().clone(), new_children))
+        Ok(Self::new(self.get_symbol().clone().into(), new_children))
     }
 
     pub fn replace_name(&self, from: &str, to: &str) -> Result<Self, SymbolNodeError> {
         let new_root = if self.get_root_name() == from {
-            Symbol::new(from.to_string(), self.get_evaluates_to_type())
+            Symbol::new(from.to_string(), self.get_evaluates_to_type()).into()
         } else {
             self.root.clone()
         };
@@ -287,9 +311,9 @@ impl SymbolNode {
 
     pub fn replace_symbol(&self, from: &Symbol, to: &Symbol) -> Result<Self, SymbolNodeError> {
         let new_root = if self.get_symbol() == from {
-            to.clone()
+            to.clone().into()
         } else {
-            self.root.clone()
+            self.root.clone().into()
         };
         let new_children = self
             .children
@@ -298,7 +322,7 @@ impl SymbolNode {
                 child.replace_symbol(from, to).map(|c| acc.push(c))?;
                 Ok(acc)
             })?;
-        Ok(Self::new(new_root, new_children))
+        Ok(Self::new(new_root, new_children)).into()
     }
 
     pub fn replace_all(&self, from: &Symbol, to: &SymbolNode) -> Result<Self, SymbolNodeError> {
@@ -314,7 +338,7 @@ impl SymbolNode {
                     Ok(acc)
                 },
             )?;
-            Ok(Self::new(self.get_symbol().clone(), children))
+            Ok(Self::new(self.get_symbol().clone().into(), children))
         }
     }
 
@@ -354,7 +378,7 @@ impl SymbolNode {
     }
 
     pub fn find_symbol(&self, symbol: &Symbol) -> HashSet<SymbolNodeAddress> {
-        self.find_where(&|node| &node.root == symbol)
+        self.find_where(&|node| &node.root == &SymbolNodeRoot::Symbol(symbol.clone()))
     }
 
     pub fn find_symbol_name(&self, symbol_name: &str) -> HashSet<SymbolNodeAddress> {
@@ -434,7 +458,7 @@ impl SymbolNode {
     }
 
     pub fn get_symbols(&self) -> HashSet<Symbol> {
-        let mut result = vec![self.root.clone()];
+        let mut result = vec![self.get_symbol().clone()];
         for child in &self.children {
             result.extend(child.get_symbols());
         }
@@ -502,7 +526,7 @@ impl SymbolNode {
             addresses.insert(current_address);
             (
                 Self::new(
-                    Symbol::new(new_label.to_string(), self.root.get_evaluates_to_type()),
+                    Symbol::new(new_label.to_string(), self.root.get_evaluates_to_type()).into(),
                     new_children,
                 ),
                 addresses,
@@ -724,6 +748,57 @@ impl Substitution {
             to_return,
             addresses_to_subs.into_iter().map(|x| x.0).collect(),
         )
+    }
+}
+
+#[derive(Clone, Debug, Hash, PartialEq, Eq, Serialize, Deserialize)]
+pub enum SymbolNodeRoot {
+    Symbol(Symbol),
+    Join,
+}
+
+impl Default for SymbolNodeRoot {
+    fn default() -> Self {
+        Symbol::default().into()
+    }
+}
+
+impl From<Symbol> for SymbolNodeRoot {
+    fn from(value: Symbol) -> Self {
+        Self::Symbol(value)
+    }
+}
+
+impl From<String> for SymbolNodeRoot {
+    fn from(value: String) -> Self {
+        value.into()
+    }
+}
+
+impl From<&str> for SymbolNodeRoot {
+    fn from(value: &str) -> Self {
+        value.into()
+    }
+}
+
+impl SymbolNodeRoot {
+    pub fn to_string(&self) -> String {
+        match self {
+            Self::Join => {
+                // TODO Ensure this never happens
+                unimplemented!();
+            }
+            Self::Symbol(s) => s.to_string(),
+        }
+    }
+    pub fn get_name(&self) -> String {
+        match self {
+            Self::Join => {
+                // TODO Ensure this never happens
+                unimplemented!();
+            }
+            Self::Symbol(s) => s.get_name(),
+        }
     }
 }
 
