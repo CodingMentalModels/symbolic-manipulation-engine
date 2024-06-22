@@ -224,7 +224,7 @@ impl TypeHierarchy {
                 Ok(acc)
             })?;
 
-        Ok(SymbolNode::new(new_root, new_children))
+        Ok(SymbolNode::new_from_symbol(new_root, new_children))
     }
 
     pub fn generalizes(&self, left: &SymbolNode, right: &SymbolNode) -> Result<bool, TypeError> {
@@ -713,12 +713,12 @@ mod test_type {
         assert_eq!(
             trivial_hierarchy.instantiate(
                 &SymbolNode::leaf_object("y"),
-                &SymbolNode::new(
+                &SymbolNode::new_from_symbol(
                     Symbol::new("op".to_string(), Type::Object),
                     vec![SymbolNode::leaf_object("x"), SymbolNode::leaf_object("y")]
                 ),
             ),
-            Ok(SymbolNode::new(
+            Ok(SymbolNode::new_from_symbol(
                 Symbol::new("op".to_string(), Type::Object),
                 vec![SymbolNode::leaf_object("x"), SymbolNode::leaf_object("y")]
             ),)
@@ -823,7 +823,7 @@ mod test_type {
     fn test_generalizes_and_is_generalized_by() {
         let mut type_hierarchy = TypeHierarchy::chain(vec!["Integer".into()]).unwrap();
         type_hierarchy.add_chain(vec!["Boolean".into()]);
-        let a_equals_b = SymbolNode::new(
+        let a_equals_b = SymbolNode::new_from_symbol(
             "=".into(),
             vec![SymbolNode::leaf_object("a"), SymbolNode::leaf_object("b")],
         );
@@ -835,7 +835,7 @@ mod test_type {
             .is_generalized_by(&a_equals_b, &a_equals_b)
             .unwrap());
 
-        let a_equals_b_integers = SymbolNode::new(
+        let a_equals_b_integers = SymbolNode::new_from_symbol(
             Symbol::new("=".to_string(), Type::new("Boolean".to_string())),
             vec![
                 SymbolNode::leaf(Symbol::new(
@@ -861,7 +861,7 @@ mod test_type {
 
         let mut type_hierarchy = TypeHierarchy::chain(vec!["=".into()]).unwrap();
         type_hierarchy.add_chain(vec!["Integer".into()]);
-        let x_equals_y_integers = SymbolNode::new(
+        let x_equals_y_integers = SymbolNode::new_from_symbol(
             Symbol::new("y".to_string(), Type::new("=".to_string())),
             vec![
                 SymbolNode::leaf(Symbol::new(

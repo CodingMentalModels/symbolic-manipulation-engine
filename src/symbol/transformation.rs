@@ -658,7 +658,10 @@ mod test_transformation {
         let p_implies_q = parser
             .parse_from_string(vec!["=>".to_string()], "p=>q")
             .unwrap();
-        let from = SymbolNode::new(SymbolNodeRoot::Join, vec![as_proposition("p"), p_implies_q]);
+        let from = SymbolNode::new(
+            SymbolNodeRoot::Join,
+            vec![as_proposition("p"), p_implies_q.clone()],
+        );
         let transform: Transformation =
             ExplicitTransformation::new(from, as_proposition("q")).into();
 
