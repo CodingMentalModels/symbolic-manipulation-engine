@@ -22,9 +22,9 @@ pub type SymbolNodeAddress = Vec<usize>;
 #[derive(Clone, Debug, Hash, PartialEq, Eq)]
 pub enum SymbolNodeError {
     ConflictingTypes(String, Type, Type),
-    ConflictingSymbolArities(Symbol),
+    ConflictingSymbolArities(SymbolNode),
     ChildIndexOutOfRange,
-    DifferentNumberOfArguments(Symbol, usize, Symbol, usize),
+    DifferentNumberOfArguments(SymbolNode, SymbolNode),
     RelabellingNotInjective(Vec<(String, String)>),
     InvalidAddress,
 }
@@ -115,6 +115,10 @@ impl SymbolNode {
             Symbol::new_object(root.to_string()).into(),
             Symbol::new_object(child.to_string()).into(),
         )
+    }
+
+    pub fn join(self, other: Self) -> Self {
+        Self::new(SymbolNodeRoot::Join, vec![self, other])
     }
 
     pub fn get_depth(&self) -> usize {
@@ -208,7 +212,7 @@ impl SymbolNode {
             std::collections::hash_map::Entry::Occupied(e) => {
                 // If the arity (number of children) is different, return an error
                 if *e.get() != self.get_n_children() {
-                    return Err(SymbolNodeError::ConflictingSymbolArities(self.root.clone()));
+                    return Err(SymbolNodeError::ConflictingSymbolArities(self.clone()));
                 }
             }
         }
@@ -581,10 +585,8 @@ impl SymbolNode {
         } else {
             if self.get_n_children() != other.get_n_children() {
                 return Err(SymbolNodeError::DifferentNumberOfArguments(
-                    self.get_symbol().clone(),
-                    self.get_n_children(),
-                    other.get_symbol().clone(),
-                    other.get_n_children(),
+                    self.clone(),
+                    other.clone(),
                 ));
             }
             let new_inner = self
@@ -609,10 +611,8 @@ impl SymbolNode {
     ) -> Result<HashMap<String, String>, SymbolNodeError> {
         if self.children.len() != other.children.len() {
             return Err(SymbolNodeError::DifferentNumberOfArguments(
-                self.root.clone(),
-                self.children.len(),
-                other.root.clone(),
-                other.children.len(),
+                self.clone(),
+                other.clone(),
             ));
         }
         let mut to_return = vec![(self.root.get_name(), other.root.get_name())];

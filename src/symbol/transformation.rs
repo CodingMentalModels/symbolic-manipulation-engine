@@ -45,6 +45,15 @@ impl Transformation {
             Self::ApplyToBothSidesTransformation(t) => t.transform(hierarchy, statement),
         }
     }
+    pub fn joint_transform(
+        &self,
+        hierarchy: &TypeHierarchy,
+        left: &SymbolNode,
+        right: &SymbolNode,
+    ) -> Result<SymbolNode, TransformationError> {
+        let statement = left.clone().join(right.clone());
+        self.transform(hierarchy, &statement)
+    }
 
     pub fn try_transform_into(
         &self,
@@ -626,12 +635,12 @@ mod test_transformation {
             .unwrap();
         let transform: Transformation = ExplicitTransformation::new(from, p_and_q.clone()).into();
         let actual = transform
-            .joint_transform(&hierarchy, as_proposition("p"), as_proposition("q"))
+            .joint_transform(&hierarchy, &as_proposition("p"), &as_proposition("q"))
             .unwrap();
         assert_eq!(actual, p_and_q);
 
         let actual = transform
-            .joint_transform(&hierarchy, as_proposition("a"), as_proposition("b"))
+            .joint_transform(&hierarchy, &as_proposition("a"), &as_proposition("b"))
             .unwrap();
         let expected = parser
             .parse_from_string(vec!["^".to_string()], "a^b")
@@ -639,7 +648,7 @@ mod test_transformation {
         assert_eq!(actual, expected);
 
         let actual = transform
-            .joint_transform(&hierarchy, p_and_q, as_proposition("b"))
+            .joint_transform(&hierarchy, &p_and_q, &as_proposition("b"))
             .unwrap();
         let expected = parser
             .parse_from_string(vec!["^".to_string()], "(p^q)^b")
@@ -655,12 +664,16 @@ mod test_transformation {
 
         let expected = as_proposition("q");
         assert_eq!(
-            transform.joint_transform(hierarchy, as_proposition("p"), p_implies_q),
+            transform
+                .joint_transform(&hierarchy, &as_proposition("p"), &p_implies_q)
+                .unwrap(),
             expected
         );
         // Order shouldn't matter
         assert_eq!(
-            transform.joint_transform(hierarchy, p_implies_q, as_proposition("p")),
+            transform
+                .joint_transform(&hierarchy, &p_implies_q, &as_proposition("p"))
+                .unwrap(),
             expected
         );
     }

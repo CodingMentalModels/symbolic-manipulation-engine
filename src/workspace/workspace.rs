@@ -761,7 +761,7 @@ mod test_workspace {
         expected.add_chain(vec!["+".into()]).unwrap();
         assert_eq!(workspace.types, expected);
 
-        let expected = SymbolNode::new(
+        let expected = SymbolNode::new_from_symbol(
             Symbol::new("+".to_string(), "Integer".into()),
             vec![SymbolNode::singleton("2"), SymbolNode::singleton("2")],
         );
