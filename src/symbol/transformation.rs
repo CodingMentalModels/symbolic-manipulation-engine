@@ -288,7 +288,7 @@ impl ApplyToBothSidesTransformation {
             .typed_relabel_and_transform(hierarchy, &right)?;
 
         Ok(SymbolNode::new(
-            self.symbol.clone(),
+            self.symbol.clone().into(),
             vec![left_transformed, right_transformed],
         ))
     }
@@ -341,7 +341,7 @@ impl ExplicitTransformation {
     ) -> Self {
         let object = SymbolNode::leaf(Symbol::new(object_name, object_type));
         let node = SymbolNode::new(
-            Symbol::new(operator_name, operator_type),
+            Symbol::new(operator_name, operator_type).into(),
             vec![object.clone(), object.clone()],
         );
         ExplicitTransformation::new(node.clone(), node)
@@ -356,8 +356,8 @@ impl ExplicitTransformation {
         let left = SymbolNode::leaf(Symbol::new(object_names.0, object_type.clone()));
         let right = SymbolNode::leaf(Symbol::new(object_names.1, object_type));
         let operator = Symbol::new(operator_name, operator_type);
-        let from = SymbolNode::new(operator.clone(), vec![left.clone(), right.clone()]);
-        let to = SymbolNode::new(operator, vec![right.clone(), left.clone()]);
+        let from = SymbolNode::new(operator.clone().into(), vec![left.clone(), right.clone()]);
+        let to = SymbolNode::new(operator.into(), vec![right.clone(), left.clone()]);
         ExplicitTransformation::new(from, to)
     }
 
@@ -381,11 +381,11 @@ impl ExplicitTransformation {
         let c = SymbolNode::leaf(Symbol::new(object_names.2, object_type));
         let operator = Symbol::new(operator_name, operator_type);
 
-        let a_b = SymbolNode::new(operator.clone(), vec![a.clone(), b.clone()]);
-        let a_b_then_c = SymbolNode::new(operator.clone(), vec![a_b.clone(), c.clone()]);
+        let a_b = SymbolNode::new(operator.clone().into(), vec![a.clone(), b.clone()]);
+        let a_b_then_c = SymbolNode::new(operator.clone().into(), vec![a_b.clone(), c.clone()]);
 
-        let b_c = SymbolNode::new(operator.clone(), vec![b.clone(), c.clone()]);
-        let a_then_b_c = SymbolNode::new(operator.clone(), vec![a.clone(), b_c.clone()]);
+        let b_c = SymbolNode::new(operator.clone().into(), vec![b.clone(), c.clone()]);
+        let a_then_b_c = SymbolNode::new(operator.clone().into(), vec![a.clone(), b_c.clone()]);
 
         ExplicitTransformation::new(a_b_then_c, a_then_b_c)
     }
@@ -490,7 +490,8 @@ impl ExplicitTransformation {
             .flatten()
             .collect();
 
-        let new_statement = SymbolNode::new(statement.get_symbol().clone(), transformed_children);
+        let new_statement =
+            SymbolNode::new(statement.get_symbol().clone().into(), transformed_children);
 
         match self.try_transform(&new_statement, relabellings) {
             Ok((transformed, true)) => {
@@ -597,7 +598,7 @@ impl From<TypeError> for TransformationError {
 mod test_transformation {
     use crate::{
         parsing::{interpretation::Interpretation, parser::Parser, tokenizer::Token},
-        symbol::symbol_node::SymbolNodeElement,
+        symbol::symbol_node::SymbolNodeRoot,
     };
 
     use super::*;
@@ -617,7 +618,7 @@ mod test_transformation {
 
         let as_proposition = |name: &str| Symbol::new("p".to_string(), "Proposition".into()).into();
         let from = SymbolNode::new(
-            SymbolNodeElement::Join,
+            SymbolNodeRoot::Join,
             vec![as_proposition("p"), as_proposition("q")],
         );
         let p_and_q = parser
