@@ -90,6 +90,10 @@ impl SymbolNode {
         SymbolNode { root, children }
     }
 
+    pub fn new_from_symbol(root: Symbol, children: Vec<SymbolNode>) -> Self {
+        Self::new(root.into(), children)
+    }
+
     pub fn singleton(s: &str) -> Self {
         Self::leaf(Symbol::new(s.to_string(), s.into()).into())
     }

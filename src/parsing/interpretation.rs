@@ -185,15 +185,15 @@ impl Interpretation {
                 }
             }
             InterpretedType::Delimiter => Ok(SymbolNode::new(
-                Symbol::new(token.to_string(), Type::Delimiter),
+                Symbol::new(token.to_string(), Type::Delimiter).into(),
                 children,
             )),
             InterpretedType::SameAsValue => Ok(SymbolNode::new(
-                Symbol::new(token.to_string(), token.to_string().into()),
+                Symbol::new(token.to_string(), token.to_string().into()).into(),
                 children,
             )),
             InterpretedType::Type(t) => Ok(SymbolNode::new(
-                Symbol::new(token.to_string(), t.clone()),
+                Symbol::new(token.to_string(), t.clone()).into(),
                 children,
             )),
         }
