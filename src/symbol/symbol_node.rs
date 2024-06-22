@@ -46,7 +46,7 @@ impl From<SymbolNodeRoot> for SymbolNode {
 
 impl From<Symbol> for SymbolNode {
     fn from(value: Symbol) -> Self {
-        Self::leaf(value.into())
+        SymbolNodeRoot::Symbol(value).into()
     }
 }
 
@@ -775,13 +775,13 @@ impl From<Symbol> for SymbolNodeRoot {
 
 impl From<String> for SymbolNodeRoot {
     fn from(value: String) -> Self {
-        value.into()
+        Self::Symbol(value.into())
     }
 }
 
 impl From<&str> for SymbolNodeRoot {
     fn from(value: &str) -> Self {
-        value.into()
+        value.to_string().into()
     }
 }
 
