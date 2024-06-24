@@ -530,7 +530,10 @@ impl SymbolNode {
                         .collect(),
                 )
             });
-        if self.root.get_name() == old_label && condition(self, &current_address) {
+        if !self.root.is_join()
+            && self.root.get_name() == old_label
+            && condition(self, &current_address)
+        {
             let mut addresses = children_addresses;
             addresses.insert(current_address);
             (
@@ -616,7 +619,11 @@ impl SymbolNode {
                 other.clone(),
             ));
         }
-        let mut to_return = vec![(self.root.get_name(), other.root.get_name())];
+        let mut to_return = if self.root.is_join() {
+            vec![]
+        } else {
+            vec![(self.root.get_name(), other.root.get_name())]
+        };
         for (_i, (child, other_child)) in
             self.children.iter().zip(other.children.iter()).enumerate()
         {
@@ -683,6 +690,9 @@ impl SymbolNode {
                     Ok(acc)
                 })?;
         let mut to_return = children_type_map.clone();
+        if self.root.is_join() {
+            return Ok(to_return);
+        }
         match children_type_map.get(&self.get_root_name()) {
             Some(prior_type) => {
                 if &self.get_evaluates_to_type() != prior_type {
@@ -787,6 +797,10 @@ impl From<&str> for SymbolNodeRoot {
 }
 
 impl SymbolNodeRoot {
+    pub fn is_join(&self) -> bool {
+        self == &Self::Join
+    }
+
     pub fn to_string(&self) -> String {
         match self {
             Self::Join => {
