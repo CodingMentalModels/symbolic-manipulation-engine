@@ -163,6 +163,10 @@ impl SymbolNode {
         Ok(self)
     }
 
+    pub fn get_root(&self) -> &SymbolNodeRoot {
+        &self.root
+    }
+
     pub fn get_symbol(&self) -> &Symbol {
         match &self.root {
             SymbolNodeRoot::Join => {
@@ -179,10 +183,7 @@ impl SymbolNode {
 
     pub fn get_evaluates_to_type(&self) -> Type {
         match &self.root {
-            SymbolNodeRoot::Join => {
-                // TODO Ensure this never happens
-                unimplemented!();
-            }
+            SymbolNodeRoot::Join => Type::Join,
             SymbolNodeRoot::Symbol(s) => s.get_evaluates_to_type(),
         }
     }

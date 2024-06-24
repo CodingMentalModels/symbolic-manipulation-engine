@@ -9,6 +9,7 @@ use serde::{
 };
 use ts_rs::TS;
 
+use super::symbol_node::SymbolNodeRoot;
 use super::transformation::Transformation;
 use super::{
     symbol_node::{Symbol, SymbolNode},
@@ -99,6 +100,14 @@ impl TypeHierarchy {
             Type::Object,
             TypeHierarchyNode {
                 inner: Type::Object,
+                parents: HashSet::new(),
+                children: HashSet::new(),
+            },
+        );
+        hierarchy.type_map.insert(
+            Type::Join,
+            TypeHierarchyNode {
+                inner: Type::Join,
                 parents: HashSet::new(),
                 children: HashSet::new(),
             },
@@ -211,7 +220,7 @@ impl TypeHierarchy {
             ));
         }
 
-        let new_root = specific.get_symbol().clone();
+        let new_root = specific.get_root().clone();
         let new_children = general
             .get_children()
             .iter()
@@ -224,10 +233,13 @@ impl TypeHierarchy {
                 Ok(acc)
             })?;
 
-        Ok(SymbolNode::new_from_symbol(new_root, new_children))
+        Ok(SymbolNode::new(new_root, new_children))
     }
 
     pub fn generalizes(&self, left: &SymbolNode, right: &SymbolNode) -> Result<bool, TypeError> {
+        if left.get_root() == &SymbolNodeRoot::Join || right.get_root() == &SymbolNodeRoot::Join {
+            return Ok(left.get_root() == right.get_root());
+        }
         let root_generalizes = left.get_root_name() == right.get_root_name()
             && self.is_supertype_of(
                 &left.get_evaluates_to_type(),
@@ -593,6 +605,7 @@ impl GeneratedTypeCondition {
 pub enum Type {
     Object,
     Delimiter,
+    Join,
     NamedType(TypeName),
 }
 
@@ -635,6 +648,7 @@ impl Type {
         match self {
             Type::Object => SERIALIZED_OBJECT_TYPE.to_string(),
             Type::Delimiter => SERIALIZED_DELIMITER_TYPE.to_string(),
+            Type::Join => SERIALIZED_JOIN_TYPE.to_string(),
             Type::NamedType(name) => name.clone(),
         }
     }
@@ -649,6 +663,8 @@ impl Type {
         match self {
             Type::Object => "Object".to_string(),
             Type::Delimiter => "Delimiter".to_string(),
+            // TODO Make sure this never happens
+            Type::Join => unimplemented!(),
             Type::NamedType(t) => t.to_string(),
         }
     }
