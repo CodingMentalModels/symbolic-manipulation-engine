@@ -179,6 +179,18 @@ impl Workspace {
         &self.statements
     }
 
+    pub fn get_statement_pairs(&self) -> Vec<SymbolNode> {
+        let left = self.get_statements();
+        let right = self.get_statements();
+        let mut to_return = Vec::new();
+        for i in 0..(left.len() - 1) {
+            for j in i..right.len() {
+                to_return.push(left[i].clone().join(right[j].clone()));
+            }
+        }
+        to_return
+    }
+
     pub fn get_statement(&self, index: StatementIndex) -> Result<SymbolNode, WorkspaceError> {
         if self.statement_index_is_invalid(index) {
             Err(WorkspaceError::InvalidStatementIndex)
@@ -289,10 +301,15 @@ impl Workspace {
             }
             Ok(s) => s,
         };
-        for statement in self.get_statements() {
-            for transformation in self.get_transformations() {
+        for transformation in self.get_transformations() {
+            let statements = if transformation.is_joint_transform() {
+                self.get_statement_pairs()
+            } else {
+                self.get_statements().clone()
+            };
+            for statement in statements {
                 let valid_transformations =
-                    transformation.get_valid_transformations(self.get_types(), statement);
+                    transformation.get_valid_transformations(self.get_types(), &statement);
                 if valid_transformations.contains(&desired)
                     && !self.get_statements().contains(&desired)
                 {

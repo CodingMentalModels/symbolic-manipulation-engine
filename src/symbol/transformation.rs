@@ -45,6 +45,15 @@ impl Transformation {
             Self::ApplyToBothSidesTransformation(t) => t.transform(hierarchy, statement),
         }
     }
+
+    pub fn is_joint_transform(&self) -> bool {
+        if let Self::ExplicitTransformation(t) = self {
+            t.from.is_join()
+        } else {
+            false
+        }
+    }
+
     pub fn joint_transform(
         &self,
         hierarchy: &TypeHierarchy,

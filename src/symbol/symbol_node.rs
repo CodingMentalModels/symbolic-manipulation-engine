@@ -117,6 +117,10 @@ impl SymbolNode {
         )
     }
 
+    pub fn is_join(&self) -> bool {
+        self.root.is_join()
+    }
+
     pub fn join(self, other: Self) -> Self {
         Self::new(SymbolNodeRoot::Join, vec![self, other])
     }
