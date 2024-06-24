@@ -1284,6 +1284,18 @@ mod test_statement {
         );
 
         assert_eq!(a_equals_c_plus_b, expected);
+
+        let p_joined_q = SymbolNode::new(
+            SymbolNodeRoot::Join,
+            vec![SymbolNode::leaf_object("p"), SymbolNode::leaf_object("q")],
+        );
+
+        let a_joined_q = p_joined_q.relabel("p", "a");
+        let expected = SymbolNode::new(
+            SymbolNodeRoot::Join,
+            vec![SymbolNode::leaf_object("a"), SymbolNode::leaf_object("q")],
+        );
+        assert_eq!(a_joined_q, expected);
     }
 
     #[test]

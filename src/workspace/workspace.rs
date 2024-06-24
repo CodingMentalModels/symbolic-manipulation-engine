@@ -106,6 +106,7 @@ impl Workspace {
     pub fn try_import_context(&mut self, context: Context) -> Result<(), WorkspaceError> {
         let mut shared_types = self.types.get_shared_types(context.get_types());
         shared_types.remove(&Type::Object);
+        shared_types.remove(&Type::Join);
         if shared_types.len() > 0 {
             return Err(WorkspaceError::AttemptedToImportAmbiguousTypes(
                 shared_types,

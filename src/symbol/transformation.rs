@@ -52,7 +52,13 @@ impl Transformation {
         right: &SymbolNode,
     ) -> Result<SymbolNode, TransformationError> {
         let statement = left.clone().join(right.clone());
-        self.transform(hierarchy, &statement)
+        let in_order = self.transform(hierarchy, &statement);
+        if in_order.is_ok() {
+            return in_order;
+        }
+
+        let reversed = right.clone().join(left.clone());
+        self.transform(hierarchy, &reversed)
     }
 
     pub fn try_transform_into(
@@ -625,7 +631,8 @@ mod test_transformation {
             Interpretation::singleton("c", "Proposition".into()),
         ]);
 
-        let as_proposition = |name: &str| Symbol::new("p".to_string(), "Proposition".into()).into();
+        let as_proposition =
+            |name: &str| Symbol::new(name.to_string(), "Proposition".into()).into();
         let from = SymbolNode::new(
             SymbolNodeRoot::Join,
             vec![as_proposition("p"), as_proposition("q")],
