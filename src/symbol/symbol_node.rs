@@ -796,6 +796,7 @@ impl SymbolNodeRoot {
             Self::Symbol(s) => s.to_string(),
         }
     }
+
     pub fn get_name(&self) -> String {
         match self {
             Self::Join => {
