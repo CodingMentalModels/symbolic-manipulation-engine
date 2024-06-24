@@ -153,6 +153,23 @@ impl Workspace {
         Ok(parsed)
     }
 
+    pub fn add_parsed_joint_transformation(
+        &mut self,
+        left_from: &str,
+        right_from: &str,
+        to: &str,
+    ) -> Result<Transformation, WorkspaceError> {
+        let parsed_from =
+            (self.parse_from_string(left_from)?).join(self.parse_from_string(right_from)?);
+        self.generate_types(&parsed_from)?;
+        let parsed_to = self.parse_from_string(to)?;
+        self.generate_types(&parsed_to)?;
+        let transformation: Transformation =
+            ExplicitTransformation::new(parsed_from, parsed_to).into();
+        self.add_transformation(transformation.clone())?;
+        Ok(transformation)
+    }
+
     pub fn add_parsed_transformation(
         &mut self,
         from: &str,
@@ -333,19 +350,17 @@ impl Workspace {
         &mut self,
         desired: SymbolNode,
     ) -> Result<SymbolNode, WorkspaceError> {
+        if self.statements.contains(&desired) {
+            return Err(WorkspaceError::StatementsAlreadyInclude(desired.clone()));
+        }
         for (statement_idx, statement) in self.statements.iter().enumerate() {
             for (transform_idx, transform) in self.transformations.iter().enumerate() {
                 match transform.try_transform_into(self.get_types(), &statement, &desired) {
                     Ok(output) => {
-                        if self.statements.contains(&output) {
-                            return Err(WorkspaceError::StatementsAlreadyInclude(output.clone()));
-                        } else {
-                            // TODO Derive the appropriate transform addresses
-                            let provenance =
-                                Provenance::Derived(statement_idx, transform_idx, vec![]);
-                            self.add_derived_statement(output.clone(), provenance);
-                            return Ok(output);
-                        }
+                        // TODO Derive the appropriate transform addresses
+                        let provenance = Provenance::Derived(statement_idx, transform_idx, vec![]);
+                        self.add_derived_statement(output.clone(), provenance);
+                        return Ok(output);
                     }
                     Err(_) => { // Do nothing, keep trying transformations
                     }
@@ -671,6 +686,10 @@ mod test_workspace {
         types
             .add_child_to_parent("+".into(), "Real".into())
             .unwrap();
+        types
+            .add_chain(vec!["Proposition".into(), "^".into()])
+            .unwrap();
+
         let interpretations = vec![
             Interpretation::infix_operator("=".into(), 1, "=".into()),
             Interpretation::infix_operator("+".into(), 6, "+".into()),
@@ -681,6 +700,10 @@ mod test_workspace {
             Interpretation::singleton("a".into(), "Integer".into()),
             Interpretation::singleton("b".into(), "Integer".into()),
             Interpretation::singleton("c".into(), "Integer".into()),
+            Interpretation::singleton("p".into(), "Proposition".into()),
+            Interpretation::singleton("q".into(), "Proposition".into()),
+            Interpretation::singleton("r".into(), "Proposition".into()),
+            Interpretation::singleton("s".into(), "Proposition".into()),
         ];
         let mut workspace = Workspace::new(types.clone(), vec![], interpretations.clone());
         workspace
@@ -719,7 +742,7 @@ mod test_workspace {
         );
         assert!(workspace.get_statements().contains(&expected));
 
-        let mut workspace = Workspace::new(types.clone(), vec![], interpretations);
+        let mut workspace = Workspace::new(types.clone(), vec![], interpretations.clone());
         workspace
             .add_transformation(
                 ExplicitTransformation::symmetry(
@@ -736,6 +759,20 @@ mod test_workspace {
         let expected = workspace.parse_from_string("a+(c+b)").unwrap();
         assert_eq!(
             workspace.try_transform_into_parsed("a+(c+b)").unwrap(),
+            expected
+        );
+        assert!(workspace.get_statements().contains(&expected));
+
+        let mut workspace = Workspace::new(types.clone(), vec![], interpretations.clone());
+        workspace
+            .add_parsed_joint_transformation("p", "q", "p^q")
+            .unwrap();
+
+        workspace.add_parsed_hypothesis("r").unwrap();
+        workspace.add_parsed_hypothesis("s").unwrap();
+        let expected = workspace.parse_from_string("s^r").unwrap();
+        assert_eq!(
+            workspace.try_transform_into_parsed("s^r").unwrap(),
             expected
         );
         assert!(workspace.get_statements().contains(&expected));
