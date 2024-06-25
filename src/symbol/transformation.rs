@@ -211,7 +211,7 @@ impl AdditionAlgorithm {
         if !statement.has_children() {
             if hierarchy
                 .is_subtype_of(
-                    &statement.get_symbol().get_evaluates_to_type(),
+                    &statement.get_symbol()?.get_evaluates_to_type(),
                     &self.input_type,
                 )
                 .map_err(|e| Into::<TransformationError>::into(e))?
@@ -230,8 +230,8 @@ impl AdditionAlgorithm {
         let left = self.transform(hierarchy, &children[0])?;
         let right = self.transform(hierarchy, &children[1])?;
 
-        let left_value = Self::try_parse_number(&left.get_root_name())?;
-        let right_value = Self::try_parse_number(&right.get_root_name())?;
+        let left_value = Self::try_parse_number(&&left.get_root_as_string())?;
+        let right_value = Self::try_parse_number(&right.get_root_as_string())?;
         // TODO This will overflow on big enough numbers
         let final_value = left_value + right_value;
         Ok(SymbolNode::leaf(Symbol::new(
@@ -289,9 +289,9 @@ impl ApplyToBothSidesTransformation {
         hierarchy: &TypeHierarchy,
         statement: &SymbolNode,
     ) -> Result<SymbolNode, TransformationError> {
-        if statement.get_symbol() != &self.symbol {
+        if statement.get_symbol()? != &self.symbol {
             return Err(TransformationError::SymbolDoesntMatch(
-                statement.get_symbol().clone(),
+                statement.get_symbol()?.clone(),
             ));
         }
 
@@ -514,8 +514,7 @@ impl ExplicitTransformation {
             .flatten()
             .collect();
 
-        let new_statement =
-            SymbolNode::new(statement.get_symbol().clone().into(), transformed_children);
+        let new_statement = SymbolNode::new(statement.get_root().clone(), transformed_children);
 
         match self.try_transform(&new_statement, relabellings) {
             Ok((transformed, true)) => {
@@ -591,6 +590,7 @@ impl ExplicitTransformation {
 pub enum TransformationError {
     ConflictingTypes(String, Type, Type),
     InvalidSymbolNodeError(SymbolNodeError),
+    InvalidFunctionCalledOnJoin,
     InvalidTypes(TypeError),
     RelabellingsKeysMismatch,
     StatementDoesNotMatch(SymbolNode, SymbolNode),
@@ -607,6 +607,7 @@ impl From<SymbolNodeError> for TransformationError {
             SymbolNodeError::ConflictingTypes(name, t_0, t_1) => {
                 Self::ConflictingTypes(name, t_0, t_1)
             }
+            SymbolNodeError::InvalidFunctionCalledOnJoin => Self::InvalidFunctionCalledOnJoin,
             _ => Self::InvalidSymbolNodeError(value),
         }
     }

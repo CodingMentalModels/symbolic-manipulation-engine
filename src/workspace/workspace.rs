@@ -671,8 +671,6 @@ impl From<TypeError> for WorkspaceError {
 #[cfg(test)]
 mod test_workspace {
 
-    use std::unimplemented;
-
     use crate::{
         context::context::Context,
         parsing::{interpretation::Interpretation, parser::Parser},

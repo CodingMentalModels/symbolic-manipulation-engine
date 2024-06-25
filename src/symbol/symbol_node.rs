@@ -26,6 +26,7 @@ pub enum SymbolNodeError {
     ChildIndexOutOfRange,
     DifferentNumberOfArguments(SymbolNode, SymbolNode),
     RelabellingNotInjective(Vec<(String, String)>),
+    InvalidFunctionCalledOnJoin,
     InvalidAddress,
 }
 
@@ -125,6 +126,10 @@ impl SymbolNode {
         Self::new(SymbolNodeRoot::Join, vec![self, other])
     }
 
+    pub fn has_same_value_as_type(&self) -> bool {
+        !self.is_join() && self.get_root_as_string() == self.get_evaluates_to_type().to_string()
+    }
+
     pub fn get_depth(&self) -> usize {
         if self.children.len() == 0 {
             1
@@ -171,18 +176,18 @@ impl SymbolNode {
         &self.root
     }
 
-    pub fn get_symbol(&self) -> &Symbol {
+    pub fn get_symbol(&self) -> Result<&Symbol, SymbolNodeError> {
         match &self.root {
-            SymbolNodeRoot::Join => {
-                // TODO Ensure this never happens
-                unimplemented!()
-            }
-            SymbolNodeRoot::Symbol(s) => &s,
+            SymbolNodeRoot::Join => Err(SymbolNodeError::InvalidFunctionCalledOnJoin),
+            SymbolNodeRoot::Symbol(s) => Ok(&s),
         }
     }
 
-    pub fn get_root_name(&self) -> String {
-        self.get_symbol().get_name()
+    pub fn get_root_as_string(&self) -> String {
+        match self.get_root() {
+            SymbolNodeRoot::Symbol(s) => s.get_name(),
+            SymbolNodeRoot::Join => ", ".to_string(),
+        }
     }
 
     pub fn get_evaluates_to_type(&self) -> Type {
@@ -252,11 +257,11 @@ impl SymbolNode {
     }
 
     pub fn split_self(&self) -> Vec<Self> {
-        self.split(self.get_symbol())
+        self.split(self.get_root())
     }
 
-    pub fn split(&self, symbol: &Symbol) -> Vec<Self> {
-        if self.get_symbol() == symbol {
+    pub fn split(&self, symbol: &SymbolNodeRoot) -> Vec<Self> {
+        if self.get_root() == symbol {
             let mut to_return = vec![];
             for child in self.children.iter() {
                 to_return.append(&mut child.split(symbol));
@@ -293,7 +298,7 @@ impl SymbolNode {
     }
 
     pub fn replace_by_name(&self, from: &str, to: &Self) -> Result<Self, SymbolNodeError> {
-        if self.get_root_name() == from {
+        if !self.is_join() && (self.get_root_as_string() == from) {
             return Ok(to.clone());
         };
         let new_children = self
@@ -303,11 +308,11 @@ impl SymbolNode {
                 child.replace_by_name(from, to).map(|c| acc.push(c))?;
                 Ok(acc)
             })?;
-        Ok(Self::new(self.get_symbol().clone().into(), new_children))
+        Ok(Self::new(self.get_root().clone(), new_children))
     }
 
     pub fn replace_name(&self, from: &str, to: &str) -> Result<Self, SymbolNodeError> {
-        let new_root = if self.get_root_name() == from {
+        let new_root = if !self.is_join() && (self.get_root_as_string() == from) {
             Symbol::new(from.to_string(), self.get_evaluates_to_type()).into()
         } else {
             self.root.clone()
@@ -323,7 +328,7 @@ impl SymbolNode {
     }
 
     pub fn replace_symbol(&self, from: &Symbol, to: &Symbol) -> Result<Self, SymbolNodeError> {
-        let new_root = if self.get_symbol() == from {
+        let new_root = if !self.is_join() && (self.get_symbol()? == from) {
             to.clone().into()
         } else {
             self.root.clone().into()
@@ -339,7 +344,7 @@ impl SymbolNode {
     }
 
     pub fn replace_all(&self, from: &Symbol, to: &SymbolNode) -> Result<Self, SymbolNodeError> {
-        if self.get_symbol() == from {
+        if !self.is_join() && (self.get_symbol()? == from) {
             Ok(to.clone())
         } else {
             let children = self.get_children().iter().try_fold(
@@ -351,7 +356,7 @@ impl SymbolNode {
                     Ok(acc)
                 },
             )?;
-            Ok(Self::new(self.get_symbol().clone().into(), children))
+            Ok(Self::new(self.get_root().clone(), children))
         }
     }
 
@@ -415,30 +420,32 @@ impl SymbolNode {
                 .collect::<Vec<_>>();
             let functional_string = format!(
                 "{}({})",
-                self.get_root_name(),
+                self.get_root_as_string(),
                 interpreted_children.join(", ")
             )
             .to_string();
             match interpretations.iter().find(|i| i.could_produce(self)) {
                 Some(interpretation) => match interpretation.get_expression_type() {
-                    ExpressionType::Singleton => self.get_root_name(),
+                    ExpressionType::Singleton => self.get_root_as_string(),
                     ExpressionType::Prefix => {
-                        format!("{}{}", self.get_root_name(), interpreted_children[0]).to_string()
+                        format!("{}{}", self.get_root_as_string(), interpreted_children[0])
+                            .to_string()
                     }
                     ExpressionType::Infix => format!(
                         "({}{}{})",
                         interpreted_children[0],
-                        self.get_root_name(),
+                        self.get_root_as_string(),
                         interpreted_children[1]
                     )
                     .to_string(),
                     ExpressionType::Postfix => {
-                        format!("{}{}", interpreted_children[0], self.get_root_name()).to_string()
+                        format!("{}{}", interpreted_children[0], self.get_root_as_string())
+                            .to_string()
                     }
                     ExpressionType::Outfix(right) => match right {
                         Token::Object(right_string) => format!(
                             "{}{}{}",
-                            self.get_root_name(),
+                            self.get_root_as_string(),
                             interpreted_children[0],
                             right_string,
                         )
@@ -450,7 +457,7 @@ impl SymbolNode {
                 None => functional_string,
             }
         } else {
-            self.get_root_name()
+            self.get_root_as_string()
         }
     }
 
@@ -471,7 +478,10 @@ impl SymbolNode {
     }
 
     pub fn get_symbols(&self) -> HashSet<Symbol> {
-        let mut result = vec![self.get_symbol().clone()];
+        let mut result = match self.get_root() {
+            SymbolNodeRoot::Symbol(symbol) => vec![symbol.clone()],
+            SymbolNodeRoot::Join => Vec::new(),
+        };
         for child in &self.children {
             result.extend(child.get_symbols());
         }
@@ -580,13 +590,13 @@ impl SymbolNode {
     ) -> Result<Substitution, SymbolNodeError> {
         if !(hierarchy.generalizes(self, other).is_ok()) {
             return Err(SymbolNodeError::ConflictingTypes(
-                self.get_root_name(),
+                self.get_root_as_string(),
                 self.get_evaluates_to_type(),
                 other.get_evaluates_to_type(),
             ));
         }
         return if !self.has_children() {
-            let substitutions = vec![(self.get_root_name().clone(), other.clone())]
+            let substitutions = vec![(self.get_root_as_string().clone(), other.clone())]
                 .into_iter()
                 .collect();
             Ok(Substitution::new(substitutions))
@@ -697,18 +707,18 @@ impl SymbolNode {
         if self.root.is_join() {
             return Ok(to_return);
         }
-        match children_type_map.get(&self.get_root_name()) {
+        match children_type_map.get(&self.get_root_as_string()) {
             Some(prior_type) => {
                 if &self.get_evaluates_to_type() != prior_type {
                     return Err(SymbolNodeError::ConflictingTypes(
-                        self.get_root_name(),
+                        self.get_root_as_string(),
                         self.get_evaluates_to_type(),
                         prior_type.clone(),
                     ));
                 }
             }
             None => {
-                to_return.insert(self.get_root_name(), self.get_evaluates_to_type());
+                to_return.insert(self.get_root_as_string(), self.get_evaluates_to_type());
             }
         }
         Ok(to_return)
@@ -807,30 +817,21 @@ impl SymbolNodeRoot {
 
     pub fn to_string(&self) -> String {
         match self {
-            Self::Join => {
-                // TODO Ensure this never happens
-                unimplemented!();
-            }
+            Self::Join => "Join".to_string(),
             Self::Symbol(s) => s.to_string(),
         }
     }
 
     pub fn get_name(&self) -> String {
         match self {
-            Self::Join => {
-                // TODO Ensure this never happens
-                unimplemented!();
-            }
+            Self::Join => "Join".to_string(),
             Self::Symbol(s) => s.get_name(),
         }
     }
 
     pub fn get_evaluates_to_type(&self) -> Type {
         match self {
-            Self::Join => {
-                // TODO Ensure this never happens
-                unimplemented!();
-            }
+            Self::Join => Type::Join,
             Self::Symbol(s) => s.get_evaluates_to_type(),
         }
     }
@@ -1384,7 +1385,7 @@ mod test_statement {
         ];
 
         assert_eq!(
-            a_plus_b_plus_c.split(&Symbol::new_object("+".to_string())),
+            a_plus_b_plus_c.split(&Symbol::new_object("+".to_string()).into()),
             expected
         );
     }

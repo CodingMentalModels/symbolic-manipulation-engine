@@ -240,7 +240,7 @@ impl TypeHierarchy {
         if left.get_root() == &SymbolNodeRoot::Join || right.get_root() == &SymbolNodeRoot::Join {
             return Ok(left.get_root() == right.get_root());
         }
-        let root_generalizes = left.get_root_name() == right.get_root_name()
+        let root_generalizes = left.get_root_as_string() == right.get_root_as_string()
             && self.is_supertype_of(
                 &left.get_evaluates_to_type(),
                 &right.get_evaluates_to_type(),
@@ -563,11 +563,14 @@ impl GeneratedType {
             .map(|child| self.generate(child))
             .flatten()
             .collect();
-        if self.satisfies_condition(statement.get_symbol()) {
-            to_return.push((
-                statement.get_symbol().get_name().into(),
-                self.parents.clone(),
-            ));
+        if !statement.is_join()
+            && self.satisfies_condition(
+                statement
+                    .get_symbol()
+                    .expect("We checked that statement isn't join."),
+            )
+        {
+            to_return.push((statement.get_root_as_string().into(), self.parents.clone()));
         }
         to_return
     }
@@ -661,12 +664,16 @@ impl Type {
                 .to_string();
         } else if self == &Self::NamedType("Delimiter".to_string()) {
             return "Delimiter (Warning: This overloades the Delimiter Type and is not recommended)".to_string();
+        } else if self == &Self::NamedType("Join".to_string()) {
+            return "Join (Warning: This overloades the Join Type and is not recommended)"
+                .to_string();
         }
+
         match self {
             Type::Object => "Object".to_string(),
             Type::Delimiter => "Delimiter".to_string(),
             // TODO Make sure this never happens
-            Type::Join => unimplemented!(),
+            Type::Join => "Join".to_string(),
             Type::NamedType(t) => t.to_string(),
         }
     }
