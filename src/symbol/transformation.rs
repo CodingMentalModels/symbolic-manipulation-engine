@@ -46,6 +46,30 @@ impl Transformation {
         }
     }
 
+    pub fn is_joint_transform(&self) -> bool {
+        if let Self::ExplicitTransformation(t) = self {
+            t.from.is_join()
+        } else {
+            false
+        }
+    }
+
+    pub fn joint_transform(
+        &self,
+        hierarchy: &TypeHierarchy,
+        left: &SymbolNode,
+        right: &SymbolNode,
+    ) -> Result<SymbolNode, TransformationError> {
+        let statement = left.clone().join(right.clone());
+        let in_order = self.transform(hierarchy, &statement);
+        if in_order.is_ok() {
+            return in_order;
+        }
+
+        let reversed = right.clone().join(left.clone());
+        self.transform(hierarchy, &reversed)
+    }
+
     pub fn try_transform_into(
         &self,
         hierarchy: &TypeHierarchy,
@@ -288,7 +312,7 @@ impl ApplyToBothSidesTransformation {
             .typed_relabel_and_transform(hierarchy, &right)?;
 
         Ok(SymbolNode::new(
-            self.symbol.clone(),
+            self.symbol.clone().into(),
             vec![left_transformed, right_transformed],
         ))
     }
@@ -341,7 +365,7 @@ impl ExplicitTransformation {
     ) -> Self {
         let object = SymbolNode::leaf(Symbol::new(object_name, object_type));
         let node = SymbolNode::new(
-            Symbol::new(operator_name, operator_type),
+            Symbol::new(operator_name, operator_type).into(),
             vec![object.clone(), object.clone()],
         );
         ExplicitTransformation::new(node.clone(), node)
@@ -356,8 +380,8 @@ impl ExplicitTransformation {
         let left = SymbolNode::leaf(Symbol::new(object_names.0, object_type.clone()));
         let right = SymbolNode::leaf(Symbol::new(object_names.1, object_type));
         let operator = Symbol::new(operator_name, operator_type);
-        let from = SymbolNode::new(operator.clone(), vec![left.clone(), right.clone()]);
-        let to = SymbolNode::new(operator, vec![right.clone(), left.clone()]);
+        let from = SymbolNode::new(operator.clone().into(), vec![left.clone(), right.clone()]);
+        let to = SymbolNode::new(operator.into(), vec![right.clone(), left.clone()]);
         ExplicitTransformation::new(from, to)
     }
 
@@ -381,11 +405,11 @@ impl ExplicitTransformation {
         let c = SymbolNode::leaf(Symbol::new(object_names.2, object_type));
         let operator = Symbol::new(operator_name, operator_type);
 
-        let a_b = SymbolNode::new(operator.clone(), vec![a.clone(), b.clone()]);
-        let a_b_then_c = SymbolNode::new(operator.clone(), vec![a_b.clone(), c.clone()]);
+        let a_b = SymbolNode::new(operator.clone().into(), vec![a.clone(), b.clone()]);
+        let a_b_then_c = SymbolNode::new(operator.clone().into(), vec![a_b.clone(), c.clone()]);
 
-        let b_c = SymbolNode::new(operator.clone(), vec![b.clone(), c.clone()]);
-        let a_then_b_c = SymbolNode::new(operator.clone(), vec![a.clone(), b_c.clone()]);
+        let b_c = SymbolNode::new(operator.clone().into(), vec![b.clone(), c.clone()]);
+        let a_then_b_c = SymbolNode::new(operator.clone().into(), vec![a.clone(), b_c.clone()]);
 
         ExplicitTransformation::new(a_b_then_c, a_then_b_c)
     }
@@ -490,7 +514,8 @@ impl ExplicitTransformation {
             .flatten()
             .collect();
 
-        let new_statement = SymbolNode::new(statement.get_symbol().clone(), transformed_children);
+        let new_statement =
+            SymbolNode::new(statement.get_symbol().clone().into(), transformed_children);
 
         match self.try_transform(&new_statement, relabellings) {
             Ok((transformed, true)) => {
@@ -595,9 +620,82 @@ impl From<TypeError> for TransformationError {
 
 #[cfg(test)]
 mod test_transformation {
-    use crate::parsing::{interpretation::Interpretation, parser::Parser, tokenizer::Token};
+    use crate::{
+        parsing::{interpretation::Interpretation, parser::Parser, tokenizer::Token},
+        symbol::symbol_node::SymbolNodeRoot,
+    };
 
     use super::*;
+
+    #[test]
+    fn test_transformation_joint_transforms() {
+        let hierarchy = TypeHierarchy::chain(vec!["Proposition".into()]).unwrap();
+        let parser = Parser::new(vec![
+            Interpretation::singleton("p", "Proposition".into()),
+            Interpretation::singleton("q", "Proposition".into()),
+            Interpretation::infix_operator("^".into(), 1, "Proposition".into()),
+            Interpretation::infix_operator("=>".into(), 2, "Proposition".into()),
+            Interpretation::singleton("a", "Proposition".into()),
+            Interpretation::singleton("b", "Proposition".into()),
+            Interpretation::singleton("c", "Proposition".into()),
+        ]);
+
+        let as_proposition =
+            |name: &str| Symbol::new(name.to_string(), "Proposition".into()).into();
+        let from = SymbolNode::new(
+            SymbolNodeRoot::Join,
+            vec![as_proposition("p"), as_proposition("q")],
+        );
+        let p_and_q = parser
+            .parse_from_string(vec!["^".to_string()], "p^q")
+            .unwrap();
+        let transform: Transformation = ExplicitTransformation::new(from, p_and_q.clone()).into();
+        let actual = transform
+            .joint_transform(&hierarchy, &as_proposition("p"), &as_proposition("q"))
+            .unwrap();
+        assert_eq!(actual, p_and_q);
+
+        let actual = transform
+            .joint_transform(&hierarchy, &as_proposition("a"), &as_proposition("b"))
+            .unwrap();
+        let expected = parser
+            .parse_from_string(vec!["^".to_string()], "a^b")
+            .unwrap();
+        assert_eq!(actual, expected);
+
+        let actual = transform
+            .joint_transform(&hierarchy, &p_and_q, &as_proposition("b"))
+            .unwrap();
+        let expected = parser
+            .parse_from_string(vec!["^".to_string()], "(p^q)^b")
+            .unwrap();
+        assert_eq!(actual, expected);
+
+        let p_implies_q = parser
+            .parse_from_string(vec!["=>".to_string()], "p=>q")
+            .unwrap();
+        let from = SymbolNode::new(
+            SymbolNodeRoot::Join,
+            vec![as_proposition("p"), p_implies_q.clone()],
+        );
+        let transform: Transformation =
+            ExplicitTransformation::new(from, as_proposition("q")).into();
+
+        let expected = as_proposition("q");
+        assert_eq!(
+            transform
+                .joint_transform(&hierarchy, &as_proposition("p"), &p_implies_q)
+                .unwrap(),
+            expected
+        );
+        // Order shouldn't matter
+        assert_eq!(
+            transform
+                .joint_transform(&hierarchy, &p_implies_q, &as_proposition("p"))
+                .unwrap(),
+            expected
+        );
+    }
 
     #[test]
     fn test_transformation_applies_algorithm() {

@@ -28,9 +28,18 @@ impl Parser {
     }
 
     pub fn parse(&self, token_stack: &mut TokenStack) -> Result<SymbolNode, ParserError> {
-        token_stack.remove_whitespace();
-        let to_return = self.parse_expression(token_stack, 0)?;
+        let to_return = self.parse_inner(token_stack)?;
+        if !token_stack.is_empty() {
+            return Err(ParserError::DoneParsingButTokensRemain(
+                token_stack.as_vector(),
+            ));
+        }
         return Ok(to_return);
+    }
+
+    fn parse_inner(&self, token_stack: &mut TokenStack) -> Result<SymbolNode, ParserError> {
+        token_stack.remove_whitespace();
+        self.parse_expression(token_stack, 0)
     }
 
     pub fn parse_from_string(
@@ -79,6 +88,8 @@ impl Parser {
                                 }
                                 token_stack.pop_and_assert_or_error(Token::Comma)?;
                             }
+                        } else {
+                            token_stack.pop(); // Remove the right token
                         }
                         interpretation.get_symbol_node(&token, args)?
                     }
@@ -173,6 +184,7 @@ pub enum ParserError {
     NoValidInterpretation(Token),
     NoFunctionalInterpretation(Token),
     NoTokensRemainingToInterpret,
+    DoneParsingButTokensRemain(Vec<Token>),
     ExpectedButFound(Token, Token),
     ExpectedLeftArgument(Token),
     InvalidExpressionType(Token, ExpressionType),
@@ -215,11 +227,11 @@ mod test_parser {
 
         assert_eq!(
             parsed,
-            Ok(SymbolNode::new(
-                Symbol::new("=".to_string(), "Equals".into(),),
+            Ok(SymbolNode::new_from_symbol(
+                Symbol::new("=".to_string(), "Equals".into(),).into(),
                 vec![
-                    SymbolNode::new(
-                        Symbol::new("+".to_string(), "Plus".into(),),
+                    SymbolNode::new_from_symbol(
+                        Symbol::new("+".to_string(), "Plus".into(),).into(),
                         vec![SymbolNode::leaf_object("2"), SymbolNode::leaf_object("2")]
                     ),
                     SymbolNode::leaf_object("4")
@@ -239,14 +251,14 @@ mod test_parser {
             "=>".into(),
         );
 
-        let mut parser = Parser::new(vec![implies_interpretation]);
+        let parser = Parser::new(vec![implies_interpretation]);
 
         let parsed = parser.parse(&mut tokens);
 
         assert_eq!(
             parsed,
-            Ok(SymbolNode::new(
-                Symbol::new("=>".to_string(), "=>".into(),),
+            Ok(SymbolNode::new_from_symbol(
+                Symbol::new("=>".to_string(), "=>".into(),).into(),
                 vec![SymbolNode::leaf_object("p"), SymbolNode::leaf_object("q"),]
             ))
         );
@@ -269,8 +281,8 @@ mod test_parser {
 
         assert_eq!(
             parsed,
-            Ok(SymbolNode::new(
-                Symbol::new("f".to_string(), "Function".into(),),
+            Ok(SymbolNode::new_from_symbol(
+                Symbol::new("f".to_string(), "Function".into(),).into(),
                 vec![]
             ))
         );
@@ -281,8 +293,8 @@ mod test_parser {
 
         assert_eq!(
             parsed,
-            Ok(SymbolNode::new(
-                Symbol::new("f".to_string(), "Function".into(),),
+            Ok(SymbolNode::new_from_symbol(
+                Symbol::new("f".to_string(), "Function".into(),).into(),
                 vec![
                     SymbolNode::leaf_object("x"),
                     SymbolNode::leaf_object("y"),
@@ -372,17 +384,17 @@ mod test_parser {
 
         assert_eq!(
             a_squared.clone(),
-            SymbolNode::new(
-                Symbol::new("^".to_string(), "Operator".into()),
+            SymbolNode::new_from_symbol(
+                Symbol::new("^".to_string(), "Operator".into()).into(),
                 vec![SymbolNode::leaf_object("a"), SymbolNode::leaf_object("2"),]
             )
         );
 
-        let expected = SymbolNode::new(
-            Symbol::new("=".to_string(), "Operator".into()),
+        let expected = SymbolNode::new_from_symbol(
+            Symbol::new("=".to_string(), "Operator".into()).into(),
             vec![
-                SymbolNode::new(
-                    Symbol::new("+".to_string(), "Operator".into()),
+                SymbolNode::new_from_symbol(
+                    Symbol::new("+".to_string(), "Operator".into()).into(),
                     vec![a_squared, b_squared],
                 ),
                 c_squared,
@@ -395,11 +407,11 @@ mod test_parser {
             .parse_from_string(vec!["*".to_string(), "inv".to_string()], "g*inv(g)")
             .unwrap();
 
-        let expected = SymbolNode::new(
+        let expected = SymbolNode::new_from_symbol(
             Symbol::new("*".to_string(), "Operator".into()),
             vec![
                 SymbolNode::leaf_object("g"),
-                SymbolNode::new(
+                SymbolNode::new_from_symbol(
                     Symbol::new("inv".to_string(), "inv".into()),
                     vec![SymbolNode::leaf_object("g")],
                 ),
@@ -441,13 +453,13 @@ mod test_parser {
 
         assert_eq!(
             parsed,
-            Ok(SymbolNode::new(
+            Ok(SymbolNode::new_from_symbol(
                 Symbol::new("omega".to_string(), "Function".into(),),
-                vec![SymbolNode::new(
+                vec![SymbolNode::new_from_symbol(
                     Symbol::new("f".to_string(), "Function".into()),
-                    vec![SymbolNode::new(
+                    vec![SymbolNode::new_from_symbol(
                         Symbol::new("g".to_string(), "Function".into(),),
-                        vec![SymbolNode::new(
+                        vec![SymbolNode::new_from_symbol(
                             Symbol::new("h".to_string(), "Function".into()),
                             vec![]
                         ),]
@@ -469,14 +481,14 @@ mod test_parser {
 
         assert_eq!(
             parsed,
-            Ok(SymbolNode::new(
+            Ok(SymbolNode::new_from_symbol(
                 Symbol::new("f".to_string(), "Function".into(),),
                 vec![
-                    SymbolNode::new(
+                    SymbolNode::new_from_symbol(
                         Symbol::new("g".to_string(), "Function".into()),
                         vec![SymbolNode::leaf_object("x"),]
                     ),
-                    SymbolNode::new(
+                    SymbolNode::new_from_symbol(
                         Symbol::new("h".to_string(), "Function".into()),
                         vec![SymbolNode::leaf_object("y"),]
                     ),
@@ -499,12 +511,12 @@ mod test_parser {
 
         assert_eq!(
             parsed,
-            Ok(SymbolNode::new(
+            Ok(SymbolNode::new_from_symbol(
                 Symbol::new("omega".to_string(), "Function".into()),
-                vec![SymbolNode::new(
+                vec![SymbolNode::new_from_symbol(
                     Symbol::new("f".to_string(), "Function".into(),),
                     vec![
-                        SymbolNode::new(
+                        SymbolNode::new_from_symbol(
                             Symbol::new("g".to_string(), "Function".into()),
                             vec![
                                 SymbolNode::leaf_object("w"),
@@ -512,7 +524,7 @@ mod test_parser {
                                 SymbolNode::leaf_object("y"),
                             ]
                         ),
-                        SymbolNode::new(
+                        SymbolNode::new_from_symbol(
                             Symbol::new("h".to_string(), "Function".into()),
                             vec![SymbolNode::leaf_object("z"),]
                         ),
@@ -539,7 +551,7 @@ mod test_parser {
 
         assert_eq!(
             parsed,
-            Ok(SymbolNode::new(
+            Ok(SymbolNode::new_from_symbol(
                 Symbol::new("|".to_string(), "Absolute Value".into(),),
                 vec![SymbolNode::leaf_object("x"),]
             ))
@@ -560,9 +572,9 @@ mod test_parser {
 
         assert_eq!(
             parsed,
-            Ok(SymbolNode::new(
+            Ok(SymbolNode::new_from_symbol(
                 Symbol::new("|".to_string(), "Absolute Value".into(),),
-                vec![SymbolNode::new(
+                vec![SymbolNode::new_from_symbol(
                     Symbol::new("+".to_string(), "Plus".into()),
                     vec![
                         SymbolNode::leaf(Symbol::new_object("a".to_string())),
@@ -580,11 +592,11 @@ mod test_parser {
 
         assert_eq!(
             parsed,
-            Ok(SymbolNode::new(
+            Ok(SymbolNode::new_from_symbol(
                 Symbol::new("+".to_string(), "Plus".into(),),
                 vec![
                     SymbolNode::leaf(Symbol::new_object("a".to_string())),
-                    SymbolNode::new(
+                    SymbolNode::new_from_symbol(
                         Symbol::new("+".to_string(), "Plus".into()),
                         vec![
                             SymbolNode::leaf(Symbol::new_object("b".to_string())),
@@ -662,7 +674,7 @@ mod test_parser {
 
         assert_eq!(
             alpha_squared.clone(),
-            SymbolNode::new(
+            SymbolNode::new_from_symbol(
                 Symbol::new("^".to_string(), "Operator".into()),
                 vec![
                     SymbolNode::leaf_object("\\alpha"),
@@ -671,10 +683,10 @@ mod test_parser {
             )
         );
 
-        let expected = SymbolNode::new(
+        let expected = SymbolNode::new_from_symbol(
             Symbol::new("=".to_string(), "Operator".into()),
             vec![
-                SymbolNode::new(
+                SymbolNode::new_from_symbol(
                     Symbol::new("+".to_string(), "Operator".into()),
                     vec![alpha_squared, beta_squared],
                 ),
@@ -730,7 +742,7 @@ mod test_parser {
             .parse_from_string(vec!["+".to_string()], "2+2")
             .unwrap();
 
-        let expected = SymbolNode::new(
+        let expected = SymbolNode::new_from_symbol(
             Symbol::new("+".to_string(), "+".into()),
             vec![SymbolNode::singleton("2"), SymbolNode::singleton("2")],
         );
