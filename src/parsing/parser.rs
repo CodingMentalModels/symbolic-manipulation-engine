@@ -28,9 +28,18 @@ impl Parser {
     }
 
     pub fn parse(&self, token_stack: &mut TokenStack) -> Result<SymbolNode, ParserError> {
-        token_stack.remove_whitespace();
-        let to_return = self.parse_expression(token_stack, 0)?;
+        let to_return = self.parse_inner(token_stack)?;
+        if !token_stack.is_empty() {
+            return Err(ParserError::DoneParsingButTokensRemain(
+                token_stack.as_vector(),
+            ));
+        }
         return Ok(to_return);
+    }
+
+    fn parse_inner(&self, token_stack: &mut TokenStack) -> Result<SymbolNode, ParserError> {
+        token_stack.remove_whitespace();
+        self.parse_expression(token_stack, 0)
     }
 
     pub fn parse_from_string(
@@ -40,7 +49,7 @@ impl Parser {
     ) -> Result<SymbolNode, ParserError> {
         let mut tokenizer = Tokenizer::new_with_tokens(custom_tokens);
         let mut token_stack = tokenizer.tokenize(s);
-        self.parse(&mut token_stack)
+        self.parse_inner(&mut token_stack)
     }
 
     fn parse_expression(
@@ -79,6 +88,8 @@ impl Parser {
                                 }
                                 token_stack.pop_and_assert_or_error(Token::Comma)?;
                             }
+                        } else {
+                            token_stack.pop(); // Remove the right token
                         }
                         interpretation.get_symbol_node(&token, args)?
                     }
@@ -173,6 +184,7 @@ pub enum ParserError {
     NoValidInterpretation(Token),
     NoFunctionalInterpretation(Token),
     NoTokensRemainingToInterpret,
+    DoneParsingButTokensRemain(Vec<Token>),
     ExpectedButFound(Token, Token),
     ExpectedLeftArgument(Token),
     InvalidExpressionType(Token, ExpressionType),
