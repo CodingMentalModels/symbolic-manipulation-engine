@@ -197,11 +197,13 @@ impl Workspace {
     }
 
     pub fn get_statement_pairs(&self) -> Vec<SymbolNode> {
+        // Returns pairs of statements for use in joint transforms
+        // Returns both orders as well as duplicates since those are valid joint transform args
         let left = self.get_statements();
         let right = self.get_statements();
         let mut to_return = Vec::new();
-        for i in 0..(left.len() - 1) {
-            for j in i..right.len() {
+        for i in 0..left.len() {
+            for j in 0..right.len() {
                 to_return.push(left[i].clone().join(right[j].clone()));
             }
         }
@@ -353,8 +355,13 @@ impl Workspace {
         if self.statements.contains(&desired) {
             return Err(WorkspaceError::StatementsAlreadyInclude(desired.clone()));
         }
-        for (statement_idx, statement) in self.statements.iter().enumerate() {
-            for (transform_idx, transform) in self.transformations.iter().enumerate() {
+        for (transform_idx, transform) in self.transformations.iter().enumerate() {
+            let statements = if transform.is_joint_transform() {
+                self.get_statement_pairs()
+            } else {
+                self.get_statements().clone()
+            };
+            for (statement_idx, statement) in statements.iter().enumerate() {
                 match transform.try_transform_into(self.get_types(), &statement, &desired) {
                     Ok(output) => {
                         // TODO Derive the appropriate transform addresses
@@ -771,6 +778,14 @@ mod test_workspace {
 
         workspace.add_parsed_hypothesis("r").unwrap();
         workspace.add_parsed_hypothesis("s").unwrap();
+
+        let expected = workspace.parse_from_string("r^s").unwrap();
+        assert_eq!(
+            workspace.try_transform_into_parsed("r^s").unwrap(),
+            expected
+        );
+        assert!(workspace.get_statements().contains(&expected));
+
         let expected = workspace.parse_from_string("s^r").unwrap();
         assert_eq!(
             workspace.try_transform_into_parsed("s^r").unwrap(),
