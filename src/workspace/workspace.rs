@@ -700,6 +700,7 @@ mod test_workspace {
             Interpretation::singleton("a".into(), "Integer".into()),
             Interpretation::singleton("b".into(), "Integer".into()),
             Interpretation::singleton("c".into(), "Integer".into()),
+            Interpretation::infix_operator("^".into(), 1, "^".into()),
             Interpretation::singleton("p".into(), "Proposition".into()),
             Interpretation::singleton("q".into(), "Proposition".into()),
             Interpretation::singleton("r".into(), "Proposition".into()),
