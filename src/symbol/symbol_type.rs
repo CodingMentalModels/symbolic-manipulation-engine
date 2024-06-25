@@ -621,6 +621,8 @@ impl From<&str> for Type {
             Self::Object
         } else if value == SERIALIZED_DELIMITER_TYPE {
             Self::Delimiter
+        } else if value == SERIALIZED_JOIN_TYPE {
+            Self::Join
         } else {
             Self::NamedType(value.to_string())
         }
