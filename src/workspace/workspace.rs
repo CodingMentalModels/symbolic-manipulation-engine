@@ -793,6 +793,98 @@ mod test_workspace {
     }
 
     #[test]
+    fn test_workspace_gets_valid_transformations() {
+        let mut types = TypeHierarchy::chain(vec!["Real".into(), "Integer".into()]).unwrap();
+        types
+            .add_child_to_parent("=".into(), "Real".into())
+            .unwrap();
+        types
+            .add_child_to_parent("+".into(), "Real".into())
+            .unwrap();
+        types
+            .add_chain(vec!["Proposition".into(), "^".into()])
+            .unwrap();
+
+        let interpretations = vec![
+            Interpretation::infix_operator("=".into(), 1, "=".into()),
+            Interpretation::infix_operator("+".into(), 6, "+".into()),
+            Interpretation::singleton("x".into(), "Real".into()),
+            Interpretation::singleton("y".into(), "Real".into()),
+            Interpretation::singleton("j".into(), "Integer".into()),
+            Interpretation::singleton("k".into(), "Integer".into()),
+            Interpretation::singleton("a".into(), "Integer".into()),
+            Interpretation::singleton("b".into(), "Integer".into()),
+            Interpretation::singleton("c".into(), "Integer".into()),
+            Interpretation::infix_operator("^".into(), 1, "^".into()),
+            Interpretation::singleton("p".into(), "Proposition".into()),
+            Interpretation::singleton("q".into(), "Proposition".into()),
+            Interpretation::singleton("r".into(), "Proposition".into()),
+            Interpretation::singleton("s".into(), "Proposition".into()),
+        ];
+        let mut workspace = Workspace::new(types.clone(), vec![], interpretations.clone());
+        workspace
+            .add_transformation(
+                ExplicitTransformation::symmetry(
+                    "+".to_string(),
+                    "+".into(),
+                    ("a".to_string(), "b".to_string()),
+                    "Real".into(),
+                )
+                .into(),
+            )
+            .unwrap();
+
+        workspace.add_parsed_hypothesis("x+y").unwrap();
+        let expected = vec![workspace.parse_from_string("y+x").unwrap()];
+        assert_eq!(workspace.get_valid_transformations("y+x"), expected);
+
+        workspace.add_parsed_hypothesis("j+k").unwrap();
+        assert_eq!(workspace.get_statements().len(), 2);
+        let expected = vec![workspace.parse_from_string("k+j").unwrap()];
+        assert_eq!(workspace.get_valid_transformations("k+j"), expected);
+
+        workspace.add_parsed_hypothesis("a+(b+c)").unwrap();
+        let expected = workspace.parse_from_string("(b+c)+a").unwrap();
+        assert_eq!(
+            workspace.get_valid_transformations("(b+c)+a"),
+            vec![expected]
+        );
+
+        let mut workspace = Workspace::new(types.clone(), vec![], interpretations.clone());
+        workspace
+            .add_transformation(
+                ExplicitTransformation::symmetry(
+                    "+".to_string(),
+                    "+".into(),
+                    ("a".to_string(), "b".to_string()),
+                    "Real".into(),
+                )
+                .into(),
+            )
+            .unwrap();
+
+        workspace.add_parsed_hypothesis("a+(b+c)").unwrap();
+        let expected = workspace.parse_from_string("a+(c+b)").unwrap();
+        assert_eq!(
+            workspace.get_valid_transformations("a+(c+b)"),
+            vec![expected]
+        );
+
+        let mut workspace = Workspace::new(types.clone(), vec![], interpretations.clone());
+        workspace
+            .add_parsed_joint_transformation("p", "q", "p^q")
+            .unwrap();
+
+        workspace.add_parsed_hypothesis("r").unwrap();
+        workspace.add_parsed_hypothesis("s").unwrap();
+
+        let expected = workspace.parse_from_string("r^s").unwrap();
+        assert_eq!(workspace.get_valid_transformations("r^s"), vec![expected]);
+
+        let expected = workspace.parse_from_string("s^r").unwrap();
+        assert_eq!(workspace.get_valid_transformations("s^r"), vec![expected]);
+    }
+    #[test]
     fn test_workspace_adds_hypotheses() {
         let types = TypeHierarchy::new();
         let mut workspace = Workspace::new(types, vec![], vec![]);
