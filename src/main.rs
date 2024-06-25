@@ -73,9 +73,17 @@ fn main() {
             ))
         .subcommand(Command::new("add-transformation").about("Add a Transformation to the Workspace via a 'from' and a 'to' statement, parsed using the Workspace's Interpretations.")
             .arg(
-                Arg::new("from").required(true).help("Starting point of the Transformation.")
+                Arg::new("from").required(true).help("Input to the Transformation.")
             ).arg(
-                Arg::new("to").required(true).help("Ending point for the Transformation.")
+                Arg::new("to").required(true).help("Output of the Transformation.")
+            ))
+        .subcommand(Command::new("add-joint-transformation").about("Add a Joint Transformation (one with two inputs) to the Workspace via a 'from' and a 'to' statement, parsed using the Workspace's Interpretations.")
+            .arg(
+                Arg::new("left-from").required(true).help("First input to the Transformation.")
+            ).arg(
+                Arg::new("right-from").required(true).help("Second input to the Transformation.")
+            ).arg(
+                Arg::new("to").required(true).help("Output of the Transformation.")
             ))
         .subcommand(Command::new("get-transformations").about("Takes a partial statement and gets all valid transformations sorted based on the string.").arg(
                 Arg::new("partial-statement").required(true)
@@ -109,6 +117,9 @@ fn main() {
         Some(("remove-interpretation", sub_matches)) => cli.remove_interpretation(sub_matches),
         Some(("add-type", sub_matches)) => cli.add_type(sub_matches),
         Some(("add-transformation", sub_matches)) => cli.add_transformation(sub_matches),
+        Some(("add-joint-transformation", sub_matches)) => {
+            cli.add_joint_transformation(sub_matches)
+        }
         Some(("get-transformations", sub_matches)) => cli.get_transformations(sub_matches),
         Some(("hypothesize", sub_matches)) => cli.hypothesize(sub_matches),
         Some(("derive", sub_matches)) => cli.derive(sub_matches),
