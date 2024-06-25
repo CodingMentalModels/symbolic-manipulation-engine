@@ -49,7 +49,7 @@ impl Parser {
     ) -> Result<SymbolNode, ParserError> {
         let mut tokenizer = Tokenizer::new_with_tokens(custom_tokens);
         let mut token_stack = tokenizer.tokenize(s);
-        self.parse_inner(&mut token_stack)
+        self.parse(&mut token_stack)
     }
 
     fn parse_expression(
