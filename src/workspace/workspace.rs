@@ -607,6 +607,10 @@ impl DisplaySymbolNode {
             from_transformation,
         }
     }
+
+    pub fn get_interpreted_string(&self) -> &String {
+        &self.interpreted_string
+    }
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -884,6 +888,7 @@ mod test_workspace {
         let expected = workspace.parse_from_string("s^r").unwrap();
         assert_eq!(workspace.get_valid_transformations("s^r"), vec![expected]);
     }
+
     #[test]
     fn test_workspace_adds_hypotheses() {
         let types = TypeHierarchy::new();
