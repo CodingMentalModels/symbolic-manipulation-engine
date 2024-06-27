@@ -740,6 +740,10 @@ impl Substitution {
     }
 
     pub fn substitute(&self, statement: &SymbolNode) -> SymbolNode {
+        println!(
+            "substitute({:?})\n\nSub Map:\n{:?}",
+            statement, self.substitution
+        );
         self.substitute_and_get_addresses_if(statement, &|_, _| true)
             .0
     }
@@ -1045,6 +1049,7 @@ mod test_statement {
             Interpretation::singleton("b", "Integer".into()),
             Interpretation::singleton("x", "Integer".into()),
             Interpretation::singleton("y", "Integer".into()),
+            Interpretation::singleton("z", "Integer".into()),
         ];
         let parser = Parser::new(interpretations);
 
@@ -1052,8 +1057,14 @@ mod test_statement {
         let b = parser
             .parse_from_string(custom_tokens.clone(), "b")
             .unwrap();
+        let x = parser
+            .parse_from_string(custom_tokens.clone(), "x")
+            .unwrap();
         let y = parser
             .parse_from_string(custom_tokens.clone(), "y")
+            .unwrap();
+        let z = parser
+            .parse_from_string(custom_tokens.clone(), "z")
             .unwrap();
         let a_equals_b = parser
             .parse_from_string(custom_tokens.clone(), "a=b")
@@ -1069,6 +1080,9 @@ mod test_statement {
             .unwrap();
         let x_equals_y_equals_x_equals_y = parser
             .parse_from_string(custom_tokens.clone(), "(x=y)=(x=y)")
+            .unwrap();
+        let x_equals_y_equals_z = parser
+            .parse_from_string(custom_tokens.clone(), "(x=y)=z")
             .unwrap();
 
         let substitution = Substitution::new(
@@ -1105,6 +1119,20 @@ mod test_statement {
         assert_eq!(
             substitution.substitute(&x_equals_y),
             x_equals_y_equals_y.clone()
+        );
+
+        let substitution = Substitution::new(
+            vec![
+                ("z".to_string(), z.clone()),
+                ("y".to_string(), y.clone()),
+                ("x".to_string(), x.clone()),
+            ]
+            .into_iter()
+            .collect(),
+        );
+        assert_eq!(
+            substitution.substitute(&x_equals_y_equals_z),
+            x_equals_y_equals_z.clone()
         );
     }
 
