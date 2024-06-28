@@ -38,9 +38,9 @@ pub struct DisplayWorkspace {
     provenance: Vec<DisplayProvenance>,
 }
 
-impl From<&Workspace> for DisplayWorkspace {
-    fn from(workspace: &Workspace) -> Self {
-        DisplayWorkspace {
+impl DisplayWorkspace {
+    fn from_workspace(workspace: &Workspace) -> Result<Self, WorkspaceError> {
+        Ok(DisplayWorkspace {
             types: Vec::<DisplayTypeHierarchyNode>::from(&workspace.types),
             generated_types: workspace
                 .generated_types
@@ -52,14 +52,14 @@ impl From<&Workspace> for DisplayWorkspace {
                 .iter()
                 .map(|i| DisplayInterpretation::from(i))
                 .collect(),
-            statements: workspace.get_display_symbol_nodes(),
+            statements: workspace.get_display_symbol_nodes()?,
             transformations: workspace
                 .transformations
                 .iter()
                 .map(|t| t.to_interpreted_string(&workspace.interpretations))
                 .collect(),
             provenance: workspace.get_display_provenances(),
-        }
+        })
     }
 }
 
@@ -434,15 +434,13 @@ impl Workspace {
         }
     }
 
-    pub fn get_display_symbol_nodes(&self) -> Vec<DisplaySymbolNode> {
+    pub fn get_display_symbol_nodes(&self) -> Result<Vec<DisplaySymbolNode>, WorkspaceError> {
         let mut to_return = Vec::new();
         for i in 0..self.statements.len() {
-            let node = self
-                .get_display_symbol_node(i)
-                .expect("We control which indices are provided.");
+            let node = self.get_display_symbol_node(i)?;
             to_return.push(node);
         }
-        to_return
+        Ok(to_return)
     }
 
     pub fn get_display_symbol_node(
@@ -474,7 +472,7 @@ impl Workspace {
     }
 
     pub fn to_json(&self) -> Result<String, WorkspaceError> {
-        let display_workspace = DisplayWorkspace::from(self);
+        let display_workspace = DisplayWorkspace::from_workspace(self)?;
         to_string(&display_workspace).map_err(|e| WorkspaceError::UnableToSerialize(e.to_string()))
     }
 
