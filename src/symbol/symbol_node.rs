@@ -387,8 +387,8 @@ impl SymbolNode {
         for (i, child) in self.children.iter().enumerate() {
             let child_result = child.find_where(&condition);
             for address in child_result {
-                let mut new_address = address.clone();
-                new_address.push(i);
+                let mut new_address = vec![i];
+                new_address.append(&mut address.clone());
                 result.insert(new_address);
             }
         }
@@ -740,10 +740,6 @@ impl Substitution {
     }
 
     pub fn substitute(&self, statement: &SymbolNode) -> SymbolNode {
-        println!(
-            "substitute({:?})\n\nSub Map:\n{:?}",
-            statement, self.substitution
-        );
         self.substitute_and_get_addresses_if(statement, &|_, _| true)
             .0
     }
@@ -1038,6 +1034,85 @@ mod test_statement {
         assert_eq!(
             then_one_plus_two_plus_three.to_interpreted_string(&interpretations),
             "(1+(2+3))"
+        );
+    }
+
+    #[test]
+    fn test_symbol_node_finds() {
+        let interpretations = vec![
+            Interpretation::infix_operator("=".into(), 1, "Integer".into()),
+            Interpretation::singleton("a", "Integer".into()),
+            Interpretation::singleton("b", "Integer".into()),
+            Interpretation::singleton("x", "Integer".into()),
+            Interpretation::singleton("y", "Integer".into()),
+            Interpretation::singleton("z", "Integer".into()),
+        ];
+        let parser = Parser::new(interpretations);
+
+        let custom_tokens = vec!["=".to_string()];
+        let b = parser
+            .parse_from_string(custom_tokens.clone(), "b")
+            .unwrap();
+        let x = parser
+            .parse_from_string(custom_tokens.clone(), "x")
+            .unwrap();
+        let y = parser
+            .parse_from_string(custom_tokens.clone(), "y")
+            .unwrap();
+        let z = parser
+            .parse_from_string(custom_tokens.clone(), "z")
+            .unwrap();
+        let a_equals_b = parser
+            .parse_from_string(custom_tokens.clone(), "a=b")
+            .unwrap();
+        let x_equals_y = parser
+            .parse_from_string(custom_tokens.clone(), "x=y")
+            .unwrap();
+        let x_equals_y_equals_b = parser
+            .parse_from_string(custom_tokens.clone(), "(x=y)=b")
+            .unwrap();
+        let x_equals_y_equals_y = parser
+            .parse_from_string(custom_tokens.clone(), "(x=y)=y")
+            .unwrap();
+        let x_equals_y_equals_x_equals_y = parser
+            .parse_from_string(custom_tokens.clone(), "(x=y)=(x=y)")
+            .unwrap();
+        let x_equals_y_equals_z = parser
+            .parse_from_string(custom_tokens.clone(), "(x=y)=z")
+            .unwrap();
+        assert_eq!(b.find_symbol_name("x"), HashSet::new());
+        assert_eq!(b.find_symbol_name("b"), vec![vec![]].into_iter().collect());
+        assert_eq!(
+            b.find_symbol(&Symbol::new("b".to_string(), "Integer".into())),
+            vec![vec![]].into_iter().collect()
+        );
+        assert_eq!(
+            b.find_symbol(&Symbol::new_object("b".to_string())),
+            HashSet::new()
+        );
+        assert_eq!(
+            a_equals_b.find_symbol_name("b"),
+            vec![vec![1]].into_iter().collect()
+        );
+        assert_eq!(
+            x_equals_y_equals_z.find_symbol_name("x"),
+            vec![vec![0, 0]].into_iter().collect()
+        );
+        assert_eq!(
+            x_equals_y_equals_z.find_symbol_name("y"),
+            vec![vec![0, 1]].into_iter().collect()
+        );
+        assert_eq!(
+            x_equals_y_equals_z.find_symbol_name("z"),
+            vec![vec![1]].into_iter().collect()
+        );
+        assert_eq!(
+            x_equals_y_equals_y.find_symbol_name("x"),
+            vec![vec![0, 0]].into_iter().collect()
+        );
+        assert_eq!(
+            x_equals_y_equals_y.find_symbol_name("y"),
+            vec![vec![0, 1], vec![1]].into_iter().collect()
         );
     }
 
