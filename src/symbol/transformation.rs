@@ -230,7 +230,7 @@ impl AdditionAlgorithm {
         let left = self.transform(hierarchy, &children[0])?;
         let right = self.transform(hierarchy, &children[1])?;
 
-        let left_value = Self::try_parse_number(&&left.get_root_as_string())?;
+        let left_value = Self::try_parse_number(&left.get_root_as_string())?;
         let right_value = Self::try_parse_number(&right.get_root_as_string())?;
         // TODO This will overflow on big enough numbers
         let final_value = left_value + right_value;
