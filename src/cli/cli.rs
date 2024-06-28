@@ -87,7 +87,7 @@ impl Cli {
     pub fn ls(&self) -> Result<String, String> {
         self.load_workspace()?
             .to_json()
-            .map_err(|_| "Serialization Error.".to_string())
+            .map_err(|e| format!("Serialization Error: {:?}", e).to_string())
     }
 
     pub fn add_interpretation(&mut self, sub_matches: &ArgMatches) -> Result<String, String> {

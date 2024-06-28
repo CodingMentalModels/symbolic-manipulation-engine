@@ -365,7 +365,8 @@ impl Workspace {
                 match transform.try_transform_into(self.get_types(), &statement, &desired) {
                     Ok(output) => {
                         // TODO Derive the appropriate transform addresses
-                        let provenance = Provenance::Derived(statement_idx, transform_idx, vec![]);
+                        let provenance =
+                            Provenance::Derived((statement_idx, transform_idx, vec![]));
                         self.add_derived_statement(output.clone(), provenance);
                         return Ok(output);
                     }
@@ -388,7 +389,7 @@ impl Workspace {
             provenance.push(current_provenance.clone());
             match current_provenance {
                 Provenance::Hypothesis => break,
-                Provenance::Derived(parent_index, _, _) => current_index = parent_index,
+                Provenance::Derived((parent_index, _, _)) => current_index = parent_index,
             }
         }
         Ok(provenance)
@@ -421,10 +422,10 @@ impl Workspace {
         let provenance = self.get_provenance(index)?;
         match provenance {
             Provenance::Hypothesis => Ok(DisplayProvenance::Hypothesis),
-            Provenance::Derived(s, t, indices) => {
+            Provenance::Derived((s, t, indices)) => {
                 let statement = self.get_statement(s)?;
                 let transformation = self.get_transformation(t)?;
-                Ok(DisplayProvenance::Derived((
+                Ok(DisplayProvenance::Derived(DerivedDisplayProvenance::new(
                     statement.to_interpreted_string(&self.interpretations),
                     transformation.to_interpreted_string(&self.interpretations),
                     indices,
@@ -552,35 +553,64 @@ impl Workspace {
 #[ts(export)]
 pub enum DisplayProvenance {
     Hypothesis,
-    Derived(
-        (
-            DisplayTransformation,
-            SymbolNodeString,
-            Vec<SymbolNodeAddress>,
-        ),
-    ),
+    Derived(DerivedDisplayProvenance),
 }
 
 impl DisplayProvenance {
     pub fn get_from_statement(&self) -> Option<String> {
         match self {
             Self::Hypothesis => None,
-            Self::Derived((_, s, _)) => Some(s.clone()),
+            Self::Derived(derived) => Some(derived.get_from_statement().clone()),
         }
     }
 
     pub fn get_from_transformation(&self) -> Option<String> {
         match self {
             Self::Hypothesis => None,
-            Self::Derived((t, _, _)) => Some(t.clone()),
+            Self::Derived(derived) => Some(derived.get_from_transformation().clone()),
         }
+    }
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub struct DerivedDisplayProvenance {
+    from_transformation: DisplayTransformation,
+    from_statement: SymbolNodeString,
+    applied_addresses: Vec<SymbolNodeAddress>,
+}
+
+impl DerivedDisplayProvenance {
+    pub fn new(
+        from_transformation: DisplayTransformation,
+        from_statement: SymbolNodeString,
+        applied_addresses: Vec<SymbolNodeAddress>,
+    ) -> Self {
+        Self {
+            from_transformation,
+            from_statement,
+            applied_addresses,
+        }
+    }
+
+    pub fn get_from_statement(&self) -> &String {
+        &self.from_statement
+    }
+
+    pub fn get_from_transformation(&self) -> &String {
+        &self.from_transformation
+    }
+
+    pub fn get_applied_addresses(&self) -> &Vec<SymbolNodeAddress> {
+        &self.applied_addresses
     }
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub enum Provenance {
     Hypothesis,
-    Derived(TransformationIndex, StatementIndex, Vec<SymbolNodeAddress>),
+    Derived((TransformationIndex, StatementIndex, Vec<SymbolNodeAddress>)),
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize, TS)]
@@ -959,7 +989,7 @@ mod test_workspace {
         // fail
         assert_eq!(
             workspace.get_provenance(1),
-            Ok(Provenance::Derived(0, 0, vec![]))
+            Ok(Provenance::Derived((0, 0, vec![])))
         );
 
         assert_eq!(
