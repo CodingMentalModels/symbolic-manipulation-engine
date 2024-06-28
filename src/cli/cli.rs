@@ -87,7 +87,7 @@ impl Cli {
     pub fn ls(&self) -> Result<String, String> {
         self.load_workspace()?
             .to_json()
-            .map_err(|_| "Serialization Error.".to_string())
+            .map_err(|e| format!("Serialization Error: {:?}", e).to_string())
     }
 
     pub fn add_interpretation(&mut self, sub_matches: &ArgMatches) -> Result<String, String> {
@@ -252,6 +252,31 @@ impl Cli {
         };
         let _from = workspace
             .add_parsed_transformation(&from_as_string, &to_as_string)
+            .map_err(|e| format!("Workspace Error: {:?}", e).to_string())?;
+        self.update_workspace(workspace)?;
+        return Ok("Transformation added.".to_string());
+    }
+
+    pub fn add_joint_transformation(&mut self, sub_matches: &ArgMatches) -> Result<String, String> {
+        let mut workspace = self.load_workspace()?;
+        let left_from_as_string = match sub_matches.get_one::<String>("left-from") {
+            None => return Err("No left-from provided.".to_string()),
+            Some(from) => from,
+        };
+        let right_from_as_string = match sub_matches.get_one::<String>("right-from") {
+            None => return Err("No right-from provided.".to_string()),
+            Some(from) => from,
+        };
+        let to_as_string = match sub_matches.get_one::<String>("to") {
+            None => return Err("No to provided.".to_string()),
+            Some(to) => to,
+        };
+        let _from = workspace
+            .add_parsed_joint_transformation(
+                &left_from_as_string,
+                right_from_as_string,
+                &to_as_string,
+            )
             .map_err(|e| format!("Workspace Error: {:?}", e).to_string())?;
         self.update_workspace(workspace)?;
         return Ok("Transformation added.".to_string());

@@ -277,14 +277,14 @@ impl InterpretationCondition {
         match self {
             Self::IsObject => true,
             Self::IsNumeric => {
-                Interpretation::is_numeric(&Token::Object(statement.get_root_name()))
+                Interpretation::is_numeric(&Token::Object(statement.get_root_as_string()))
             }
             Self::IsInteger => {
-                Interpretation::is_integer(&Token::Object(statement.get_root_name()))
+                Interpretation::is_integer(&Token::Object(statement.get_root_as_string()))
             }
             Self::Matches(token) => {
                 if let Token::Object(s) = token {
-                    return s == &statement.get_root_name();
+                    return s == &statement.get_root_as_string();
                 } else {
                     return false;
                 }
@@ -366,9 +366,7 @@ impl InterpretedType {
         match self {
             Self::PassThrough => false,
             Self::Delimiter => false,
-            Self::SameAsValue => {
-                statement.get_root_name() == statement.get_evaluates_to_type().to_string()
-            }
+            Self::SameAsValue => statement.has_same_value_as_type(),
             Self::Type(t) => t == &statement.get_evaluates_to_type(),
         }
     }

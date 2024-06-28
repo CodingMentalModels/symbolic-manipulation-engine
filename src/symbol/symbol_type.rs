@@ -240,7 +240,7 @@ impl TypeHierarchy {
         if left.get_root() == &SymbolNodeRoot::Join || right.get_root() == &SymbolNodeRoot::Join {
             return Ok(left.get_root() == right.get_root());
         }
-        let root_generalizes = left.get_root_name() == right.get_root_name()
+        let root_generalizes = left.get_root_as_string() == right.get_root_as_string()
             && self.is_supertype_of(
                 &left.get_evaluates_to_type(),
                 &right.get_evaluates_to_type(),
@@ -412,7 +412,6 @@ impl TypeHierarchy {
 
         for (other_type, other_node) in other.type_map.iter() {
             if !new_hierarchy.type_map.contains_key(other_type) {
-                println!("Unioning in unconflicted {:?}", other_type.clone());
                 new_hierarchy
                     .type_map
                     .insert(other_type.clone(), other_node.clone());
@@ -422,11 +421,6 @@ impl TypeHierarchy {
                     // If the parent doesn't exist or isn't already in the lineage of the inner
                     // node, we add it
                     if self.is_subtype_of(&existing_node.inner, other_parent) != Ok(true) {
-                        println!(
-                            "Inserting parent {:?} into {:?}",
-                            other_parent.clone(),
-                            existing_node.inner.to_string()
-                        );
                         existing_node.parents.insert(other_parent.clone());
                     }
                 }
@@ -438,11 +432,6 @@ impl TypeHierarchy {
                     // If the child doesn't exist or isn't already in the lineage of the inner
                     // node, we add it
                     if self.is_supertype_of(&existing_node.inner, other_child) != Ok(true) {
-                        println!(
-                            "Inserting child {:?} into {:?}",
-                            other_child.clone(),
-                            existing_node.inner.to_string()
-                        );
                         existing_children.insert(other_child.clone());
                     }
                 }
@@ -563,11 +552,14 @@ impl GeneratedType {
             .map(|child| self.generate(child))
             .flatten()
             .collect();
-        if self.satisfies_condition(statement.get_symbol()) {
-            to_return.push((
-                statement.get_symbol().get_name().into(),
-                self.parents.clone(),
-            ));
+        if !statement.is_join()
+            && self.satisfies_condition(
+                statement
+                    .get_symbol()
+                    .expect("We checked that statement isn't join."),
+            )
+        {
+            to_return.push((statement.get_root_as_string().into(), self.parents.clone()));
         }
         to_return
     }
@@ -621,6 +613,8 @@ impl From<&str> for Type {
             Self::Object
         } else if value == SERIALIZED_DELIMITER_TYPE {
             Self::Delimiter
+        } else if value == SERIALIZED_JOIN_TYPE {
+            Self::Join
         } else {
             Self::NamedType(value.to_string())
         }
@@ -659,12 +653,16 @@ impl Type {
                 .to_string();
         } else if self == &Self::NamedType("Delimiter".to_string()) {
             return "Delimiter (Warning: This overloades the Delimiter Type and is not recommended)".to_string();
+        } else if self == &Self::NamedType("Join".to_string()) {
+            return "Join (Warning: This overloades the Join Type and is not recommended)"
+                .to_string();
         }
+
         match self {
             Type::Object => "Object".to_string(),
             Type::Delimiter => "Delimiter".to_string(),
             // TODO Make sure this never happens
-            Type::Join => unimplemented!(),
+            Type::Join => "Join".to_string(),
             Type::NamedType(t) => t.to_string(),
         }
     }
