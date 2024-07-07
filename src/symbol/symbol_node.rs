@@ -784,6 +784,7 @@ impl Substitution {
 pub enum SymbolNodeRoot {
     Symbol(Symbol),
     Join,
+    Arbitrary(ArbitraryRoot),
 }
 
 impl Default for SymbolNodeRoot {
@@ -819,13 +820,16 @@ impl SymbolNodeRoot {
         match self {
             Self::Join => "Join".to_string(),
             Self::Symbol(s) => s.to_string(),
+            Self::Arbitrary(r) => r.to_string(),
         }
     }
 
     pub fn get_name(&self) -> String {
+        // TODO Ensure that this isn't happening for non symbol
         match self {
             Self::Join => "Join".to_string(),
             Self::Symbol(s) => s.get_name(),
+            Self::Arbitrary(r) => r.get_name(),
         }
     }
 
@@ -833,7 +837,40 @@ impl SymbolNodeRoot {
         match self {
             Self::Join => Type::Join,
             Self::Symbol(s) => s.get_evaluates_to_type(),
+            Self::Arbitrary(r) => r.get_evaluates_to_type(),
         }
+    }
+}
+
+#[derive(Clone, Debug, Default, Hash, PartialEq, Eq, Serialize, Deserialize)]
+pub struct ArbitraryRoot {
+    symbol: Symbol,
+    evaluates_to_type: Type,
+}
+
+impl ArbitraryRoot {
+    pub fn new(symbol: Symbol, evaluates_to_type: Type) -> Self {
+        Self {
+            symbol,
+            evaluates_to_type,
+        }
+    }
+
+    pub fn get_string(&self) -> String {
+        format!(
+            "Arbitrary({}: {})",
+            self.symbol.get_name(),
+            self.get_evaluates_to_type().to_string()
+        )
+        .to_string()
+    }
+
+    pub fn get_name(&self) -> String {
+        format!("Arbitrary({})", self.symbol.get_name()).to_string()
+    }
+
+    pub fn get_evaluates_to_type(&self) -> Type {
+        self.evaluates_to_type.clone()
     }
 }
 
