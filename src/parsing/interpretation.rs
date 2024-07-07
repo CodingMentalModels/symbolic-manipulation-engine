@@ -205,13 +205,18 @@ impl Interpretation {
                 children,
             )),
             InterpretedType::ArbitraryReturning(t) => {
-                if children.len() == 1 {
-                    let child = children[0].clone();
-                    Ok(SymbolNode::arbitrary(child, t.clone()))
-                } else {
+                if children
+                    .iter()
+                    .any(|child| child.contains_arbitrary_nodes())
+                {
+                    Err(ParserError::NestedArbitraryNodes)
+                } else if children.len() != 1 {
                     Err(ParserError::ArbitraryReturningHadNonOneChildren(
                         children.len(),
                     ))
+                } else {
+                    let child = children[0].clone();
+                    Ok(SymbolNode::arbitrary(child, t.clone()))
                 }
             }
         }

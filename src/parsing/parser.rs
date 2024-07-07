@@ -191,6 +191,7 @@ pub enum ParserError {
     InvalidLeftExpressionType(Token, ExpressionType),
     InvalidPassThroughInterpretation(Token),
     ArbitraryReturningHadNonOneChildren(usize),
+    NestedArbitraryNodes,
 }
 
 #[cfg(test)]

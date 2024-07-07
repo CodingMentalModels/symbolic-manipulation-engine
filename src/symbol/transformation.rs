@@ -179,6 +179,16 @@ impl Transformation {
             Self::ApplyToBothSidesTransformation(t) => t.to_interpreted_string(interpretations),
         }
     }
+
+    pub fn contains_arbitrary_nodes(&self) -> bool {
+        match self {
+            Self::AdditionAlgorithm(_) => false,
+            Self::ExplicitTransformation(t) => t.contains_arbitrary_nodes(),
+            Self::ApplyToBothSidesTransformation(t) => {
+                t.get_transformation().contains_arbitrary_nodes()
+            }
+        }
+    }
 }
 
 #[derive(Clone, Debug, Hash, PartialEq, Eq, Serialize, Deserialize)]

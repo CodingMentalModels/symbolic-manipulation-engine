@@ -471,6 +471,24 @@ impl Workspace {
         self.generated_types.push(generated_type);
     }
 
+    pub fn get_instantiated_transformations(&self) -> HashSet<Transformation> {
+        let mut to_return = self
+            .transformations
+            .iter()
+            .filter(|t| !t.contains_arbitrary_nodes())
+            .cloned()
+            .collect();
+
+        let arbitrary_transformations = self
+            .transformations
+            .iter()
+            .map(|t| t.get_arbitrary_nodes())
+            .flatten()
+            .collect();
+
+        return to_return;
+    }
+
     pub fn to_json(&self) -> Result<String, WorkspaceError> {
         let display_workspace = DisplayWorkspace::from_workspace(self)?;
         to_string(&display_workspace).map_err(|e| WorkspaceError::UnableToSerialize(e.to_string()))
