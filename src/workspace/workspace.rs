@@ -479,11 +479,18 @@ impl Workspace {
             .cloned()
             .collect();
 
-        let arbitrary_transformations = self
+        let arbitrary_nodes = self
             .transformations
             .iter()
             .map(|t| t.get_arbitrary_nodes())
             .flatten()
+            .collect();
+
+        let statements = self.workspace.get_statements();
+
+        let instantiations = arbitrary_nodes
+            .iter()
+            .map(|node| (node, node.get_instantiations(node)))
             .collect();
 
         return to_return;
