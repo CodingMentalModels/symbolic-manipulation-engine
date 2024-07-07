@@ -479,7 +479,7 @@ impl Workspace {
             .cloned()
             .collect();
 
-        let arbitrary_nodes = self
+        let arbitrary_nodes: HashSet<_> = self
             .transformations
             .iter()
             .map(|t| t.get_arbitrary_nodes())
@@ -490,7 +490,7 @@ impl Workspace {
 
         let instantiations = arbitrary_nodes
             .iter()
-            .map(|node| (node, node.get_instantiations(node)))
+            .map(|node| (node, node.get_instantiations(statements)))
             .collect();
 
         // TODO For each arbitrary transformation, instantiate it with each combination of

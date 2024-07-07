@@ -455,9 +455,11 @@ impl ExplicitTransformation {
     }
 
     pub fn get_arbitrary_nodes(&self) -> HashSet<SymbolNode> {
-        let mut to_return = self.from.get_arbitrary_nodes();
-        to_return.append(&mut self.to.get_arbitrary_nodes());
-        to_return
+        self.from
+            .get_arbitrary_nodes()
+            .union(&mut self.to.get_arbitrary_nodes())
+            .cloned()
+            .collect()
     }
 
     fn relabel_and_transform_at(
