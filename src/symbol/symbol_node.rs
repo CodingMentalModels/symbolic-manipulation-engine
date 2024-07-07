@@ -177,9 +177,11 @@ impl SymbolNode {
     }
 
     pub fn get_symbol(&self) -> Result<&Symbol, SymbolNodeError> {
+        // TODO Could we be missing symbols here because of Arbitrary Root?
         match &self.root {
             SymbolNodeRoot::Join => Err(SymbolNodeError::InvalidFunctionCalledOnJoin),
             SymbolNodeRoot::Symbol(s) => Ok(&s),
+            SymbolNodeRoot::Arbitrary(r) => Ok(&r.symbol),
         }
     }
 
@@ -187,6 +189,7 @@ impl SymbolNode {
         match self.get_root() {
             SymbolNodeRoot::Symbol(s) => s.get_name(),
             SymbolNodeRoot::Join => ", ".to_string(),
+            SymbolNodeRoot::Arbitrary(r) => r.to_string(),
         }
     }
 
@@ -194,6 +197,7 @@ impl SymbolNode {
         match &self.root {
             SymbolNodeRoot::Join => Type::Join,
             SymbolNodeRoot::Symbol(s) => s.get_evaluates_to_type(),
+            SymbolNodeRoot::Arbitrary(r) => r.get_evaluates_to_type(),
         }
     }
 
@@ -478,9 +482,11 @@ impl SymbolNode {
     }
 
     pub fn get_symbols(&self) -> HashSet<Symbol> {
+        // TODO Could we be missing symbols here because of ArbitraryRoot?
         let mut result = match self.get_root() {
             SymbolNodeRoot::Symbol(symbol) => vec![symbol.clone()],
             SymbolNodeRoot::Join => Vec::new(),
+            SymbolNodeRoot::Arbitrary(root) => vec![root.symbol.clone()],
         };
         for child in &self.children {
             result.extend(child.get_symbols());
@@ -856,7 +862,7 @@ impl ArbitraryRoot {
         }
     }
 
-    pub fn get_string(&self) -> String {
+    pub fn to_string(&self) -> String {
         format!(
             "Arbitrary({}: {})",
             self.symbol.get_name(),
