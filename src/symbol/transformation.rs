@@ -189,6 +189,14 @@ impl Transformation {
             }
         }
     }
+
+    pub fn get_arbitrary_nodes(&self) -> HashSet<SymbolNode> {
+        match self {
+            Self::AdditionAlgorithm(_) => HashSet::new(),
+            Self::ExplicitTransformation(t) => t.get_arbitrary_nodes(),
+            Self::ApplyToBothSidesTransformation(t) => t.get_transformation().get_arbitrary_nodes(),
+        }
+    }
 }
 
 #[derive(Clone, Debug, Hash, PartialEq, Eq, Serialize, Deserialize)]
@@ -444,6 +452,12 @@ impl ExplicitTransformation {
 
     pub fn contains_arbitrary_nodes(&self) -> bool {
         self.from.contains_arbitrary_nodes() || self.to.contains_arbitrary_nodes()
+    }
+
+    pub fn get_arbitrary_nodes(&self) -> HashSet<SymbolNode> {
+        let mut to_return = self.from.get_arbitrary_nodes();
+        to_return.append(&mut self.to.get_arbitrary_nodes());
+        to_return
     }
 
     fn relabel_and_transform_at(

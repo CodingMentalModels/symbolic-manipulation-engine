@@ -135,6 +135,22 @@ impl SymbolNode {
             .any(|child| child.contains_arbitrary_nodes())
     }
 
+    pub fn get_arbitrary_nodes(&self) -> HashSet<Self> {
+        if let SymbolNodeRoot::ArbitraryReturning(_) = self.get_root() {
+            return vec![self.clone()].into_iter().collect();
+        }
+
+        let mut to_return = HashSet::new();
+        for child in self.children.iter() {
+            to_return = to_return
+                .union(&mut child.get_arbitrary_nodes())
+                .cloned()
+                .collect();
+        }
+
+        to_return
+    }
+
     pub fn is_join(&self) -> bool {
         self.root.is_join()
     }

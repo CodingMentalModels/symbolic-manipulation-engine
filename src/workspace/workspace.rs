@@ -486,12 +486,15 @@ impl Workspace {
             .flatten()
             .collect();
 
-        let statements = self.workspace.get_statements();
+        let statements = self.get_statements();
 
         let instantiations = arbitrary_nodes
             .iter()
             .map(|node| (node, node.get_instantiations(node)))
             .collect();
+
+        // TODO For each arbitrary transformation, instantiate it with each combination of
+        // instantiations
 
         return to_return;
     }
