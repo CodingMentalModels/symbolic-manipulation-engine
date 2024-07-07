@@ -647,6 +647,7 @@ pub enum WorkspaceError {
     InvalidTransformationIndex,
     InvalidInterpretationIndex,
     InvalidTransformationAddress,
+    CantContainArbitraryNode,
     ParserError(ParserError),
     UnableToSerialize(String),
     TransformationError(TransformationError),
@@ -745,6 +746,77 @@ mod test_workspace {
             expected
         );
         assert!(workspace.get_statements().contains(&expected));
+    }
+
+    #[test]
+    fn test_workspace_instantiates_arbitrary_transforms() {
+        let mut types = TypeHierarchy::chain(vec!["Boolean".into(), "=".into()]).unwrap();
+        types
+            .add_child_to_parent("^".into(), "Boolean".into())
+            .unwrap();
+
+        let interpretations = vec![
+            Interpretation::infix_operator("=".into(), 1, "=".into()),
+            Interpretation::infix_operator("^".into(), 1, "^".into()),
+            Interpretation::singleton("p".into(), "Boolean".into()),
+            Interpretation::singleton("q".into(), "Boolean".into()),
+            Interpretation::singleton("r".into(), "Boolean".into()),
+            Interpretation::singleton("s".into(), "Boolean".into()),
+            Interpretation::singleton("s".into(), "Boolean".into()),
+            Interpretation::arbitrary_functional("Any".into(), 99, "Boolean".into()),
+        ];
+
+        let mut workspace = Workspace::new(types.clone(), vec![], interpretations.clone());
+
+        workspace
+            .add_parsed_transformation("p=q", "Any(p)=Any(q)")
+            .unwrap();
+        workspace.add_parsed_hypothesis("p=q").unwrap();
+        workspace.add_parsed_hypothesis("p^s").unwrap();
+
+        let and_s_equal = workspace.parse_from_string("p^s=q^s").unwrap();
+        let expected = vec![and_s_equal].into_iter().collect();
+        assert_eq!(workspace.get_instantiated_transformations(), expected);
+
+        workspace.add_parsed_hypothesis("t^p").unwrap();
+        let t_and_equal = workspace.parse_from_string("t^p=t^q").unwrap();
+        let expected = vec![and_s_equal, t_and_equal].into_iter().collect();
+        assert_eq!(workspace.get_instantiated_transformations(), expected);
+    }
+
+    #[test]
+    fn test_workspace_disallows_arbitrary_statements() {
+        let mut types = TypeHierarchy::chain(vec!["Boolean".into(), "=".into()]).unwrap();
+        types
+            .add_child_to_parent("^".into(), "Boolean".into())
+            .unwrap();
+
+        let interpretations = vec![
+            Interpretation::infix_operator("=".into(), 1, "=".into()),
+            Interpretation::infix_operator("^".into(), 1, "^".into()),
+            Interpretation::singleton("p".into(), "Boolean".into()),
+            Interpretation::singleton("q".into(), "Boolean".into()),
+            Interpretation::singleton("r".into(), "Boolean".into()),
+            Interpretation::singleton("s".into(), "Boolean".into()),
+            Interpretation::singleton("s".into(), "Boolean".into()),
+            Interpretation::arbitrary_functional("Any".into(), 99, "Boolean".into()),
+        ];
+
+        let mut workspace = Workspace::new(types.clone(), vec![], interpretations.clone());
+        assert_eq!(
+            workspace.add_parsed_hypothesis("Any(p)"),
+            Err(WorkspaceError::CantContainArbitraryNode)
+        );
+        assert_eq!(
+            workspace.add_parsed_hypothesis("Any(p)=q"),
+            Err(WorkspaceError::CantContainArbitraryNode)
+        );
+
+        workspace.add_parsed_hypothesis("p=q").unwrap();
+        assert_eq!(
+            workspace.try_transform_into_parsed("Any(p)=Any(q)"),
+            Err(WorkspaceError::CantContainArbitraryNode)
+        );
     }
 
     #[test]
