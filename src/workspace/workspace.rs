@@ -313,7 +313,7 @@ impl Workspace {
     }
 
     pub fn get_valid_transformations(&self, partial_statement: &str) -> Vec<SymbolNode> {
-        // TODO: Try to complete partial statements
+        // TODO Try to complete partial statements
         let desired = match self.parse_from_string(partial_statement) {
             Err(_) => {
                 return vec![];
@@ -715,6 +715,39 @@ mod test_workspace {
     use super::*;
 
     #[test]
+    fn test_workspace_try_transform_into_with_arbitrary() {
+        let mut types = TypeHierarchy::chain(vec!["Boolean".into(), "=".into()]).unwrap();
+        types
+            .add_child_to_parent("^".into(), "Boolean".into())
+            .unwrap();
+
+        let interpretations = vec![
+            Interpretation::infix_operator("=".into(), 1, "=".into()),
+            Interpretation::infix_operator("^".into(), 1, "^".into()),
+            Interpretation::singleton("p".into(), "Boolean".into()),
+            Interpretation::singleton("q".into(), "Boolean".into()),
+            Interpretation::singleton("r".into(), "Boolean".into()),
+            Interpretation::singleton("s".into(), "Boolean".into()),
+            Interpretation::singleton("s".into(), "Boolean".into()),
+            Interpretation::arbitrary_functional("Any".into(), 99, "Boolean".into()),
+        ];
+
+        let mut workspace = Workspace::new(types.clone(), vec![], interpretations.clone());
+        workspace
+            .add_parsed_transformation("p=q", "Any(p)=Any(q)")
+            .unwrap();
+
+        workspace.add_parsed_hypothesis("p=q").unwrap();
+
+        let expected = workspace.parse_from_string("p^s=q^s").unwrap();
+        assert_eq!(
+            workspace.try_transform_into_parsed("p^s=q^s").unwrap(),
+            expected
+        );
+        assert!(workspace.get_statements().contains(&expected));
+    }
+
+    #[test]
     fn test_workspace_try_transform_into() {
         let mut types = TypeHierarchy::chain(vec!["Real".into(), "Integer".into()]).unwrap();
         types
@@ -741,6 +774,7 @@ mod test_workspace {
             Interpretation::singleton("p".into(), "Proposition".into()),
             Interpretation::singleton("q".into(), "Proposition".into()),
             Interpretation::singleton("r".into(), "Proposition".into()),
+            Interpretation::singleton("s".into(), "Proposition".into()),
             Interpretation::singleton("s".into(), "Proposition".into()),
         ];
         let mut workspace = Workspace::new(types.clone(), vec![], interpretations.clone());

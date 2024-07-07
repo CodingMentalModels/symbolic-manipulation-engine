@@ -190,6 +190,7 @@ pub enum ParserError {
     InvalidExpressionType(Token, ExpressionType),
     InvalidLeftExpressionType(Token, ExpressionType),
     InvalidPassThroughInterpretation(Token),
+    ArbitraryReturningHadNonOneChildren(usize),
 }
 
 #[cfg(test)]
@@ -198,10 +199,41 @@ mod test_parser {
     use crate::{
         constants::DEFAULT_PRECEDENCE,
         parsing::interpretation::{InterpretationCondition, InterpretedType},
-        symbol::{symbol_node::Symbol, symbol_type::GeneratedTypeCondition},
+        symbol::{
+            symbol_node::{Symbol, SymbolNodeRoot},
+            symbol_type::GeneratedTypeCondition,
+        },
     };
 
     use super::*;
+
+    #[test]
+    fn test_parser_parses_arbitrary() {
+        let custom_tokens = vec!["+".to_string(), "=".to_string()];
+        let interpretations = vec![
+            Interpretation::arbitrary_functional("Any".into(), 99, "Real".into()),
+            Interpretation::infix_operator("=".into(), 1, "=".into()),
+            Interpretation::singleton("x", "Real".into()),
+            Interpretation::singleton("y", "Real".into()),
+        ];
+        let parser = Parser::new(interpretations);
+        let arbitrary_of = |s: &str| {
+            SymbolNode::arbitrary(
+                SymbolNode::leaf(Symbol::new(s.to_string(), "Real".into())),
+                "Real".into(),
+            )
+        };
+        let expected = SymbolNode::new(
+            SymbolNodeRoot::Symbol(Symbol::new_with_same_type_as_value("=")),
+            vec![arbitrary_of("x"), arbitrary_of("y")],
+        );
+        assert_eq!(
+            parser
+                .parse_from_string(custom_tokens.clone(), "Any(x)=Any(y)")
+                .unwrap(),
+            expected
+        );
+    }
 
     #[test]
     fn test_parser_parses() {
@@ -221,7 +253,7 @@ mod test_parser {
             "Equals".into(),
         );
 
-        let mut parser = Parser::new(vec![plus_interpretation, equals_interpretation]);
+        let parser = Parser::new(vec![plus_interpretation, equals_interpretation]);
 
         let parsed = parser.parse(&mut tokens);
 

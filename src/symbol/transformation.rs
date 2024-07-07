@@ -5,7 +5,7 @@ use crate::symbol::symbol_node::{Symbol, SymbolNode, SymbolNodeError};
 use crate::symbol::symbol_type::{Type, TypeError};
 use serde::{Deserialize, Serialize};
 
-use super::symbol_node::{SymbolName, SymbolNodeAddress};
+use super::symbol_node::{SymbolName, SymbolNodeAddress, SymbolNodeRoot};
 use super::symbol_type::TypeHierarchy;
 
 #[derive(Clone, Debug, Hash, PartialEq, Eq, Serialize, Deserialize)]
@@ -432,6 +432,10 @@ impl ExplicitTransformation {
         variables.into_iter().map(|s| s.get_name()).collect()
     }
 
+    pub fn contains_arbitrary_nodes(&self) -> bool {
+        self.from.contains_arbitrary_nodes() || self.to.contains_arbitrary_nodes()
+    }
+
     fn relabel_and_transform_at(
         &self,
         statement: &SymbolNode,
@@ -452,6 +456,9 @@ impl ExplicitTransformation {
         hierarchy: &TypeHierarchy,
         statement: &SymbolNode,
     ) -> Result<SymbolNode, TransformationError> {
+        if self.contains_arbitrary_nodes() {
+            return Err(TransformationError::TransformCalledOnArbitrary);
+        }
         let generalized_transform = self.generalize_to_fit(hierarchy, statement)?;
         generalized_transform.relabel_and_transform(statement)
     }
@@ -590,7 +597,7 @@ impl ExplicitTransformation {
 pub enum TransformationError {
     ConflictingTypes(String, Type, Type),
     InvalidSymbolNodeError(SymbolNodeError),
-    InvalidFunctionCalledOnJoin,
+    InvalidFunctionCalledOn(SymbolNodeRoot),
     InvalidTypes(TypeError),
     RelabellingsKeysMismatch,
     StatementDoesNotMatch(SymbolNode, SymbolNode),
@@ -598,6 +605,7 @@ pub enum TransformationError {
     ApplyToBothSidesCalledOnNChildren(usize),
     StatementTypesDoNotMatch,
     NoValidTransformations,
+    TransformCalledOnArbitrary,
     UnableToParse(SymbolName),
 }
 
@@ -607,7 +615,7 @@ impl From<SymbolNodeError> for TransformationError {
             SymbolNodeError::ConflictingTypes(name, t_0, t_1) => {
                 Self::ConflictingTypes(name, t_0, t_1)
             }
-            SymbolNodeError::InvalidFunctionCalledOnJoin => Self::InvalidFunctionCalledOnJoin,
+            SymbolNodeError::InvalidFunctionCalledOn(root) => Self::InvalidFunctionCalledOn(root),
             _ => Self::InvalidSymbolNodeError(value),
         }
     }
@@ -733,13 +741,15 @@ mod test_transformation {
 
     #[test]
     fn test_transformation_gets_valid_transformations() {
-        let hierarchy =
+        let mut hierarchy =
             TypeHierarchy::chain(vec!["Real".into(), "Integer".into(), "=".into()]).unwrap();
+        hierarchy.add_chain(vec!["Boolean".into()]);
         let interpretations = vec![
             Interpretation::infix_operator("=".into(), 1, "=".into()),
             Interpretation::singleton("x", "Integer".into()),
             Interpretation::singleton("y", "Integer".into()),
             Interpretation::singleton("z", "Integer".into()),
+            Interpretation::arbitrary_functional("Any".into(), 99, "Boolean".into()),
         ];
         let parser = Parser::new(interpretations);
 
@@ -899,6 +909,17 @@ mod test_transformation {
         let actual = transformation.get_valid_transformations(&hierarchy, &x_equals_y_equals_z);
 
         assert_eq!(actual, expected.into_iter().collect());
+
+        let arbitrary_x_equals_arbitrary_y = parser
+            .parse_from_string(custom_tokens.clone(), "Any(x)=Any(y)")
+            .unwrap();
+        let transformation: Transformation =
+            ExplicitTransformation::new(x_equals_y.clone(), arbitrary_x_equals_arbitrary_y.clone())
+                .into();
+        assert_eq!(
+            transformation.transform(&hierarchy, &x_equals_y),
+            Err(TransformationError::TransformCalledOnArbitrary)
+        );
     }
 
     #[test]

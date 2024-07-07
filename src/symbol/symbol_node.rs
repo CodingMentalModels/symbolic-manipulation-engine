@@ -26,7 +26,7 @@ pub enum SymbolNodeError {
     ChildIndexOutOfRange,
     DifferentNumberOfArguments(SymbolNode, SymbolNode),
     RelabellingNotInjective(Vec<(String, String)>),
-    InvalidFunctionCalledOnJoin,
+    InvalidFunctionCalledOn(SymbolNodeRoot),
     InvalidAddress,
 }
 
@@ -118,6 +118,23 @@ impl SymbolNode {
         )
     }
 
+    pub fn arbitrary(child: SymbolNode, evaluates_to_type: Type) -> Self {
+        Self::new(
+            SymbolNodeRoot::ArbitraryReturning(evaluates_to_type),
+            vec![child],
+        )
+    }
+
+    pub fn contains_arbitrary_nodes(&self) -> bool {
+        if let SymbolNodeRoot::ArbitraryReturning(_) = self.root {
+            return true;
+        }
+
+        self.children
+            .iter()
+            .any(|child| child.contains_arbitrary_nodes())
+    }
+
     pub fn is_join(&self) -> bool {
         self.root.is_join()
     }
@@ -179,9 +196,13 @@ impl SymbolNode {
     pub fn get_symbol(&self) -> Result<&Symbol, SymbolNodeError> {
         // TODO Could we be missing symbols here because of Arbitrary Root?
         match &self.root {
-            SymbolNodeRoot::Join => Err(SymbolNodeError::InvalidFunctionCalledOnJoin),
+            SymbolNodeRoot::Join => {
+                Err(SymbolNodeError::InvalidFunctionCalledOn(self.root.clone()))
+            }
             SymbolNodeRoot::Symbol(s) => Ok(&s),
-            SymbolNodeRoot::Arbitrary(r) => Ok(&r.symbol),
+            SymbolNodeRoot::ArbitraryReturning(r) => {
+                Err(SymbolNodeError::InvalidFunctionCalledOn(self.root.clone()))
+            }
         }
     }
 
@@ -189,7 +210,7 @@ impl SymbolNode {
         match self.get_root() {
             SymbolNodeRoot::Symbol(s) => s.get_name(),
             SymbolNodeRoot::Join => ", ".to_string(),
-            SymbolNodeRoot::Arbitrary(r) => r.to_string(),
+            SymbolNodeRoot::ArbitraryReturning(r) => r.to_string(),
         }
     }
 
@@ -197,7 +218,7 @@ impl SymbolNode {
         match &self.root {
             SymbolNodeRoot::Join => Type::Join,
             SymbolNodeRoot::Symbol(s) => s.get_evaluates_to_type(),
-            SymbolNodeRoot::Arbitrary(r) => r.get_evaluates_to_type(),
+            SymbolNodeRoot::ArbitraryReturning(t) => t.clone(),
         }
     }
 
@@ -482,11 +503,10 @@ impl SymbolNode {
     }
 
     pub fn get_symbols(&self) -> HashSet<Symbol> {
-        // TODO Could we be missing symbols here because of ArbitraryRoot?
         let mut result = match self.get_root() {
             SymbolNodeRoot::Symbol(symbol) => vec![symbol.clone()],
             SymbolNodeRoot::Join => Vec::new(),
-            SymbolNodeRoot::Arbitrary(root) => vec![root.symbol.clone()],
+            SymbolNodeRoot::ArbitraryReturning(_) => Vec::new(),
         };
         for child in &self.children {
             result.extend(child.get_symbols());
@@ -790,7 +810,7 @@ impl Substitution {
 pub enum SymbolNodeRoot {
     Symbol(Symbol),
     Join,
-    Arbitrary(ArbitraryRoot),
+    ArbitraryReturning(Type),
 }
 
 impl Default for SymbolNodeRoot {
@@ -826,7 +846,9 @@ impl SymbolNodeRoot {
         match self {
             Self::Join => "Join".to_string(),
             Self::Symbol(s) => s.to_string(),
-            Self::Arbitrary(r) => r.to_string(),
+            Self::ArbitraryReturning(t) => {
+                format!("ArbitraryReturning({})", t.to_string()).to_string()
+            }
         }
     }
 
@@ -835,7 +857,9 @@ impl SymbolNodeRoot {
         match self {
             Self::Join => "Join".to_string(),
             Self::Symbol(s) => s.get_name(),
-            Self::Arbitrary(r) => r.get_name(),
+            Self::ArbitraryReturning(t) => {
+                format!("ArbitraryReturning({})", t.to_string()).to_string()
+            }
         }
     }
 
@@ -843,40 +867,8 @@ impl SymbolNodeRoot {
         match self {
             Self::Join => Type::Join,
             Self::Symbol(s) => s.get_evaluates_to_type(),
-            Self::Arbitrary(r) => r.get_evaluates_to_type(),
+            Self::ArbitraryReturning(t) => t.clone(),
         }
-    }
-}
-
-#[derive(Clone, Debug, Default, Hash, PartialEq, Eq, Serialize, Deserialize)]
-pub struct ArbitraryRoot {
-    symbol: Symbol,
-    evaluates_to_type: Type,
-}
-
-impl ArbitraryRoot {
-    pub fn new(symbol: Symbol, evaluates_to_type: Type) -> Self {
-        Self {
-            symbol,
-            evaluates_to_type,
-        }
-    }
-
-    pub fn to_string(&self) -> String {
-        format!(
-            "Arbitrary({}: {})",
-            self.symbol.get_name(),
-            self.get_evaluates_to_type().to_string()
-        )
-        .to_string()
-    }
-
-    pub fn get_name(&self) -> String {
-        format!("Arbitrary({})", self.symbol.get_name()).to_string()
-    }
-
-    pub fn get_evaluates_to_type(&self) -> Type {
-        self.evaluates_to_type.clone()
     }
 }
 
