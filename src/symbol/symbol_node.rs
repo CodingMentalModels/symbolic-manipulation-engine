@@ -151,6 +151,21 @@ impl SymbolNode {
         to_return
     }
 
+    pub fn get_arbitrary_node_instantiations(
+        &self,
+        statements: HashSet<SymbolNode>,
+    ) -> HashSet<SymbolNode> {
+        statements
+            .into_iter()
+            .map(|s| self.get_arbitrary_node_instantiation(s))
+            .flatten()
+            .collect()
+    }
+
+    pub fn get_arbitrary_node_instantiation(&self, statement: SymbolNode) -> HashSet<SymbolNode> {
+        unimplemented!();
+    }
+
     pub fn is_join(&self) -> bool {
         self.root.is_join()
     }
@@ -947,6 +962,73 @@ mod test_statement {
     };
 
     use super::*;
+
+    #[test]
+    fn test_symbol_node_gets_arbitrary_node_instantiations() {
+        let interpretations = vec![
+            Interpretation::infix_operator("=".into(), 1, "Boolean".into()),
+            Interpretation::infix_operator("&".into(), 2, "Boolean".into()),
+            Interpretation::outfix_operator(("|".into(), "|".into()), 2, "Integer".into()),
+            Interpretation::postfix_operator("!".into(), 3, "Integer".into()),
+            Interpretation::prefix_operator("-".into(), 4, "Integer".into()),
+            Interpretation::singleton("x", "Integer".into()),
+            Interpretation::singleton("y", "Integer".into()),
+            Interpretation::singleton("z", "Integer".into()),
+            Interpretation::arbitrary_functional("Any".into(), 99, "Boolean".into()),
+        ];
+
+        let parser = Parser::new(interpretations.clone());
+
+        let custom_tokens = vec![
+            "=".to_string(),
+            "&".to_string(),
+            "|".to_string(),
+            "!".to_string(),
+            "-".to_string(),
+        ];
+
+        let parse = |s: &str| {
+            parser
+                .parse_from_string(custom_tokens.clone(), "x")
+                .unwrap()
+        };
+
+        let non_arbitrary = parse("x");
+        assert_eq!(
+            non_arbitrary.get_arbitrary_node_instantiation(non_arbitrary.clone()),
+            HashSet::new()
+        );
+
+        let wrong_type = non_arbitrary.clone();
+        let single_arbitrary = parser
+            .parse_from_string(custom_tokens.clone(), "Any(x)")
+            .unwrap();
+        assert_eq!(
+            single_arbitrary.get_arbitrary_node_instantiation(wrong_type),
+            HashSet::new()
+        );
+
+        let p = parse("p");
+        let single_arbitrary = parse("Any(p)");
+        assert_eq!(
+            single_arbitrary.get_arbitrary_node_instantiation(p.clone()),
+            vec![p.clone()].into_iter().collect()
+        );
+
+        let p_and_q = parse("p&q");
+        assert_eq!(
+            single_arbitrary.get_arbitrary_node_instantiation(p_and_q.clone()),
+            vec![p, parse("q"), p_and_q].into_iter().collect()
+        );
+
+        let x_equals_y_and_q = parse("(x=y)&q");
+        assert_eq!(
+            single_arbitrary.get_arbitrary_node_instantiation(x_equals_y_and_q.clone()),
+            vec![parse("x=y"), parse("q"), x_equals_y_and_q]
+                .into_iter()
+                .collect()
+        );
+    }
 
     #[test]
     fn test_symbol_node_to_interpreted_string() {

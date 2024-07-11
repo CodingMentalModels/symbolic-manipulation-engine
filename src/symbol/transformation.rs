@@ -197,6 +197,13 @@ impl Transformation {
             Self::ApplyToBothSidesTransformation(t) => t.get_transformation().get_arbitrary_nodes(),
         }
     }
+
+    pub fn instantiate_arbitrary_nodes(
+        &self,
+        instantiations: &HashMap<SymbolNode, HashSet<SymbolNode>>,
+    ) -> HashSet<Self> {
+        unimplemented!();
+    }
 }
 
 #[derive(Clone, Debug, Hash, PartialEq, Eq, Serialize, Deserialize)]
