@@ -496,7 +496,10 @@ impl ExplicitTransformation {
         &self,
         instantiations: &HashMap<SymbolNode, HashSet<SymbolNode>>,
     ) -> HashSet<Self> {
-        unimplemented!()
+        // TODO Is this actually waht we want to do?  Does from need to be instantiated?
+        let from_instantiations = self.from.instantiate_arbitrary_nodes(instantiations);
+        let to_instantiations = self.to.instantiate_arbitrary_nodes(instantiations);
+        unimplemented!();
     }
 
     fn relabel_and_transform_at(
