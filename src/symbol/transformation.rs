@@ -202,7 +202,19 @@ impl Transformation {
         &self,
         instantiations: &HashMap<SymbolNode, HashSet<SymbolNode>>,
     ) -> HashSet<Self> {
-        unimplemented!();
+        match self {
+            Self::AdditionAlgorithm(_) => HashSet::new(),
+            Self::ExplicitTransformation(t) => t
+                .instantiate_arbitrary_nodes(instantiations)
+                .into_iter()
+                .map(|t| t.into())
+                .collect(),
+            Self::ApplyToBothSidesTransformation(t) => t
+                .instantiate_arbitrary_nodes(instantiations)
+                .into_iter()
+                .map(|t| Self::ApplyToBothSidesTransformation(t))
+                .collect(),
+        }
     }
 }
 
@@ -349,6 +361,17 @@ impl ApplyToBothSidesTransformation {
             self.symbol.to_string()
         )
     }
+
+    pub fn instantiate_arbitrary_nodes(
+        &self,
+        instantiations: &HashMap<SymbolNode, HashSet<SymbolNode>>,
+    ) -> HashSet<Self> {
+        self.get_transformation()
+            .instantiate_arbitrary_nodes(instantiations)
+            .into_iter()
+            .map(|t| Self::new(self.get_symbol().clone(), t))
+            .collect()
+    }
 }
 
 #[derive(Clone, Debug, Hash, PartialEq, Eq, Serialize, Deserialize)]
@@ -467,6 +490,13 @@ impl ExplicitTransformation {
             .union(&mut self.to.get_arbitrary_nodes())
             .cloned()
             .collect()
+    }
+
+    pub fn instantiate_arbitrary_nodes(
+        &self,
+        instantiations: &HashMap<SymbolNode, HashSet<SymbolNode>>,
+    ) -> HashSet<Self> {
+        unimplemented!()
     }
 
     fn relabel_and_transform_at(
