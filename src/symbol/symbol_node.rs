@@ -989,6 +989,8 @@ mod test_statement {
             Interpretation::outfix_operator(("|".into(), "|".into()), 2, "Integer".into()),
             Interpretation::postfix_operator("!".into(), 3, "Integer".into()),
             Interpretation::prefix_operator("-".into(), 4, "Integer".into()),
+            Interpretation::singleton("p", "Boolean".into()),
+            Interpretation::singleton("q", "Boolean".into()),
             Interpretation::singleton("x", "Integer".into()),
             Interpretation::singleton("y", "Integer".into()),
             Interpretation::singleton("z", "Integer".into()),
@@ -1005,11 +1007,7 @@ mod test_statement {
             "-".to_string(),
         ];
 
-        let parse = |s: &str| {
-            parser
-                .parse_from_string(custom_tokens.clone(), "x")
-                .unwrap()
-        };
+        let parse = |s: &str| parser.parse_from_string(custom_tokens.clone(), s).unwrap();
 
         let non_arbitrary = parse("x");
         assert_eq!(
