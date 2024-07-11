@@ -153,17 +153,35 @@ impl SymbolNode {
 
     pub fn get_arbitrary_node_instantiations(
         &self,
-        statements: HashSet<SymbolNode>,
+        statements: &HashSet<SymbolNode>,
     ) -> HashSet<SymbolNode> {
         statements
-            .into_iter()
+            .iter()
             .map(|s| self.get_arbitrary_node_instantiation(s))
             .flatten()
             .collect()
     }
 
-    pub fn get_arbitrary_node_instantiation(&self, statement: SymbolNode) -> HashSet<SymbolNode> {
-        unimplemented!();
+    pub fn get_arbitrary_node_instantiation(&self, statement: &SymbolNode) -> HashSet<SymbolNode> {
+        // TODO checking Arbitrary Returning doesn't have to happen recursively
+        let mut to_return = HashSet::new();
+        match self.get_root() {
+            SymbolNodeRoot::ArbitraryReturning(return_type) => {
+                let mut children_instantiations = self.get_arbitrary_node_instantiations(
+                    &statement.get_children().into_iter().cloned().collect(),
+                );
+                to_return = to_return
+                    .union(&mut children_instantiations)
+                    .cloned()
+                    .collect();
+                if &statement.get_evaluates_to_type() == return_type {
+                    to_return.insert(statement.clone());
+                }
+            }
+            _ => { // Do nothing
+            }
+        }
+        to_return
     }
 
     pub fn is_join(&self) -> bool {
@@ -995,7 +1013,7 @@ mod test_statement {
 
         let non_arbitrary = parse("x");
         assert_eq!(
-            non_arbitrary.get_arbitrary_node_instantiation(non_arbitrary.clone()),
+            non_arbitrary.get_arbitrary_node_instantiation(&non_arbitrary.clone()),
             HashSet::new()
         );
 
@@ -1004,26 +1022,26 @@ mod test_statement {
             .parse_from_string(custom_tokens.clone(), "Any(x)")
             .unwrap();
         assert_eq!(
-            single_arbitrary.get_arbitrary_node_instantiation(wrong_type),
+            single_arbitrary.get_arbitrary_node_instantiation(&wrong_type),
             HashSet::new()
         );
 
         let p = parse("p");
         let single_arbitrary = parse("Any(p)");
         assert_eq!(
-            single_arbitrary.get_arbitrary_node_instantiation(p.clone()),
+            single_arbitrary.get_arbitrary_node_instantiation(&p.clone()),
             vec![p.clone()].into_iter().collect()
         );
 
         let p_and_q = parse("p&q");
         assert_eq!(
-            single_arbitrary.get_arbitrary_node_instantiation(p_and_q.clone()),
+            single_arbitrary.get_arbitrary_node_instantiation(&p_and_q.clone()),
             vec![p, parse("q"), p_and_q].into_iter().collect()
         );
 
         let x_equals_y_and_q = parse("(x=y)&q");
         assert_eq!(
-            single_arbitrary.get_arbitrary_node_instantiation(x_equals_y_and_q.clone()),
+            single_arbitrary.get_arbitrary_node_instantiation(&x_equals_y_and_q.clone()),
             vec![parse("x=y"), parse("q"), x_equals_y_and_q]
                 .into_iter()
                 .collect()

@@ -486,7 +486,7 @@ impl Workspace {
             .map(|node| {
                 (
                     node.clone(),
-                    node.get_arbitrary_node_instantiations(statements.iter().cloned().collect()),
+                    node.get_arbitrary_node_instantiations(&statements.iter().cloned().collect()),
                 )
             })
             .collect();
