@@ -184,6 +184,13 @@ impl SymbolNode {
         to_return
     }
 
+    pub fn instantiate_arbitrary_nodes(
+        &self,
+        instantiations: &HashMap<SymbolNode, HashSet<SymbolNode>>,
+    ) -> Self {
+        unimplemented!();
+    }
+
     pub fn is_join(&self) -> bool {
         self.root.is_join()
     }
