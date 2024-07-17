@@ -713,6 +713,60 @@ mod test_transformation {
     use super::*;
 
     #[test]
+    fn test_transformation_instantiates_arbitrary_nodes() {
+        let interpretations = vec![
+            Interpretation::infix_operator("=".into(), 1, "Boolean".into()),
+            Interpretation::infix_operator("&".into(), 2, "Boolean".into()),
+            Interpretation::outfix_operator(("|".into(), "|".into()), 2, "Integer".into()),
+            Interpretation::postfix_operator("!".into(), 3, "Integer".into()),
+            Interpretation::prefix_operator("-".into(), 4, "Integer".into()),
+            Interpretation::singleton("p", "Boolean".into()),
+            Interpretation::singleton("q", "Boolean".into()),
+            Interpretation::singleton("x", "Integer".into()),
+            Interpretation::singleton("y", "Integer".into()),
+            Interpretation::singleton("z", "Integer".into()),
+            Interpretation::arbitrary_functional("Any".into(), 99, "Boolean".into()),
+        ];
+
+        let parser = Parser::new(interpretations.clone());
+
+        let custom_tokens = vec![
+            "=".to_string(),
+            "&".to_string(),
+            "|".to_string(),
+            "!".to_string(),
+            "-".to_string(),
+        ];
+
+        let parse = |s: &str| parser.parse_from_string(custom_tokens.clone(), s).unwrap();
+
+        let p = parse("p");
+        let q = parse("q");
+        let f_of_p = parse("F(p)");
+        let f_of_q = parse("F(q)");
+        let p_equals_q = parse("p=q");
+        let f_of_p_equals_f_of_q = parse("F(p)=F(q)");
+        let transformation =
+            ExplicitTransformation::new(p_equals_q.clone(), f_of_p_equals_f_of_q.clone());
+        let instantiations = vec![
+            (
+                f_of_p,
+                vec![p.clone(), p_equals_q.clone()]
+                    .into_iter()
+                    .collect::<HashSet<_>>(),
+            ),
+            (
+                f_of_q,
+                vec![q.clone(), p_equals_q.clone()]
+                    .into_iter()
+                    .collect::<HashSet<_>>(),
+            ),
+        ]
+        .into_iter()
+        .collect::<HashMap<_, _>>();
+    }
+
+    #[test]
     fn test_transformation_joint_transforms() {
         let hierarchy = TypeHierarchy::chain(vec!["Proposition".into()]).unwrap();
         let parser = Parser::new(vec![

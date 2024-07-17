@@ -472,31 +472,29 @@ impl Workspace {
     }
 
     pub fn get_instantiated_transformations(&self) -> HashSet<Transformation> {
-        let arbitrary_nodes: HashSet<_> = self
-            .transformations
+        let substatements = self
+            .get_statements()
             .iter()
-            .map(|t| t.get_arbitrary_nodes())
+            .map(|statement| statement.get_substatements())
             .flatten()
+            .collect::<HashSet<_>>();
+
+        let mut to_return = vec![].into_iter().collect::<HashSet<_>>();
+        for transform in self.get_arbitrary_transformations() {
+            to_return = to_return.union(&mut transform.instantiate_arbitrary_nodes(substatements));
+        }
+
+        to_return = to_return
+            .union(
+                &self
+                    .get_non_arbitrary_transformations()
+                    .into_iter()
+                    .collect::<HashSet<_>>(),
+            )
+            .cloned()
             .collect();
 
-        let statements = self.get_statements();
-
-        let instantiations = arbitrary_nodes
-            .iter()
-            .map(|node| {
-                (
-                    node.clone(),
-                    node.get_arbitrary_node_instantiations(&statements.iter().cloned().collect()),
-                )
-            })
-            .collect();
-
-        self.transformations
-            .iter()
-            .into_iter()
-            .map(|t| t.instantiate_arbitrary_nodes(&instantiations))
-            .flatten()
-            .collect()
+        return to_return;
     }
 
     fn get_arbitrary_transformations(&self) -> HashSet<Transformation> {
@@ -827,12 +825,9 @@ mod test_workspace {
         };
         let expected = vec![
             instantiate("p=q"),
-            instantiate("p=(p=q)"),
-            instantiate("(p=q)=q"),
-            instantiate("(p=q)=(p=q)"),
-            instantiate("(p^q)=q"),
-            instantiate("p=(p^q)"),
-            instantiate("(p^q)=(p^q)"),
+            instantiate("(p=q)=(q=q)"),
+            instantiate("(p=p)=(p=q)"),
+            instantiate("(p^s)=(q^s)"),
         ]
         .into_iter()
         .collect();
