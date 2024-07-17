@@ -491,9 +491,6 @@ impl Workspace {
             })
             .collect();
 
-        // TODO For each arbitrary transformation, instantiate it with each combination of
-        // instantiations
-
         self.transformations
             .iter()
             .into_iter()

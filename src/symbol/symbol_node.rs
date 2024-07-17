@@ -424,7 +424,25 @@ impl SymbolNode {
         Ok(Self::new(new_root, new_children)).into()
     }
 
-    pub fn replace_all(&self, from: &Symbol, to: &SymbolNode) -> Result<Self, SymbolNodeError> {
+    pub fn replace_all(&self, from: &SymbolNode, to: &SymbolNode) -> Self {
+        if self == from {
+            to.clone()
+        } else {
+            Self::new(
+                self.root.clone(),
+                self.children
+                    .iter()
+                    .map(|child| child.replace_all(from, to))
+                    .collect(),
+            )
+        }
+    }
+
+    pub fn replace_all_from_symbol(
+        &self,
+        from: &Symbol,
+        to: &SymbolNode,
+    ) -> Result<Self, SymbolNodeError> {
         if !self.is_join() && (self.get_symbol()? == from) {
             Ok(to.clone())
         } else {
@@ -432,7 +450,7 @@ impl SymbolNode {
                 Vec::new(),
                 |mut acc: Vec<SymbolNode>, child: &SymbolNode| {
                     child
-                        .replace_all(from, to)
+                        .replace_all_from_symbol(from, to)
                         .map(|new_child: SymbolNode| acc.push(new_child))?;
                     Ok(acc)
                 },
@@ -1403,6 +1421,51 @@ mod test_statement {
             SymbolNode::new("=".into(), vec![n_factorial, n_factorial_definition]);
 
         assert_eq!(factorial_definition.get_depth(), 3);
+    }
+
+    #[test]
+    fn test_symbol_node_replaces_all() {
+        let interpretations = vec![
+            Interpretation::infix_operator("=".into(), 1, "=".into()),
+            Interpretation::infix_operator("^".into(), 1, "^".into()),
+            Interpretation::singleton("p".into(), "Boolean".into()),
+            Interpretation::singleton("q".into(), "Boolean".into()),
+            Interpretation::singleton("r".into(), "Boolean".into()),
+            Interpretation::singleton("s".into(), "Boolean".into()),
+            Interpretation::arbitrary_functional("Any".into(), 99, "Boolean".into()),
+        ];
+        let parser = Parser::new(interpretations);
+
+        let custom_tokens = vec!["=".to_string(), "^".to_string()];
+        let p_equals_q = parser
+            .parse_from_string(custom_tokens.clone(), "p=q")
+            .unwrap();
+        let r_equals_s = parser
+            .parse_from_string(custom_tokens.clone(), "r=s")
+            .unwrap();
+        let p_equals_q_equals_r = parser
+            .parse_from_string(custom_tokens.clone(), "(p=q)=r")
+            .unwrap();
+        let r_equals_s_equals_r = parser
+            .parse_from_string(custom_tokens.clone(), "(r=s)=r")
+            .unwrap();
+        assert_eq!(
+            p_equals_q_equals_r.replace_all(&p_equals_q, &r_equals_s),
+            r_equals_s_equals_r
+        );
+
+        let r = parser
+            .parse_from_string(custom_tokens.clone(), "r")
+            .unwrap();
+        let s = parser
+            .parse_from_string(custom_tokens.clone(), "s")
+            .unwrap();
+
+        let s_equals_s_equals_s = parser
+            .parse_from_string(custom_tokens.clone(), "(s=s)=s")
+            .unwrap();
+
+        assert_eq!(r_equals_s_equals_r.replace_all(&r, &s), s_equals_s_equals_s);
     }
 
     #[test]

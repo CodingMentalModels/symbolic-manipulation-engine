@@ -499,8 +499,14 @@ impl ExplicitTransformation {
         instantiations
             .iter()
             .map(|(arbitrary, replacements)| {
-                unimplemented!();
-                vec![self.clone()]
+                replacements
+                    .iter()
+                    .map(|replacement| {
+                        let new_from = self.from.replace_all(arbitrary, replacement);
+                        let new_to = self.to.replace_all(arbitrary, replacement);
+                        Self::new(new_from, new_to)
+                    })
+                    .collect::<HashSet<_>>()
             })
             .flatten()
             .collect()
