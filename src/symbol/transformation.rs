@@ -737,7 +737,7 @@ mod test_transformation {
             Interpretation::singleton("x", "Integer".into()),
             Interpretation::singleton("y", "Integer".into()),
             Interpretation::singleton("z", "Integer".into()),
-            Interpretation::arbitrary_functional("Any".into(), 99, "Boolean".into()),
+            Interpretation::arbitrary_functional("F".into(), 99, "Boolean".into()),
         ];
 
         let parser = Parser::new(interpretations.clone());
@@ -754,28 +754,34 @@ mod test_transformation {
 
         let p = parse("p");
         let q = parse("q");
-        let f_of_p = parse("F(p)");
-        let f_of_q = parse("F(q)");
         let p_equals_q = parse("p=q");
         let f_of_p_equals_f_of_q = parse("F(p)=F(q)");
         let transformation =
             ExplicitTransformation::new(p_equals_q.clone(), f_of_p_equals_f_of_q.clone());
-        let instantiations = vec![
-            (
-                f_of_p,
-                vec![p.clone(), p_equals_q.clone()]
-                    .into_iter()
-                    .collect::<HashSet<_>>(),
-            ),
-            (
-                f_of_q,
-                vec![q.clone(), p_equals_q.clone()]
-                    .into_iter()
-                    .collect::<HashSet<_>>(),
-            ),
+        assert_eq!(
+            transformation
+                .instantiate_arbitrary_nodes(&vec![].into_iter().collect())
+                .unwrap(),
+            vec![].into_iter().collect()
+        );
+
+        let substatements = vec![p.clone(), q.clone(), p_equals_q.clone()]
+            .into_iter()
+            .collect::<HashSet<_>>();
+        let expected = vec![
+            ExplicitTransformation::new(p_equals_q.clone(), p_equals_q.clone()),
+            ExplicitTransformation::new(p_equals_q.clone(), parse("(p=p)=(p=q)")),
+            ExplicitTransformation::new(p_equals_q.clone(), parse("(p=q)=(q=q)")),
+            ExplicitTransformation::new(p_equals_q.clone(), p_equals_q.clone()),
         ]
         .into_iter()
-        .collect::<HashMap<_, _>>();
+        .collect();
+        assert_eq!(
+            transformation
+                .instantiate_arbitrary_nodes(&substatements)
+                .unwrap(),
+            expected
+        );
     }
 
     #[test]
