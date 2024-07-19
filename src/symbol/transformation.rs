@@ -200,17 +200,17 @@ impl Transformation {
 
     pub fn instantiate_arbitrary_nodes(
         &self,
-        instantiations: &HashMap<SymbolNode, HashSet<SymbolNode>>,
+        substatements: &HashSet<SymbolNode>,
     ) -> HashSet<Self> {
         match self {
             Self::AdditionAlgorithm(_) => HashSet::new(),
             Self::ExplicitTransformation(t) => t
-                .instantiate_arbitrary_nodes(instantiations)
+                .instantiate_arbitrary_nodes(substatements)
                 .into_iter()
                 .map(|t| t.into())
                 .collect(),
             Self::ApplyToBothSidesTransformation(t) => t
-                .instantiate_arbitrary_nodes(instantiations)
+                .instantiate_arbitrary_nodes(substatements)
                 .into_iter()
                 .map(|t| Self::ApplyToBothSidesTransformation(t))
                 .collect(),
@@ -364,10 +364,10 @@ impl ApplyToBothSidesTransformation {
 
     pub fn instantiate_arbitrary_nodes(
         &self,
-        instantiations: &HashMap<SymbolNode, HashSet<SymbolNode>>,
+        substatements: &HashSet<SymbolNode>,
     ) -> HashSet<Self> {
         self.get_transformation()
-            .instantiate_arbitrary_nodes(instantiations)
+            .instantiate_arbitrary_nodes(substatements)
             .into_iter()
             .map(|t| Self::new(self.get_symbol().clone(), t))
             .collect()
@@ -494,22 +494,29 @@ impl ExplicitTransformation {
 
     pub fn instantiate_arbitrary_nodes(
         &self,
-        instantiations: &HashMap<SymbolNode, HashSet<SymbolNode>>,
+        substatements: &HashSet<SymbolNode>,
     ) -> HashSet<Self> {
-        instantiations
-            .iter()
-            .map(|(arbitrary, replacements)| {
-                replacements
-                    .iter()
-                    .map(|replacement| {
-                        let new_from = self.from.replace_all(arbitrary, replacement);
-                        let new_to = self.to.replace_all(arbitrary, replacement);
-                        Self::new(new_from, new_to)
-                    })
-                    .collect::<HashSet<_>>()
-            })
-            .flatten()
-            .collect()
+        let mut to_return = HashSet::new();
+        for arbitrary_node in self.get_arbitrary_nodes() {
+            let substatement_predicates = substatements
+                .iter()
+                .filter(|s| s.get_evaluates_to_type() == arbitrary_node.get_evaluates_to_type())
+                .map(|s| s.get_predicates())
+                .flatten()
+                .collect();
+
+            let new_from = self
+                .from
+                .replace_with_predicate(arbitrary_node.get_root(), predicate);
+            let new_to = self
+                .to
+                .replace_with_predicate(arbitrary_node.get_root(), predicate);
+
+            let transform = ExplicitTransformation::new(new_from, new_to);
+            to_return.insert(transform);
+        }
+
+        to_return
     }
 
     fn relabel_and_transform_at(

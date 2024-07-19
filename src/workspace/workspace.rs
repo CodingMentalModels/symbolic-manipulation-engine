@@ -481,7 +481,10 @@ impl Workspace {
 
         let mut to_return = vec![].into_iter().collect::<HashSet<_>>();
         for transform in self.get_arbitrary_transformations() {
-            to_return = to_return.union(&mut transform.instantiate_arbitrary_nodes(substatements));
+            to_return = to_return
+                .union(&mut transform.instantiate_arbitrary_nodes(&substatements))
+                .cloned()
+                .collect();
         }
 
         to_return = to_return
