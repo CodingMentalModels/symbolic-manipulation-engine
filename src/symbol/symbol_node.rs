@@ -28,6 +28,27 @@ pub enum SymbolNodeError {
     RelabellingNotInjective(Vec<(String, String)>),
     InvalidFunctionCalledOn(SymbolNodeRoot),
     InvalidAddress,
+    ArbitraryNodeHasNonOneChildren,
+}
+
+#[derive(Clone, Hash, PartialEq, Eq, Serialize, Deserialize)]
+pub struct Predicate {
+    node: SymbolNode,
+    arbitrary: SymbolNode,
+}
+
+impl Predicate {
+    pub fn new(node: SymbolNode, arbitrary: SymbolNode) -> Self {
+        Self { node, arbitrary }
+    }
+
+    pub fn get_evaluates_to_type(&self) -> Type {
+        self.node.get_evaluates_to_type()
+    }
+
+    pub fn instantiate(&self, instantiation: SymbolNode) -> SymbolNode {
+        self.node.replace_all(&self.arbitrary, &instantiation)
+    }
 }
 
 #[derive(Clone, Hash, PartialEq, Eq, Serialize, Deserialize)]
@@ -141,6 +162,21 @@ impl SymbolNode {
         to_return.into_iter().collect()
     }
 
+    pub fn get_all_predicates(&self) -> HashSet<Predicate> {
+        let mut to_return = self
+            .children
+            .iter()
+            .map(|child| child.get_all_predicates())
+            .flatten()
+            .collect::<Vec<_>>();
+        for i in 0..self.get_n_children() {
+            let arbitrary_node = self.children[i].clone();
+            let predicate = Predicate::new(self.clone(), arbitrary_node);
+            to_return.push(predicate);
+        }
+        to_return.into_iter().collect()
+    }
+
     pub fn get_arbitrary_nodes(&self) -> HashSet<Self> {
         if let SymbolNodeRoot::ArbitraryReturning(_) = self.get_root() {
             return vec![self.clone()].into_iter().collect();
@@ -195,6 +231,10 @@ impl SymbolNode {
         instantiations: &HashMap<SymbolNode, HashSet<SymbolNode>>,
     ) -> Self {
         unimplemented!();
+    }
+
+    pub fn is_arbitrary(&self) -> bool {
+        self.root.is_arbitrary()
     }
 
     pub fn is_join(&self) -> bool {
@@ -482,6 +522,30 @@ impl SymbolNode {
         *current_node = new_node.clone();
 
         Ok(to_return)
+    }
+
+    pub fn replace_arbitrary_from_predicate(
+        &self,
+        symbol: &Symbol,
+        predicate: &Predicate,
+    ) -> Result<SymbolNode, SymbolNodeError> {
+        if self.is_arbitrary()
+            && self.get_evaluates_to_type() == predicate.get_evaluates_to_type()
+            && self.get_symbol() == Ok(symbol)
+        {
+            let children = self.get_children();
+            if children.len() != 1 {
+                return Err(SymbolNodeError::ArbitraryNodeHasNonOneChildren);
+            }
+            let child = children[0].clone();
+            return Ok(predicate.instantiate(child));
+        }
+
+        let mut new_children = Vec::new();
+        for child in self.get_children() {
+            new_children.push(child.replace_arbitrary_from_predicate(symbol, predicate)?);
+        }
+        Ok(Self::new(self.root.clone(), new_children))
     }
 
     pub fn find_where(&self, condition: &dyn Fn(Self) -> bool) -> HashSet<SymbolNodeAddress> {
@@ -920,6 +984,14 @@ impl From<&str> for SymbolNodeRoot {
 impl SymbolNodeRoot {
     pub fn is_join(&self) -> bool {
         self == &Self::Join
+    }
+
+    pub fn is_arbitrary(&self) -> bool {
+        if let &Self::ArbitraryReturning(_) = self {
+            true
+        } else {
+            false
+        }
     }
 
     pub fn to_string(&self) -> String {

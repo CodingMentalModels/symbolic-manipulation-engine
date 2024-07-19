@@ -201,19 +201,19 @@ impl Transformation {
     pub fn instantiate_arbitrary_nodes(
         &self,
         substatements: &HashSet<SymbolNode>,
-    ) -> HashSet<Self> {
+    ) -> Result<HashSet<Self>, TransformationError> {
         match self {
-            Self::AdditionAlgorithm(_) => HashSet::new(),
-            Self::ExplicitTransformation(t) => t
-                .instantiate_arbitrary_nodes(substatements)
+            Self::AdditionAlgorithm(_) => Ok(HashSet::new()),
+            Self::ExplicitTransformation(t) => Ok(t
+                .instantiate_arbitrary_nodes(substatements)?
                 .into_iter()
                 .map(|t| t.into())
-                .collect(),
-            Self::ApplyToBothSidesTransformation(t) => t
-                .instantiate_arbitrary_nodes(substatements)
+                .collect()),
+            Self::ApplyToBothSidesTransformation(t) => Ok(t
+                .instantiate_arbitrary_nodes(substatements)?
                 .into_iter()
                 .map(|t| Self::ApplyToBothSidesTransformation(t))
-                .collect(),
+                .collect()),
         }
     }
 }
@@ -365,12 +365,13 @@ impl ApplyToBothSidesTransformation {
     pub fn instantiate_arbitrary_nodes(
         &self,
         substatements: &HashSet<SymbolNode>,
-    ) -> HashSet<Self> {
-        self.get_transformation()
-            .instantiate_arbitrary_nodes(substatements)
+    ) -> Result<HashSet<Self>, TransformationError> {
+        Ok(self
+            .get_transformation()
+            .instantiate_arbitrary_nodes(substatements)?
             .into_iter()
             .map(|t| Self::new(self.get_symbol().clone(), t))
-            .collect()
+            .collect())
     }
 }
 
@@ -495,28 +496,30 @@ impl ExplicitTransformation {
     pub fn instantiate_arbitrary_nodes(
         &self,
         substatements: &HashSet<SymbolNode>,
-    ) -> HashSet<Self> {
+    ) -> Result<HashSet<Self>, TransformationError> {
         let mut to_return = HashSet::new();
         for arbitrary_node in self.get_arbitrary_nodes() {
             let substatement_predicates = substatements
                 .iter()
                 .filter(|s| s.get_evaluates_to_type() == arbitrary_node.get_evaluates_to_type())
-                .map(|s| s.get_predicates())
+                .map(|s| s.get_all_predicates())
                 .flatten()
-                .collect();
+                .collect::<HashSet<_>>();
 
-            let new_from = self
-                .from
-                .replace_with_predicate(arbitrary_node.get_root(), predicate);
-            let new_to = self
-                .to
-                .replace_with_predicate(arbitrary_node.get_root(), predicate);
+            for predicate in substatement_predicates {
+                let new_from = self
+                    .from
+                    .replace_arbitrary_from_predicate(arbitrary_node.get_symbol()?, &predicate)?;
+                let new_to = self
+                    .to
+                    .replace_arbitrary_from_predicate(arbitrary_node.get_symbol()?, &predicate)?;
 
-            let transform = ExplicitTransformation::new(new_from, new_to);
-            to_return.insert(transform);
+                let transform = ExplicitTransformation::new(new_from, new_to);
+                to_return.insert(transform);
+            }
         }
 
-        to_return
+        Ok(to_return)
     }
 
     fn relabel_and_transform_at(
@@ -690,6 +693,7 @@ pub enum TransformationError {
     NoValidTransformations,
     TransformCalledOnArbitrary,
     UnableToParse(SymbolName),
+    ArbitraryNodeHasNonOneChildren,
 }
 
 impl From<SymbolNodeError> for TransformationError {
@@ -698,6 +702,7 @@ impl From<SymbolNodeError> for TransformationError {
             SymbolNodeError::ConflictingTypes(name, t_0, t_1) => {
                 Self::ConflictingTypes(name, t_0, t_1)
             }
+            SymbolNodeError::ArbitraryNodeHasNonOneChildren => Self::ArbitraryNodeHasNonOneChildren,
             SymbolNodeError::InvalidFunctionCalledOn(root) => Self::InvalidFunctionCalledOn(root),
             _ => Self::InvalidSymbolNodeError(value),
         }

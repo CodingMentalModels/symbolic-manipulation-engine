@@ -471,7 +471,9 @@ impl Workspace {
         self.generated_types.push(generated_type);
     }
 
-    pub fn get_instantiated_transformations(&self) -> HashSet<Transformation> {
+    pub fn get_instantiated_transformations(
+        &self,
+    ) -> Result<HashSet<Transformation>, WorkspaceError> {
         let substatements = self
             .get_statements()
             .iter()
@@ -482,7 +484,11 @@ impl Workspace {
         let mut to_return = vec![].into_iter().collect::<HashSet<_>>();
         for transform in self.get_arbitrary_transformations() {
             to_return = to_return
-                .union(&mut transform.instantiate_arbitrary_nodes(&substatements))
+                .union(
+                    &mut transform
+                        .instantiate_arbitrary_nodes(&substatements)
+                        .map_err(|e| Into::<WorkspaceError>::into(e))?,
+                )
                 .cloned()
                 .collect();
         }
@@ -497,7 +503,7 @@ impl Workspace {
             .cloned()
             .collect();
 
-        return to_return;
+        return Ok(to_return);
     }
 
     fn get_arbitrary_transformations(&self) -> HashSet<Transformation> {
@@ -703,16 +709,29 @@ pub enum WorkspaceError {
     TypeHierarchyAlreadyIncludes(Type),
     InvalidType(Type),
     ParentTypeNotFound(Type),
+    UnsupportedOperation(String),
+    ArbitraryNodeHasNonOneChildren,
     NoTransformationsPossible,
     InvalidTypeError(TypeError),
     InvalidSymbolNodeError(SymbolNodeError),
+    InvalidTransformationError(TransformationError),
     AttemptedToImportAmbiguousTypes(HashSet<Type>),
-    UnsupportedOperation(String),
 }
 
 impl From<ParserError> for WorkspaceError {
     fn from(value: ParserError) -> Self {
         Self::ParserError(value)
+    }
+}
+
+impl From<TransformationError> for WorkspaceError {
+    fn from(value: TransformationError) -> Self {
+        match value {
+            TransformationError::ArbitraryNodeHasNonOneChildren => {
+                Self::ArbitraryNodeHasNonOneChildren
+            }
+            e => Self::InvalidTransformationError(e),
+        }
     }
 }
 
@@ -826,6 +845,7 @@ mod test_workspace {
             )
             .into()
         };
+
         let expected = vec![
             instantiate("p=q"),
             instantiate("(p=q)=(q=q)"),
@@ -834,7 +854,10 @@ mod test_workspace {
         ]
         .into_iter()
         .collect();
-        assert_eq!(workspace.get_instantiated_transformations(), expected);
+        assert_eq!(
+            workspace.get_instantiated_transformations().unwrap(),
+            expected
+        );
 
         //        workspace.add_parsed_hypothesis("t^p").unwrap();
         //        let t_and_equal = workspace.parse_from_string("t^p=t^q").unwrap();
