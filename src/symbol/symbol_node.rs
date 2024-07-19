@@ -31,7 +31,7 @@ pub enum SymbolNodeError {
     ArbitraryNodeHasNonOneChildren,
 }
 
-#[derive(Clone, Hash, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Hash, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Predicate {
     node: SymbolNode,
     arbitrary: SymbolNode,
@@ -1034,6 +1034,51 @@ mod test_statement {
     };
 
     use super::*;
+
+    #[test]
+    fn test_symbol_node_gets_all_predicates() {
+        let interpretations = vec![
+            Interpretation::infix_operator("=".into(), 1, "Integer".into()),
+            Interpretation::outfix_operator(("|".into(), "|".into()), 2, "Integer".into()),
+            Interpretation::postfix_operator("!".into(), 3, "Integer".into()),
+            Interpretation::prefix_operator("-".into(), 4, "Integer".into()),
+            Interpretation::function("f".into(), 99),
+            Interpretation::singleton("a", "Integer".into()),
+            Interpretation::singleton("b", "Integer".into()),
+            Interpretation::singleton("x", "Integer".into()),
+            Interpretation::singleton("y", "Integer".into()),
+            Interpretation::singleton("z", "Integer".into()),
+            Interpretation::parentheses_like(
+                Token::Object("{".to_string()),
+                Token::Object("}".to_string()),
+            ),
+            Interpretation::function("\\frac".into(), 99),
+            Interpretation::singleton("\\alpha", "Integer".into()),
+            Interpretation::singleton("\\beta", "Integer".into()),
+            Interpretation::singleton("\\gamma", "Integer".into()),
+        ];
+
+        let parser = Parser::new(interpretations.clone());
+
+        let custom_tokens = vec!["=".to_string(), "|".to_string()];
+
+        let trivial = SymbolNode::leaf_object("a");
+        assert_eq!(
+            trivial.get_all_predicates(),
+            vec![Predicate::new(trivial.clone(), trivial.clone())]
+                .into_iter()
+                .collect()
+        );
+
+        // Note that the predicates a and b should be the same since a and b are arbitrary
+        let a_equals_b = SymbolNode::leaf_object("a=b");
+        assert_eq!(
+            a_equals_b.get_all_predicates(),
+            vec![Predicate::new(a_equals_b.clone(), trivial.clone())]
+                .into_iter()
+                .collect()
+        );
+    }
 
     #[test]
     fn test_symbol_node_to_interpreted_string() {
