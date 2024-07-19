@@ -139,15 +139,12 @@ impl SymbolNode {
         )
     }
 
-    pub fn arbitrary(child: SymbolNode, evaluates_to_type: Type) -> Self {
-        Self::new(
-            SymbolNodeRoot::ArbitraryReturning(evaluates_to_type),
-            vec![child],
-        )
+    pub fn arbitrary(symbol: Symbol, child: SymbolNode) -> Self {
+        Self::new(SymbolNodeRoot::Arbitrary(symbol), vec![child])
     }
 
     pub fn contains_arbitrary_nodes(&self) -> bool {
-        if let SymbolNodeRoot::ArbitraryReturning(_) = self.root {
+        if let SymbolNodeRoot::Arbitrary(_) = self.root {
             return true;
         }
 
@@ -178,7 +175,7 @@ impl SymbolNode {
     }
 
     pub fn get_arbitrary_nodes(&self) -> HashSet<Self> {
-        if let SymbolNodeRoot::ArbitraryReturning(_) = self.get_root() {
+        if let SymbolNodeRoot::Arbitrary(_) = self.get_root() {
             return vec![self.clone()].into_iter().collect();
         }
 
@@ -191,46 +188,6 @@ impl SymbolNode {
         }
 
         to_return
-    }
-
-    pub fn get_arbitrary_node_instantiations(
-        &self,
-        statements: &HashSet<SymbolNode>,
-    ) -> HashSet<SymbolNode> {
-        statements
-            .iter()
-            .map(|s| self.get_arbitrary_node_instantiation(s))
-            .flatten()
-            .collect()
-    }
-
-    pub fn get_arbitrary_node_instantiation(&self, statement: &SymbolNode) -> HashSet<SymbolNode> {
-        // TODO checking Arbitrary Returning doesn't have to happen recursively
-        let mut to_return = HashSet::new();
-        match self.get_root() {
-            SymbolNodeRoot::ArbitraryReturning(return_type) => {
-                let mut children_instantiations = self.get_arbitrary_node_instantiations(
-                    &statement.get_children().into_iter().cloned().collect(),
-                );
-                to_return = to_return
-                    .union(&mut children_instantiations)
-                    .cloned()
-                    .collect();
-                if &statement.get_evaluates_to_type() == return_type {
-                    to_return.insert(statement.clone());
-                }
-            }
-            _ => { // Do nothing
-            }
-        }
-        to_return
-    }
-
-    pub fn instantiate_arbitrary_nodes(
-        &self,
-        instantiations: &HashMap<SymbolNode, HashSet<SymbolNode>>,
-    ) -> Self {
-        unimplemented!();
     }
 
     pub fn is_arbitrary(&self) -> bool {
@@ -302,9 +259,7 @@ impl SymbolNode {
                 Err(SymbolNodeError::InvalidFunctionCalledOn(self.root.clone()))
             }
             SymbolNodeRoot::Symbol(s) => Ok(&s),
-            SymbolNodeRoot::ArbitraryReturning(r) => {
-                Err(SymbolNodeError::InvalidFunctionCalledOn(self.root.clone()))
-            }
+            SymbolNodeRoot::Arbitrary(s) => Ok(s),
         }
     }
 
@@ -312,7 +267,7 @@ impl SymbolNode {
         match self.get_root() {
             SymbolNodeRoot::Symbol(s) => s.get_name(),
             SymbolNodeRoot::Join => ", ".to_string(),
-            SymbolNodeRoot::ArbitraryReturning(r) => r.to_string(),
+            SymbolNodeRoot::Arbitrary(s) => s.get_name(),
         }
     }
 
@@ -320,7 +275,7 @@ impl SymbolNode {
         match &self.root {
             SymbolNodeRoot::Join => Type::Join,
             SymbolNodeRoot::Symbol(s) => s.get_evaluates_to_type(),
-            SymbolNodeRoot::ArbitraryReturning(t) => t.clone(),
+            SymbolNodeRoot::Arbitrary(s) => s.get_evaluates_to_type(),
         }
     }
 
@@ -650,7 +605,7 @@ impl SymbolNode {
         let mut result = match self.get_root() {
             SymbolNodeRoot::Symbol(symbol) => vec![symbol.clone()],
             SymbolNodeRoot::Join => Vec::new(),
-            SymbolNodeRoot::ArbitraryReturning(_) => Vec::new(),
+            SymbolNodeRoot::Arbitrary(s) => vec![s.clone()],
         };
         for child in &self.children {
             result.extend(child.get_symbols());
@@ -954,7 +909,7 @@ impl Substitution {
 pub enum SymbolNodeRoot {
     Symbol(Symbol),
     Join,
-    ArbitraryReturning(Type),
+    Arbitrary(Symbol),
 }
 
 impl Default for SymbolNodeRoot {
@@ -987,7 +942,7 @@ impl SymbolNodeRoot {
     }
 
     pub fn is_arbitrary(&self) -> bool {
-        if let &Self::ArbitraryReturning(_) = self {
+        if let &Self::Arbitrary(_) = self {
             true
         } else {
             false
@@ -998,9 +953,7 @@ impl SymbolNodeRoot {
         match self {
             Self::Join => "Join".to_string(),
             Self::Symbol(s) => s.to_string(),
-            Self::ArbitraryReturning(t) => {
-                format!("ArbitraryReturning({})", t.to_string()).to_string()
-            }
+            Self::Arbitrary(s) => format!("Arbitrary({})", s.to_string()).to_string(),
         }
     }
 
@@ -1009,9 +962,7 @@ impl SymbolNodeRoot {
         match self {
             Self::Join => "Join".to_string(),
             Self::Symbol(s) => s.get_name(),
-            Self::ArbitraryReturning(t) => {
-                format!("ArbitraryReturning({})", t.to_string()).to_string()
-            }
+            Self::Arbitrary(s) => format!("Arbitrary({})", s.to_string()).to_string(),
         }
     }
 
@@ -1019,7 +970,7 @@ impl SymbolNodeRoot {
         match self {
             Self::Join => Type::Join,
             Self::Symbol(s) => s.get_evaluates_to_type(),
-            Self::ArbitraryReturning(t) => t.clone(),
+            Self::Arbitrary(s) => s.get_evaluates_to_type(),
         }
     }
 }
@@ -1083,71 +1034,6 @@ mod test_statement {
     };
 
     use super::*;
-
-    #[test]
-    fn test_symbol_node_gets_arbitrary_node_instantiations() {
-        let interpretations = vec![
-            Interpretation::infix_operator("=".into(), 1, "Boolean".into()),
-            Interpretation::infix_operator("&".into(), 2, "Boolean".into()),
-            Interpretation::outfix_operator(("|".into(), "|".into()), 2, "Integer".into()),
-            Interpretation::postfix_operator("!".into(), 3, "Integer".into()),
-            Interpretation::prefix_operator("-".into(), 4, "Integer".into()),
-            Interpretation::singleton("p", "Boolean".into()),
-            Interpretation::singleton("q", "Boolean".into()),
-            Interpretation::singleton("x", "Integer".into()),
-            Interpretation::singleton("y", "Integer".into()),
-            Interpretation::singleton("z", "Integer".into()),
-            Interpretation::arbitrary_functional("Any".into(), 99, "Boolean".into()),
-        ];
-
-        let parser = Parser::new(interpretations.clone());
-
-        let custom_tokens = vec![
-            "=".to_string(),
-            "&".to_string(),
-            "|".to_string(),
-            "!".to_string(),
-            "-".to_string(),
-        ];
-
-        let parse = |s: &str| parser.parse_from_string(custom_tokens.clone(), s).unwrap();
-
-        let non_arbitrary = parse("x");
-        assert_eq!(
-            non_arbitrary.get_arbitrary_node_instantiation(&non_arbitrary.clone()),
-            HashSet::new()
-        );
-
-        let wrong_type = non_arbitrary.clone();
-        let single_arbitrary = parser
-            .parse_from_string(custom_tokens.clone(), "Any(x)")
-            .unwrap();
-        assert_eq!(
-            single_arbitrary.get_arbitrary_node_instantiation(&wrong_type),
-            HashSet::new()
-        );
-
-        let p = parse("p");
-        let single_arbitrary = parse("Any(p)");
-        assert_eq!(
-            single_arbitrary.get_arbitrary_node_instantiation(&p.clone()),
-            vec![p.clone()].into_iter().collect()
-        );
-
-        let p_and_q = parse("p&q");
-        assert_eq!(
-            single_arbitrary.get_arbitrary_node_instantiation(&p_and_q.clone()),
-            vec![p, parse("q"), p_and_q].into_iter().collect()
-        );
-
-        let x_equals_y_and_q = parse("(x=y)&q");
-        assert_eq!(
-            single_arbitrary.get_arbitrary_node_instantiation(&x_equals_y_and_q.clone()),
-            vec![parse("x=y"), parse("q"), x_equals_y_and_q]
-                .into_iter()
-                .collect()
-        );
-    }
 
     #[test]
     fn test_symbol_node_to_interpreted_string() {

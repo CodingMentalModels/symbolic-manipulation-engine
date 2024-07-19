@@ -220,8 +220,8 @@ mod test_parser {
         let parser = Parser::new(interpretations);
         let arbitrary_of = |s: &str| {
             SymbolNode::arbitrary(
+                Symbol::new(s.to_string(), "Real".into()),
                 SymbolNode::leaf(Symbol::new(s.to_string(), "Real".into())),
-                "Real".into(),
             )
         };
         let expected = SymbolNode::new(

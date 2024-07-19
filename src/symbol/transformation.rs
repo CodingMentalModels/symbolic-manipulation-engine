@@ -776,11 +776,23 @@ mod test_transformation {
         ]
         .into_iter()
         .collect();
+        let actual = transformation
+            .instantiate_arbitrary_nodes(&substatements)
+            .unwrap();
         assert_eq!(
-            transformation
-                .instantiate_arbitrary_nodes(&substatements)
-                .unwrap(),
+            actual,
+            expected,
+            "actual:\n{}\n\nexpected:\n{}",
+            actual
+                .iter()
+                .map(|t| t.to_interpreted_string(&interpretations))
+                .collect::<Vec<_>>()
+                .join("\n"),
             expected
+                .iter()
+                .map(|t| t.to_interpreted_string(&interpretations))
+                .collect::<Vec<_>>()
+                .join("\n"),
         );
     }
 

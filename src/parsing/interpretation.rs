@@ -216,7 +216,10 @@ impl Interpretation {
                     ))
                 } else {
                     let child = children[0].clone();
-                    Ok(SymbolNode::arbitrary(child, t.clone()))
+                    Ok(SymbolNode::arbitrary(
+                        Symbol::new(token.to_string(), t.clone()),
+                        child,
+                    ))
                 }
             }
         }
