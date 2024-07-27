@@ -39,7 +39,36 @@ pub struct Predicate {
 
 impl Predicate {
     pub fn new(node: SymbolNode, arbitrary: SymbolNode) -> Self {
-        Self { node, arbitrary }
+        let (normalized_node, normalized_arbitrary) = Self::normalize(node, arbitrary);
+        Self {
+            node: normalized_node,
+            arbitrary: normalized_arbitrary,
+        }
+    }
+
+    fn normalize(node: SymbolNode, arbitrary: SymbolNode) -> (SymbolNode, SymbolNode) {
+        let symbols = node
+            .get_symbols()
+            .union(&arbitrary.get_symbols())
+            .cloned()
+            .collect::<HashSet<_>>();
+        let mut sorted_symbols = symbols.into_iter().collect::<Vec<_>>();
+        sorted_symbols.sort_by(|a, b| a.get_name().partial_cmp(&b.get_name()).unwrap());
+        let symbol_map = sorted_symbols
+            .into_iter()
+            .enumerate()
+            .map(|(i, symbol)| (symbol, i.to_string()))
+            .collect::<Vec<_>>();
+        let (mut node_to_return, mut arbitrary_to_return) = (node.clone(), arbitrary.clone());
+        for (symbol, replacement) in symbol_map {
+            node_to_return = node_to_return
+                .replace_all_from_symbol(&symbol, replacement.into())
+                .expect("We filtered out any joins above.");
+            arbitrary_to_return = arbitrary_to_return
+                .replace_all_from_symbol(&symbol, replacement.into())
+                .expect("We filtered out any joins above.");
+        }
+        (node_to_return, arbitrary_to_return)
     }
 
     pub fn get_evaluates_to_type(&self) -> Type {
@@ -160,18 +189,10 @@ impl SymbolNode {
     }
 
     pub fn get_all_predicates(&self) -> HashSet<Predicate> {
-        let mut to_return = self
-            .children
-            .iter()
-            .map(|child| child.get_all_predicates())
-            .flatten()
-            .collect::<Vec<_>>();
-        for i in 0..self.get_n_children() {
-            let arbitrary_node = self.children[i].clone();
-            let predicate = Predicate::new(self.clone(), arbitrary_node);
-            to_return.push(predicate);
-        }
-        to_return.into_iter().collect()
+        self.get_substatements()
+            .into_iter()
+            .map(|n| Predicate::new(self.clone(), n))
+            .collect()
     }
 
     pub fn get_arbitrary_nodes(&self) -> HashSet<Self> {
@@ -975,7 +996,7 @@ impl SymbolNodeRoot {
     }
 }
 
-#[derive(Clone, Debug, Default, Hash, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Clone, Debug, Default, Hash, PartialEq, Eq, PartialOrd, Serialize, Deserialize)]
 pub struct Symbol {
     name: SymbolName,
     evaluates_to_type: Type,
@@ -1058,10 +1079,6 @@ mod test_statement {
             Interpretation::singleton("\\gamma", "Integer".into()),
         ];
 
-        let parser = Parser::new(interpretations.clone());
-
-        let custom_tokens = vec!["=".to_string(), "|".to_string()];
-
         let trivial = SymbolNode::leaf_object("a");
         assert_eq!(
             trivial.get_all_predicates(),
@@ -1070,13 +1087,61 @@ mod test_statement {
                 .collect()
         );
 
+        let parser = Parser::new(interpretations.clone());
+        let custom_tokens = vec!["=".to_string(), "|".to_string()];
+
+        let parse = |s: &str| parser.parse_from_string(custom_tokens.clone(), s).unwrap();
+
         // Note that the predicates a and b should be the same since a and b are arbitrary
-        let a_equals_b = SymbolNode::leaf_object("a=b");
+        let a_equals_b = parse("a=b");
+        let a = parse("a");
         assert_eq!(
             a_equals_b.get_all_predicates(),
-            vec![Predicate::new(a_equals_b.clone(), trivial.clone())]
+            vec![Predicate::new(a_equals_b.clone(), a.clone())]
                 .into_iter()
                 .collect()
+        );
+    }
+
+    #[test]
+    fn test_symbol_node_gets_substatements() {
+        let interpretations = vec![
+            Interpretation::infix_operator("=".into(), 1, "Integer".into()),
+            Interpretation::outfix_operator(("|".into(), "|".into()), 2, "Integer".into()),
+            Interpretation::postfix_operator("!".into(), 3, "Integer".into()),
+            Interpretation::prefix_operator("-".into(), 4, "Integer".into()),
+            Interpretation::function("f".into(), 99),
+            Interpretation::singleton("a", "Integer".into()),
+            Interpretation::singleton("b", "Integer".into()),
+            Interpretation::singleton("x", "Integer".into()),
+            Interpretation::singleton("y", "Integer".into()),
+            Interpretation::singleton("z", "Integer".into()),
+            Interpretation::parentheses_like(
+                Token::Object("{".to_string()),
+                Token::Object("}".to_string()),
+            ),
+            Interpretation::function("\\frac".into(), 99),
+            Interpretation::singleton("\\alpha", "Integer".into()),
+            Interpretation::singleton("\\beta", "Integer".into()),
+            Interpretation::singleton("\\gamma", "Integer".into()),
+        ];
+
+        let trivial = SymbolNode::leaf_object("a");
+        assert_eq!(
+            trivial.get_substatements(),
+            vec![trivial].into_iter().collect()
+        );
+        let parser = Parser::new(interpretations.clone());
+        let custom_tokens = vec!["=".to_string(), "|".to_string()];
+
+        let parse = |s: &str| parser.parse_from_string(custom_tokens.clone(), s).unwrap();
+        let a_equals_b = parse("a=b");
+        let a = parse("a");
+        let b = parse("b");
+
+        assert_eq!(
+            a_equals_b.get_substatements(),
+            vec![a_equals_b, a, b].into_iter().collect()
         );
     }
 
