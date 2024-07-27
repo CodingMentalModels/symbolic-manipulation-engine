@@ -61,12 +61,14 @@ impl Predicate {
             .collect::<Vec<_>>();
         let (mut node_to_return, mut arbitrary_to_return) = (node.clone(), arbitrary.clone());
         for (symbol, replacement) in symbol_map {
-            node_to_return = node_to_return
-                .replace_all_from_symbol(&symbol, replacement.into())
-                .expect("We filtered out any joins above.");
-            arbitrary_to_return = arbitrary_to_return
-                .replace_all_from_symbol(&symbol, replacement.into())
-                .expect("We filtered out any joins above.");
+            node_to_return = node_to_return.replace_all_from_symbol(
+                &symbol,
+                &Symbol::new(replacement.clone(), symbol.get_evaluates_to_type()).into(),
+            );
+            arbitrary_to_return = arbitrary_to_return.replace_all_from_symbol(
+                &symbol,
+                &Symbol::new(replacement.clone(), symbol.get_evaluates_to_type()).into(),
+            );
         }
         (node_to_return, arbitrary_to_return)
     }
@@ -460,24 +462,21 @@ impl SymbolNode {
         }
     }
 
-    pub fn replace_all_from_symbol(
-        &self,
-        from: &Symbol,
-        to: &SymbolNode,
-    ) -> Result<Self, SymbolNodeError> {
-        if !self.is_join() && (self.get_symbol()? == from) {
-            Ok(to.clone())
+    pub fn replace_all_from_symbol(&self, from: &Symbol, to: &SymbolNode) -> Self {
+        let should_replace = match self.get_root() {
+            SymbolNodeRoot::Join => false,
+            SymbolNodeRoot::Arbitrary(s) => s == from,
+            SymbolNodeRoot::Symbol(s) => s == from,
+        };
+        if should_replace {
+            to.clone()
         } else {
-            let children = self.get_children().iter().try_fold(
-                Vec::new(),
-                |mut acc: Vec<SymbolNode>, child: &SymbolNode| {
-                    child
-                        .replace_all_from_symbol(from, to)
-                        .map(|new_child: SymbolNode| acc.push(new_child))?;
-                    Ok(acc)
-                },
-            )?;
-            Ok(Self::new(self.get_root().clone(), children))
+            let children = self
+                .get_children()
+                .iter()
+                .map(|child| child.replace_all_from_symbol(from, to))
+                .collect();
+            Self::new(self.get_root().clone(), children)
         }
     }
 
