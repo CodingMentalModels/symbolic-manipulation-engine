@@ -502,7 +502,7 @@ impl ExplicitTransformation {
             let substatement_predicates = substatements
                 .iter()
                 .filter(|s| s.get_evaluates_to_type() == arbitrary_node.get_evaluates_to_type())
-                .map(|s| s.get_all_predicates())
+                .map(|s| s.get_predicates())
                 .flatten()
                 .collect::<HashSet<_>>();
 
