@@ -254,6 +254,9 @@ impl Workspace {
         self.types
             .binds_statement_or_error(&statement)
             .map_err(|x| WorkspaceError::from(x))?;
+        if statement.get_arbitrary_nodes().len() > 0 {
+            return Err(WorkspaceError::ContainsArbitraryNode);
+        }
         self.generate_types_in_bulk(vec![statement.clone()].into_iter().collect())?;
         self.statements.push(statement);
         self.provenance.push(Provenance::Hypothesis);
@@ -354,6 +357,9 @@ impl Workspace {
     ) -> Result<SymbolNode, WorkspaceError> {
         if self.statements.contains(&desired) {
             return Err(WorkspaceError::StatementsAlreadyInclude(desired.clone()));
+        }
+        if desired.get_arbitrary_nodes().len() > 0 {
+            return Err(WorkspaceError::ContainsArbitraryNode);
         }
         for (transform_idx, transform) in self.transformations.iter().enumerate() {
             let statements = if transform.is_joint_transform() {
@@ -699,7 +705,7 @@ pub enum WorkspaceError {
     InvalidTransformationIndex,
     InvalidInterpretationIndex,
     InvalidTransformationAddress,
-    CantContainArbitraryNode,
+    ContainsArbitraryNode,
     ParserError(ParserError),
     UnableToSerialize(String),
     TransformationError(TransformationError),
@@ -888,17 +894,17 @@ mod test_workspace {
         let mut workspace = Workspace::new(types.clone(), vec![], interpretations.clone());
         assert_eq!(
             workspace.add_parsed_hypothesis("Any(p)"),
-            Err(WorkspaceError::CantContainArbitraryNode)
+            Err(WorkspaceError::ContainsArbitraryNode)
         );
         assert_eq!(
             workspace.add_parsed_hypothesis("Any(p)=q"),
-            Err(WorkspaceError::CantContainArbitraryNode)
+            Err(WorkspaceError::ContainsArbitraryNode)
         );
 
         workspace.add_parsed_hypothesis("p=q").unwrap();
         assert_eq!(
             workspace.try_transform_into_parsed("Any(p)=Any(q)"),
-            Err(WorkspaceError::CantContainArbitraryNode)
+            Err(WorkspaceError::ContainsArbitraryNode)
         );
     }
 
