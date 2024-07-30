@@ -355,19 +355,25 @@ impl Workspace {
         &mut self,
         desired: SymbolNode,
     ) -> Result<SymbolNode, WorkspaceError> {
+        println!("try_transform_into");
         if self.statements.contains(&desired) {
             return Err(WorkspaceError::StatementsAlreadyInclude(desired.clone()));
         }
         if desired.get_arbitrary_nodes().len() > 0 {
             return Err(WorkspaceError::ContainsArbitraryNode);
         }
-        for (transform_idx, transform) in self.transformations.iter().enumerate() {
+        println!("Getting instantiated transformations.");
+        let instantiated_transformations = self.get_instantiated_transformations()?;
+        println!("Got instantiated transformations.");
+        for (transform_idx, transform) in instantiated_transformations.iter().enumerate() {
+            println!("Processing transformation {:?}.", transform_idx);
             let statements = if transform.is_joint_transform() {
                 self.get_statement_pairs()
             } else {
                 self.get_statements().clone()
             };
             for (statement_idx, statement) in statements.iter().enumerate() {
+                println!("Processing statement {:?}", statement_idx);
                 match transform.try_transform_into(self.get_types(), &statement, &desired) {
                     Ok(output) => {
                         // TODO Derive the appropriate transform addresses
@@ -480,6 +486,7 @@ impl Workspace {
     pub fn get_instantiated_transformations(
         &self,
     ) -> Result<HashSet<Transformation>, WorkspaceError> {
+        println!("get_instantiated_transformations");
         let substatements = self
             .get_statements()
             .iter()
@@ -498,7 +505,6 @@ impl Workspace {
                 .cloned()
                 .collect();
         }
-        println!("Instantiations (arbitrary only): {:?}", to_return);
 
         to_return = to_return
             .union(
@@ -510,6 +516,7 @@ impl Workspace {
             .cloned()
             .collect();
 
+        println!("End get_instantiated_transformations");
         return Ok(to_return);
     }
 

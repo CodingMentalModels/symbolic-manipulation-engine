@@ -76,10 +76,13 @@ impl Transformation {
         from: &SymbolNode,
         to: &SymbolNode,
     ) -> Result<SymbolNode, TransformationError> {
+        println!("try_transform_into");
         let valid_transformations = self.get_valid_transformations(hierarchy, from);
         if valid_transformations.contains(to) {
+            println!("Ok try_transform_into");
             Ok(to.clone())
         } else {
+            println!("Err try_transform_into");
             Err(TransformationError::NoValidTransformations)
         }
     }
@@ -89,6 +92,7 @@ impl Transformation {
         hierarchy: &TypeHierarchy,
         statement: &SymbolNode,
     ) -> HashSet<SymbolNode> {
+        println!("get_valid_transformations of {:?}", statement);
         let mut base_case = vec![statement.clone()].into_iter().collect::<HashSet<_>>();
         match self.typed_relabel_and_transform_at(hierarchy, statement, vec![]) {
             Ok(result) => {
@@ -104,6 +108,7 @@ impl Transformation {
             to_return = to_return.union(&new_statements).cloned().collect();
         }
 
+        println!("End get_valid_transformations");
         return to_return;
     }
 
@@ -112,6 +117,7 @@ impl Transformation {
         hierarchy: &TypeHierarchy,
         statement: &SymbolNode,
     ) -> HashSet<SymbolNode> {
+        println!("get_valid_child_transformations of {:?}", statement);
         let mut child_to_valid_transformations = HashMap::new();
         for child in statement.get_children() {
             let possible_transformations = self.get_valid_transformations(hierarchy, child);
@@ -120,6 +126,7 @@ impl Transformation {
         let mut new_statements = vec![statement.clone()].into_iter().collect::<HashSet<_>>();
 
         let n_subsets = 1 << child_to_valid_transformations.len();
+        println!("n_subsets: {}", n_subsets);
         for bitmask in 0..n_subsets {
             // Bitmask indicates whether to take the child or its transformed versions
             // TODO: There's a massive opportunity for optimization here by eliminating the cases where
@@ -153,6 +160,7 @@ impl Transformation {
                 .cloned()
                 .collect();
         }
+        println!("End get_valid_child_transformations");
         new_statements
     }
 
