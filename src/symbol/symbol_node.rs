@@ -501,10 +501,8 @@ impl SymbolNode {
         symbol: &Symbol,
         predicate: &Predicate,
     ) -> Result<SymbolNode, SymbolNodeError> {
-        if self.is_arbitrary()
-            && self.get_evaluates_to_type() == predicate.get_evaluates_to_type()
-            && self.get_symbol() == Ok(symbol)
-        {
+        // Note that this doesn't check types since we want to allow subtypes!
+        if self.is_arbitrary() && self.get_symbol() == Ok(symbol) {
             let children = self.get_children();
             if children.len() != 1 {
                 return Err(SymbolNodeError::ArbitraryNodeHasNonOneChildren);

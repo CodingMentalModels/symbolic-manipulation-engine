@@ -200,17 +200,18 @@ impl Transformation {
 
     pub fn instantiate_arbitrary_nodes(
         &self,
+        hierarchy: &TypeHierarchy,
         substatements: &HashSet<SymbolNode>,
     ) -> Result<HashSet<Self>, TransformationError> {
         match self {
             Self::AdditionAlgorithm(_) => Ok(HashSet::new()),
             Self::ExplicitTransformation(t) => Ok(t
-                .instantiate_arbitrary_nodes(substatements)?
+                .instantiate_arbitrary_nodes(hierarchy, substatements)?
                 .into_iter()
                 .map(|t| t.into())
                 .collect()),
             Self::ApplyToBothSidesTransformation(t) => Ok(t
-                .instantiate_arbitrary_nodes(substatements)?
+                .instantiate_arbitrary_nodes(hierarchy, substatements)?
                 .into_iter()
                 .map(|t| Self::ApplyToBothSidesTransformation(t))
                 .collect()),
@@ -364,11 +365,12 @@ impl ApplyToBothSidesTransformation {
 
     pub fn instantiate_arbitrary_nodes(
         &self,
+        hierarchy: &TypeHierarchy,
         substatements: &HashSet<SymbolNode>,
     ) -> Result<HashSet<Self>, TransformationError> {
         Ok(self
             .get_transformation()
-            .instantiate_arbitrary_nodes(substatements)?
+            .instantiate_arbitrary_nodes(hierarchy, substatements)?
             .into_iter()
             .map(|t| Self::new(self.get_symbol().clone(), t))
             .collect())
@@ -495,13 +497,24 @@ impl ExplicitTransformation {
 
     pub fn instantiate_arbitrary_nodes(
         &self,
+        hierarchy: &TypeHierarchy,
         substatements: &HashSet<SymbolNode>,
     ) -> Result<HashSet<Self>, TransformationError> {
+        self.validate_arbitrary_nodes()?;
+
         let mut to_return = HashSet::new();
         for arbitrary_node in self.get_arbitrary_nodes() {
+            // TODO This unwrap_or could fail silently
             let substatement_predicates = substatements
                 .iter()
-                .filter(|s| s.get_evaluates_to_type() == arbitrary_node.get_evaluates_to_type())
+                .filter(|s| {
+                    hierarchy
+                        .is_subtype_of(
+                            &s.get_evaluates_to_type(),
+                            &arbitrary_node.get_evaluates_to_type(),
+                        )
+                        .unwrap_or(false)
+                })
                 .map(|s| s.get_predicates())
                 .flatten()
                 .collect::<HashSet<_>>();
@@ -520,6 +533,32 @@ impl ExplicitTransformation {
         }
 
         Ok(to_return)
+    }
+
+    fn validate_arbitrary_nodes(&self) -> Result<(), TransformationError> {
+        if self
+            .get_arbitrary_nodes()
+            .iter()
+            .map(|n| n.get_symbol())
+            .collect::<HashSet<_>>()
+            .len()
+            > 1
+        {
+            return Err(TransformationError::MultipleArbitraryNodeSymbols);
+        }
+
+        if self
+            .get_arbitrary_nodes()
+            .iter()
+            .map(|n| n.get_evaluates_to_type())
+            .collect::<HashSet<_>>()
+            .len()
+            > 1
+        {
+            return Err(TransformationError::MultipleArbitraryNodeTypes);
+        }
+
+        Ok(())
     }
 
     fn relabel_and_transform_at(
@@ -694,6 +733,8 @@ pub enum TransformationError {
     TransformCalledOnArbitrary,
     UnableToParse(SymbolName),
     ArbitraryNodeHasNonOneChildren,
+    MultipleArbitraryNodeSymbols,
+    MultipleArbitraryNodeTypes,
 }
 
 impl From<SymbolNodeError> for TransformationError {
@@ -726,6 +767,13 @@ mod test_transformation {
 
     #[test]
     fn test_transformation_instantiates_arbitrary_nodes() {
+        let mut types = TypeHierarchy::chain(vec!["Boolean".into(), "=".into()]).unwrap();
+        types
+            .add_child_to_parent("&".into(), "Boolean".into())
+            .unwrap();
+        types
+            .add_child_to_parent("Integer".into(), Type::Object)
+            .unwrap();
         let interpretations = vec![
             Interpretation::infix_operator("=".into(), 1, "Boolean".into()),
             Interpretation::infix_operator("&".into(), 2, "Boolean".into()),
@@ -738,6 +786,7 @@ mod test_transformation {
             Interpretation::singleton("y", "Integer".into()),
             Interpretation::singleton("z", "Integer".into()),
             Interpretation::arbitrary_functional("F".into(), 99, "Boolean".into()),
+            Interpretation::arbitrary_functional("G".into(), 99, "Boolean".into()),
         ];
 
         let parser = Parser::new(interpretations.clone());
@@ -760,7 +809,7 @@ mod test_transformation {
             ExplicitTransformation::new(p_equals_q.clone(), f_of_p_equals_f_of_q.clone());
         assert_eq!(
             transformation
-                .instantiate_arbitrary_nodes(&vec![].into_iter().collect())
+                .instantiate_arbitrary_nodes(&types, &vec![].into_iter().collect())
                 .unwrap(),
             vec![].into_iter().collect()
         );
@@ -777,8 +826,9 @@ mod test_transformation {
         .into_iter()
         .collect();
         let actual = transformation
-            .instantiate_arbitrary_nodes(&substatements)
+            .instantiate_arbitrary_nodes(&types, &substatements)
             .unwrap();
+
         assert_eq!(
             actual,
             expected,
@@ -793,6 +843,15 @@ mod test_transformation {
                 .map(|t| t.to_interpreted_string(&interpretations))
                 .collect::<Vec<_>>()
                 .join("\n"),
+        );
+
+        let f_of_p_equals_g_of_q = parse("F(p)=G(q)");
+        let transformation =
+            ExplicitTransformation::new(p_equals_q.clone(), f_of_p_equals_g_of_q.clone());
+
+        assert_eq!(
+            transformation.instantiate_arbitrary_nodes(&types, &substatements),
+            Err(TransformationError::MultipleArbitraryNodeSymbols)
         );
     }
 

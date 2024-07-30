@@ -481,17 +481,18 @@ impl Workspace {
             .flatten()
             .collect::<HashSet<_>>();
 
-        let mut to_return = vec![].into_iter().collect::<HashSet<_>>();
+        let mut to_return = HashSet::new();
         for transform in self.get_arbitrary_transformations() {
             to_return = to_return
                 .union(
-                    &mut transform
-                        .instantiate_arbitrary_nodes(&substatements)
+                    &transform
+                        .instantiate_arbitrary_nodes(self.get_types(), &substatements)
                         .map_err(|e| Into::<WorkspaceError>::into(e))?,
                 )
                 .cloned()
                 .collect();
         }
+        println!("Instantiations (arbitrary only): {:?}", to_return);
 
         to_return = to_return
             .union(
@@ -851,6 +852,7 @@ mod test_workspace {
             instantiate("(p=q)=(q=q)"),
             instantiate("(p=p)=(p=q)"),
             instantiate("(p^s)=(q^s)"),
+            instantiate("(p^p)=(p^q)"),
         ]
         .into_iter()
         .collect();
