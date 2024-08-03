@@ -94,11 +94,14 @@ impl Transformation {
     ) -> HashSet<SymbolNode> {
         println!("get_valid_transformations of {:?}", statement);
         let mut base_case = vec![statement.clone()].into_iter().collect::<HashSet<_>>();
-        match self.typed_relabel_and_transform_at(hierarchy, statement, vec![]) {
+        match self.transform_at(hierarchy, statement, vec![]) {
             Ok(result) => {
+                println!("Relabelled base case: {:?}", result);
                 base_case.insert(result);
             }
-            _ => {}
+            _ => {
+                println!("No relabelling.");
+            }
         };
 
         let mut to_return = base_case.clone();
@@ -164,7 +167,7 @@ impl Transformation {
         new_statements
     }
 
-    pub fn typed_relabel_and_transform_at(
+    pub fn transform_at(
         &self,
         hierarchy: &TypeHierarchy,
         statement: &SymbolNode,
@@ -1378,8 +1381,7 @@ mod test_transformation {
             vec![SymbolNode::leaf_object("d"), SymbolNode::leaf_object("b")],
         );
 
-        let transformed =
-            transformation.typed_relabel_and_transform_at(&hierarchy, &a_equals_b, vec![0]);
+        let transformed = transformation.transform_at(&hierarchy, &a_equals_b, vec![0]);
 
         assert_eq!(transformed, Ok(d_equals_b));
 
@@ -1404,11 +1406,7 @@ mod test_transformation {
                 SymbolNode::leaf_object("c"),
             ],
         );
-        let transformed = transformation.typed_relabel_and_transform_at(
-            &hierarchy,
-            &a_equals_b_equals_c,
-            vec![0, 1],
-        );
+        let transformed = transformation.transform_at(&hierarchy, &a_equals_b_equals_c, vec![0, 1]);
 
         assert_eq!(transformed, Ok(a_equals_d_equals_c));
 
@@ -1439,7 +1437,7 @@ mod test_transformation {
             .unwrap();
 
         assert_eq!(
-            transformation.typed_relabel_and_transform_at(&hierarchy, &x_equals_y_equals_z, vec![]),
+            transformation.transform_at(&hierarchy, &x_equals_y_equals_z, vec![]),
             Ok(z_equals_x_equals_y.clone())
         );
 
@@ -1448,11 +1446,7 @@ mod test_transformation {
             .unwrap();
 
         assert_eq!(
-            transformation.typed_relabel_and_transform_at(
-                &hierarchy,
-                &x_equals_y_equals_z,
-                vec![0]
-            ),
+            transformation.transform_at(&hierarchy, &x_equals_y_equals_z, vec![0]),
             Ok(y_equals_x_equals_z)
         );
 
@@ -1465,7 +1459,7 @@ mod test_transformation {
         .into();
 
         assert_eq!(
-            transformation.typed_relabel_and_transform_at(&hierarchy, &x_equals_y_equals_z, vec![]),
+            transformation.transform_at(&hierarchy, &x_equals_y_equals_z, vec![]),
             Ok(z_equals_x_equals_y)
         );
 

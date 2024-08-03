@@ -364,16 +364,20 @@ impl Workspace {
         }
         println!("Getting instantiated transformations.");
         let instantiated_transformations = self.get_instantiated_transformations()?;
-        println!("Got instantiated transformations.");
+        println!(
+            "Got instantiated transformations: {:?}",
+            instantiated_transformations
+        );
         for (transform_idx, transform) in instantiated_transformations.iter().enumerate() {
             println!("Processing transformation {:?}.", transform_idx);
             let statements = if transform.is_joint_transform() {
+                println!("(Joint transform)");
                 self.get_statement_pairs()
             } else {
                 self.get_statements().clone()
             };
             for (statement_idx, statement) in statements.iter().enumerate() {
-                println!("Processing statement {:?}", statement_idx);
+                println!("Processing statement {:?}: {:?}", statement_idx, statement);
                 match transform.try_transform_into(self.get_types(), &statement, &desired) {
                     Ok(output) => {
                         // TODO Derive the appropriate transform addresses
@@ -382,7 +386,12 @@ impl Workspace {
                         self.add_derived_statement(output.clone(), provenance);
                         return Ok(output);
                     }
-                    Err(_) => { // Do nothing, keep trying transformations
+                    Err(_) => {
+                        // Do nothing, keep trying transformations
+                        println!(
+                            "Couldn't transform\n{:?}\ninto\n{:?}\nusing:\n{:?}",
+                            statement, desired, transform
+                        );
                     }
                 }
             }
@@ -802,11 +811,10 @@ mod test_workspace {
 
         let interpretations = vec![
             Interpretation::infix_operator("=".into(), 1, "=".into()),
-            Interpretation::infix_operator("^".into(), 1, "^".into()),
+            Interpretation::infix_operator("^".into(), 2, "^".into()),
             Interpretation::singleton("p".into(), "Boolean".into()),
             Interpretation::singleton("q".into(), "Boolean".into()),
             Interpretation::singleton("r".into(), "Boolean".into()),
-            Interpretation::singleton("s".into(), "Boolean".into()),
             Interpretation::singleton("s".into(), "Boolean".into()),
             Interpretation::arbitrary_functional("Any".into(), 99, "Boolean".into()),
         ];
