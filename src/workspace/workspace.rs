@@ -355,29 +355,21 @@ impl Workspace {
         &mut self,
         desired: SymbolNode,
     ) -> Result<SymbolNode, WorkspaceError> {
-        println!("try_transform_into");
         if self.statements.contains(&desired) {
             return Err(WorkspaceError::StatementsAlreadyInclude(desired.clone()));
         }
         if desired.get_arbitrary_nodes().len() > 0 {
             return Err(WorkspaceError::ContainsArbitraryNode);
         }
-        println!("Getting instantiated transformations.");
-        let instantiated_transformations = self.get_instantiated_transformations()?;
-        println!(
-            "Got instantiated transformations: {:?}",
-            instantiated_transformations
-        );
+        let instantiated_transformations =
+            self.get_instantiated_transformations(Some(desired.clone()))?;
         for (transform_idx, transform) in instantiated_transformations.iter().enumerate() {
-            println!("Processing transformation {:?}.", transform_idx);
             let statements = if transform.is_joint_transform() {
-                println!("(Joint transform)");
                 self.get_statement_pairs()
             } else {
                 self.get_statements().clone()
             };
             for (statement_idx, statement) in statements.iter().enumerate() {
-                println!("Processing statement {:?}: {:?}", statement_idx, statement);
                 match transform.try_transform_into(self.get_types(), &statement, &desired) {
                     Ok(output) => {
                         // TODO Derive the appropriate transform addresses
@@ -388,10 +380,6 @@ impl Workspace {
                     }
                     Err(_) => {
                         // Do nothing, keep trying transformations
-                        println!(
-                            "Couldn't transform\n{:?}\ninto\n{:?}\nusing:\n{:?}",
-                            statement, desired, transform
-                        );
                     }
                 }
             }
@@ -494,10 +482,13 @@ impl Workspace {
 
     pub fn get_instantiated_transformations(
         &self,
+        maybe_desired: Option<SymbolNode>,
     ) -> Result<HashSet<Transformation>, WorkspaceError> {
-        println!("get_instantiated_transformations");
-        let substatements = self
-            .get_statements()
+        let mut statements = self.get_statements().clone();
+        if let Some(desired) = maybe_desired {
+            statements.push(desired);
+        }
+        let substatements = statements
             .iter()
             .map(|statement| statement.get_substatements())
             .flatten()
@@ -525,7 +516,6 @@ impl Workspace {
             .cloned()
             .collect();
 
-        println!("End get_instantiated_transformations");
         return Ok(to_return);
     }
 
@@ -878,7 +868,7 @@ mod test_workspace {
         .into_iter()
         .collect();
         assert_eq!(
-            workspace.get_instantiated_transformations().unwrap(),
+            workspace.get_instantiated_transformations(None).unwrap(),
             expected
         );
 
