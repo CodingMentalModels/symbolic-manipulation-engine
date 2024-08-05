@@ -484,10 +484,13 @@ impl Workspace {
         &self,
         maybe_desired: Option<SymbolNode>,
     ) -> Result<HashSet<Transformation>, WorkspaceError> {
-        let mut statements = self.get_statements().clone();
-        if let Some(desired) = maybe_desired {
-            statements.push(desired);
-        }
+        let statements = if let Some(desired) = maybe_desired {
+            let mut statements = vec![desired];
+            statements.append(&mut self.get_statements().clone());
+            statements
+        } else {
+            self.get_statements().clone()
+        };
         let substatements = statements
             .iter()
             .map(|statement| statement.get_substatements())
