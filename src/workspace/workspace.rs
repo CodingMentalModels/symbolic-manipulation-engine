@@ -484,6 +484,9 @@ impl Workspace {
         &self,
         maybe_desired: Option<SymbolNode>,
     ) -> Result<HashSet<Transformation>, WorkspaceError> {
+        // TODO Desired should probably wind up at the top of what we test, but this vec
+        // doesn't stay ordered.  If we pass it down the dependency chain, we could ensure that
+        // it's checked first
         let statements = if let Some(desired) = maybe_desired {
             let mut statements = vec![desired];
             statements.append(&mut self.get_statements().clone());
