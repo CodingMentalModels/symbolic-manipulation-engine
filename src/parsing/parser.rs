@@ -144,13 +144,18 @@ impl Parser {
     }
 
     pub fn get_interpretation_custom_tokens(&self) -> Vec<String> {
-        self.interpretations
+        let mut to_return = self
+            .interpretations
             .iter()
             .filter_map(|interpretation| match interpretation.get_condition() {
                 InterpretationCondition::Matches(t) => Some(t.to_string()),
                 _ => None,
             })
-            .collect()
+            .collect::<Vec<_>>();
+        // Sort decreasing by length to ensure smaller substrings don't stomp on larger ones
+        // e.g. -> should be checked before -
+        to_return.sort_by(|a, b| b.len().cmp(&a.len()));
+        to_return
     }
 
     pub fn get_functional_parentheses(
@@ -271,6 +276,31 @@ mod test_parser {
                 ]
             ))
         )
+    }
+
+    #[test]
+    fn test_parser_continues_on_infix() {
+        let tokens = vec!["&".to_string(), "|".to_string()];
+
+        let and = Interpretation::infix_operator("&".into(), 2, "Boolean".into());
+        let or = Interpretation::infix_operator("|".into(), 1, "Boolean".into());
+        let to_predicate = |s: &str| Interpretation::singleton(s.into(), "Boolean".into());
+
+        let parser = Parser::new(vec![
+            and,
+            or,
+            to_predicate("p"),
+            to_predicate("q"),
+            to_predicate("r"),
+            to_predicate("s"),
+        ]);
+        let actual = parser.parse_from_string(tokens.clone(), "p&q|r");
+        let expected = parser.parse_from_string(tokens.clone(), "(p&q)|r");
+        assert_eq!(actual, expected);
+
+        let actual = parser.parse_from_string(tokens.clone(), "p|q&r");
+        let expected = parser.parse_from_string(tokens.clone(), "p|(q&r)");
+        assert_eq!(actual, expected);
     }
 
     #[test]
@@ -452,6 +482,22 @@ mod test_parser {
         );
 
         assert_eq!(inverse_from, expected);
+    }
+
+    #[test]
+    fn test_parser_gets_interpretation_tokens() {
+        let and = Interpretation::infix_operator("&".into(), 2, "Boolean".into());
+        let or = Interpretation::infix_operator("|".into(), 1, "Boolean".into());
+        let not = Interpretation::prefix_operator("-".into(), 99, "Boolean".into());
+        let implies = Interpretation::infix_operator("->".into(), 1, "Boolean".into());
+        let long = Interpretation::singleton("aaaaa".into(), "Doesnt Matter".into());
+
+        let parser = Parser::new(vec![and, or, not, implies, long]);
+        let tokens = parser.get_interpretation_custom_tokens();
+
+        assert_eq!(tokens.len(), 6);
+        assert_eq!(tokens[0], "aaaaa".to_string());
+        assert_eq!(tokens[1], "->".to_string());
     }
 
     #[test]
