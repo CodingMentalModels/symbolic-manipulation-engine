@@ -504,21 +504,19 @@ impl ExplicitTransformation {
 
         let mut to_return = HashSet::new();
         for arbitrary_node in self.get_arbitrary_nodes() {
-            // TODO This unwrap_or could fail silently
             let substatement_predicates = substatements
                 .iter()
-                .filter(|s| {
+                .filter_map(|s| {
                     hierarchy
                         .is_subtype_of(
                             &s.get_evaluates_to_type(),
                             &arbitrary_node.get_evaluates_to_type(),
                         )
-                        .unwrap_or(false)
+                        .ok()?
+                        .then(|| s.get_predicates())
                 })
-                .map(|s| s.get_predicates())
                 .flatten()
                 .collect::<HashSet<_>>();
-
             for predicate in substatement_predicates {
                 let new_from = self
                     .from
