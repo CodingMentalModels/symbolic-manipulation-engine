@@ -409,22 +409,6 @@ impl SymbolNode {
         Ok(Self::new(self.get_root().clone(), new_children))
     }
 
-    pub fn replace_name(&self, from: &str, to: &str) -> Result<Self, SymbolNodeError> {
-        let new_root = if !self.is_join() && (self.get_root_as_string() == from) {
-            Symbol::new(from.to_string(), self.get_evaluates_to_type()).into()
-        } else {
-            self.root.clone()
-        };
-        let new_children = self
-            .children
-            .iter()
-            .try_fold(Vec::new(), |mut acc, child| {
-                child.replace_name(from, to).map(|c| acc.push(c))?;
-                Ok(acc)
-            })?;
-        Ok(Self::new(new_root, new_children))
-    }
-
     pub fn replace_symbol(&self, from: &Symbol, to: &Symbol) -> Self {
         let should_replace = match self.get_root() {
             SymbolNodeRoot::Join => false,
