@@ -155,6 +155,14 @@ impl Interpretation {
         )
     }
 
+    pub fn arbitrary_functional(token: Token, precedence: u8, evaluates_to_type: Type) -> Self {
+        Interpretation::new(
+            InterpretationCondition::Matches(token.clone()),
+            ExpressionType::Functional,
+            precedence,
+            InterpretedType::ArbitraryReturning(evaluates_to_type),
+        )
+    }
     pub fn get_condition(&self) -> InterpretationCondition {
         self.condition.clone()
     }
@@ -196,6 +204,24 @@ impl Interpretation {
                 Symbol::new(token.to_string(), t.clone()).into(),
                 children,
             )),
+            InterpretedType::ArbitraryReturning(t) => {
+                if children
+                    .iter()
+                    .any(|child| child.contains_arbitrary_nodes())
+                {
+                    Err(ParserError::NestedArbitraryNodes)
+                } else if children.len() != 1 {
+                    Err(ParserError::ArbitraryReturningHadNonOneChildren(
+                        children.len(),
+                    ))
+                } else {
+                    let child = children[0].clone();
+                    Ok(SymbolNode::arbitrary(
+                        Symbol::new(token.to_string(), t.clone()),
+                        child,
+                    ))
+                }
+            }
         }
     }
 
@@ -342,6 +368,7 @@ pub enum InterpretedType {
     Delimiter,
     SameAsValue,
     Type(Type),
+    ArbitraryReturning(Type),
 }
 
 impl From<Type> for InterpretedType {
@@ -368,6 +395,7 @@ impl InterpretedType {
             Self::Delimiter => false,
             Self::SameAsValue => statement.has_same_value_as_type(),
             Self::Type(t) => t == &statement.get_evaluates_to_type(),
+            Self::ArbitraryReturning(t) => t == &statement.get_evaluates_to_type(),
         }
     }
 }

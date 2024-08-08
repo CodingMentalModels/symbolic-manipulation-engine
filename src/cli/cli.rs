@@ -95,6 +95,7 @@ impl Cli {
         let maybe_condition = sub_matches.get_one::<String>("condition");
         let is_generated_integer = sub_matches.get_flag("any-integer");
         let is_generated_numeric = sub_matches.get_flag("any-numeric");
+        let is_arbitrary = sub_matches.get_flag("arbitrary");
         let output_type = sub_matches
             .get_one::<String>("output-type")
             .map(|o| o.into())
@@ -133,7 +134,13 @@ impl Cli {
             InterpretationCondition::IsInteger | InterpretationCondition::IsNumeric => {
                 InterpretedType::SameAsValue
             }
-            _ => output_type.clone().into(),
+            _ => {
+                if is_arbitrary {
+                    InterpretedType::ArbitraryReturning(output_type.clone())
+                } else {
+                    output_type.clone().into()
+                }
+            }
         };
         workspace
             .add_interpretation(Interpretation::new(

@@ -254,6 +254,9 @@ impl Workspace {
         self.types
             .binds_statement_or_error(&statement)
             .map_err(|x| WorkspaceError::from(x))?;
+        if statement.get_arbitrary_nodes().len() > 0 {
+            return Err(WorkspaceError::ContainsArbitraryNode);
+        }
         self.generate_types_in_bulk(vec![statement.clone()].into_iter().collect())?;
         self.statements.push(statement);
         self.provenance.push(Provenance::Hypothesis);
@@ -313,7 +316,7 @@ impl Workspace {
     }
 
     pub fn get_valid_transformations(&self, partial_statement: &str) -> Vec<SymbolNode> {
-        // TODO: Try to complete partial statements
+        // TODO Try to complete partial statements
         let desired = match self.parse_from_string(partial_statement) {
             Err(_) => {
                 return vec![];
@@ -355,7 +358,12 @@ impl Workspace {
         if self.statements.contains(&desired) {
             return Err(WorkspaceError::StatementsAlreadyInclude(desired.clone()));
         }
-        for (transform_idx, transform) in self.transformations.iter().enumerate() {
+        if desired.get_arbitrary_nodes().len() > 0 {
+            return Err(WorkspaceError::ContainsArbitraryNode);
+        }
+        let instantiated_transformations =
+            self.get_instantiated_transformations(Some(desired.clone()))?;
+        for (transform_idx, transform) in instantiated_transformations.iter().enumerate() {
             let statements = if transform.is_joint_transform() {
                 self.get_statement_pairs()
             } else {
@@ -370,7 +378,8 @@ impl Workspace {
                         self.add_derived_statement(output.clone(), provenance);
                         return Ok(output);
                     }
-                    Err(_) => { // Do nothing, keep trying transformations
+                    Err(_) => {
+                        // Do nothing, keep trying transformations
                     }
                 }
             }
@@ -469,6 +478,67 @@ impl Workspace {
 
     pub fn add_generated_type(&mut self, generated_type: GeneratedType) {
         self.generated_types.push(generated_type);
+    }
+
+    pub fn get_instantiated_transformations(
+        &self,
+        maybe_desired: Option<SymbolNode>,
+    ) -> Result<HashSet<Transformation>, WorkspaceError> {
+        // TODO Desired should probably wind up at the top of what we test, but this vec
+        // doesn't stay ordered.  If we pass it down the dependency chain, we could ensure that
+        // it's checked first
+        let statements = if let Some(desired) = maybe_desired {
+            let mut statements = vec![desired];
+            statements.append(&mut self.get_statements().clone());
+            statements
+        } else {
+            self.get_statements().clone()
+        };
+        let substatements = statements
+            .iter()
+            .map(|statement| statement.get_substatements())
+            .flatten()
+            .collect::<HashSet<_>>();
+
+        let mut to_return = HashSet::new();
+        for transform in self.get_arbitrary_transformations() {
+            to_return = to_return
+                .union(
+                    &transform
+                        .instantiate_arbitrary_nodes(self.get_types(), &substatements)
+                        .map_err(|e| Into::<WorkspaceError>::into(e))?,
+                )
+                .cloned()
+                .collect();
+        }
+
+        to_return = to_return
+            .union(
+                &self
+                    .get_non_arbitrary_transformations()
+                    .into_iter()
+                    .collect::<HashSet<_>>(),
+            )
+            .cloned()
+            .collect();
+
+        return Ok(to_return);
+    }
+
+    fn get_arbitrary_transformations(&self) -> HashSet<Transformation> {
+        self.transformations
+            .iter()
+            .filter(|t| t.contains_arbitrary_nodes())
+            .cloned()
+            .collect()
+    }
+
+    fn get_non_arbitrary_transformations(&self) -> HashSet<Transformation> {
+        self.transformations
+            .iter()
+            .filter(|t| !t.contains_arbitrary_nodes())
+            .cloned()
+            .collect()
     }
 
     pub fn to_json(&self) -> Result<String, WorkspaceError> {
@@ -647,6 +717,7 @@ pub enum WorkspaceError {
     InvalidTransformationIndex,
     InvalidInterpretationIndex,
     InvalidTransformationAddress,
+    ContainsArbitraryNode,
     ParserError(ParserError),
     UnableToSerialize(String),
     TransformationError(TransformationError),
@@ -657,16 +728,29 @@ pub enum WorkspaceError {
     TypeHierarchyAlreadyIncludes(Type),
     InvalidType(Type),
     ParentTypeNotFound(Type),
+    UnsupportedOperation(String),
+    ArbitraryNodeHasNonOneChildren,
     NoTransformationsPossible,
     InvalidTypeError(TypeError),
     InvalidSymbolNodeError(SymbolNodeError),
+    InvalidTransformationError(TransformationError),
     AttemptedToImportAmbiguousTypes(HashSet<Type>),
-    UnsupportedOperation(String),
 }
 
 impl From<ParserError> for WorkspaceError {
     fn from(value: ParserError) -> Self {
         Self::ParserError(value)
+    }
+}
+
+impl From<TransformationError> for WorkspaceError {
+    fn from(value: TransformationError) -> Self {
+        match value {
+            TransformationError::ArbitraryNodeHasNonOneChildren => {
+                Self::ArbitraryNodeHasNonOneChildren
+            }
+            e => Self::InvalidTransformationError(e),
+        }
     }
 }
 
@@ -715,6 +799,127 @@ mod test_workspace {
     use super::*;
 
     #[test]
+    fn test_workspace_try_transform_into_with_arbitrary() {
+        let mut types = TypeHierarchy::chain(vec!["Boolean".into(), "=".into()]).unwrap();
+        types
+            .add_child_to_parent("^".into(), "Boolean".into())
+            .unwrap();
+
+        let interpretations = vec![
+            Interpretation::infix_operator("=".into(), 1, "=".into()),
+            Interpretation::infix_operator("^".into(), 2, "^".into()),
+            Interpretation::singleton("p".into(), "Boolean".into()),
+            Interpretation::singleton("q".into(), "Boolean".into()),
+            Interpretation::singleton("r".into(), "Boolean".into()),
+            Interpretation::singleton("s".into(), "Boolean".into()),
+            Interpretation::arbitrary_functional("Any".into(), 99, "Boolean".into()),
+        ];
+
+        let mut workspace = Workspace::new(types.clone(), vec![], interpretations.clone());
+        workspace
+            .add_parsed_transformation("p=q", "Any(p)=Any(q)")
+            .unwrap();
+
+        workspace.add_parsed_hypothesis("p=q").unwrap();
+
+        let expected = workspace.parse_from_string("p^s=q^s").unwrap();
+        assert_eq!(
+            workspace.try_transform_into_parsed("p^s=q^s").unwrap(),
+            expected
+        );
+        assert!(workspace.get_statements().contains(&expected));
+    }
+
+    #[test]
+    fn test_workspace_instantiates_arbitrary_transforms() {
+        let mut types = TypeHierarchy::chain(vec!["Boolean".into(), "=".into()]).unwrap();
+        types
+            .add_child_to_parent("^".into(), "Boolean".into())
+            .unwrap();
+
+        let interpretations = vec![
+            Interpretation::infix_operator("=".into(), 1, "=".into()),
+            Interpretation::infix_operator("^".into(), 1, "^".into()),
+            Interpretation::singleton("p".into(), "Boolean".into()),
+            Interpretation::singleton("q".into(), "Boolean".into()),
+            Interpretation::singleton("r".into(), "Boolean".into()),
+            Interpretation::singleton("s".into(), "Boolean".into()),
+            Interpretation::singleton("s".into(), "Boolean".into()),
+            Interpretation::arbitrary_functional("Any".into(), 99, "Boolean".into()),
+        ];
+
+        let mut workspace = Workspace::new(types.clone(), vec![], interpretations.clone());
+
+        workspace
+            .add_parsed_transformation("p=q", "Any(p)=Any(q)")
+            .unwrap();
+        workspace.add_parsed_hypothesis("p=q").unwrap();
+        workspace.add_parsed_hypothesis("p^s").unwrap();
+
+        let instantiate = |s: &str| {
+            ExplicitTransformation::new(
+                workspace.parse_from_string("p=q").unwrap(),
+                workspace.parse_from_string(s).unwrap(),
+            )
+            .into()
+        };
+
+        let expected = vec![
+            instantiate("p=q"),
+            instantiate("(p=q)=(q=q)"),
+            instantiate("(p=p)=(p=q)"),
+            instantiate("(p^s)=(q^s)"),
+            instantiate("(p^p)=(p^q)"),
+        ]
+        .into_iter()
+        .collect();
+        assert_eq!(
+            workspace.get_instantiated_transformations(None).unwrap(),
+            expected
+        );
+
+        //        workspace.add_parsed_hypothesis("t^p").unwrap();
+        //        let t_and_equal = workspace.parse_from_string("t^p=t^q").unwrap();
+        //        let expected = vec![and_s_equal, t_and_equal].into_iter().collect();
+        //        assert_eq!(workspace.get_instantiated_transformations(), expected);
+    }
+
+    #[test]
+    fn test_workspace_disallows_arbitrary_statements() {
+        let mut types = TypeHierarchy::chain(vec!["Boolean".into(), "=".into()]).unwrap();
+        types
+            .add_child_to_parent("^".into(), "Boolean".into())
+            .unwrap();
+
+        let interpretations = vec![
+            Interpretation::infix_operator("=".into(), 1, "=".into()),
+            Interpretation::infix_operator("^".into(), 1, "^".into()),
+            Interpretation::singleton("p".into(), "Boolean".into()),
+            Interpretation::singleton("q".into(), "Boolean".into()),
+            Interpretation::singleton("r".into(), "Boolean".into()),
+            Interpretation::singleton("s".into(), "Boolean".into()),
+            Interpretation::singleton("s".into(), "Boolean".into()),
+            Interpretation::arbitrary_functional("Any".into(), 99, "Boolean".into()),
+        ];
+
+        let mut workspace = Workspace::new(types.clone(), vec![], interpretations.clone());
+        assert_eq!(
+            workspace.add_parsed_hypothesis("Any(p)"),
+            Err(WorkspaceError::ContainsArbitraryNode)
+        );
+        assert_eq!(
+            workspace.add_parsed_hypothesis("Any(p)=q"),
+            Err(WorkspaceError::ContainsArbitraryNode)
+        );
+
+        workspace.add_parsed_hypothesis("p=q").unwrap();
+        assert_eq!(
+            workspace.try_transform_into_parsed("Any(p)=Any(q)"),
+            Err(WorkspaceError::ContainsArbitraryNode)
+        );
+    }
+
+    #[test]
     fn test_workspace_try_transform_into() {
         let mut types = TypeHierarchy::chain(vec!["Real".into(), "Integer".into()]).unwrap();
         types
@@ -741,6 +946,7 @@ mod test_workspace {
             Interpretation::singleton("p".into(), "Proposition".into()),
             Interpretation::singleton("q".into(), "Proposition".into()),
             Interpretation::singleton("r".into(), "Proposition".into()),
+            Interpretation::singleton("s".into(), "Proposition".into()),
             Interpretation::singleton("s".into(), "Proposition".into()),
         ];
         let mut workspace = Workspace::new(types.clone(), vec![], interpretations.clone());

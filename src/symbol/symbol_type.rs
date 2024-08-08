@@ -591,7 +591,7 @@ impl GeneratedTypeCondition {
     }
 }
 
-#[derive(Clone, Debug, Hash, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[derive(Clone, Debug, Hash, PartialEq, Eq, PartialOrd, Serialize, Deserialize, TS)]
 #[serde(tag = "kind", content = "value", rename_all = "camelCase")]
 #[ts(export)]
 pub enum Type {

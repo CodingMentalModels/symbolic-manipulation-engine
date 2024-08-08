@@ -26,8 +26,54 @@ pub enum SymbolNodeError {
     ChildIndexOutOfRange,
     DifferentNumberOfArguments(SymbolNode, SymbolNode),
     RelabellingNotInjective(Vec<(String, String)>),
-    InvalidFunctionCalledOnJoin,
+    InvalidFunctionCalledOn(SymbolNodeRoot),
     InvalidAddress,
+    ArbitraryNodeHasNonOneChildren,
+}
+
+#[derive(Debug, Clone, Hash, PartialEq, Eq, Serialize, Deserialize)]
+pub struct Predicate {
+    node: SymbolNode,
+    arbitrary: SymbolNode,
+}
+
+impl Predicate {
+    pub fn new(node: SymbolNode, arbitrary: SymbolNode) -> Self {
+        let (normalized_node, normalized_arbitrary) = Self::normalize(node, arbitrary);
+        Self {
+            node: normalized_node,
+            arbitrary: normalized_arbitrary,
+        }
+    }
+
+    fn normalize(node: SymbolNode, arbitrary: SymbolNode) -> (SymbolNode, SymbolNode) {
+        let symbols = arbitrary.get_symbols_in_order();
+        let symbol_map = symbols
+            .into_iter()
+            .enumerate()
+            .map(|(i, symbol)| (symbol, i.to_string()))
+            .collect::<Vec<_>>();
+        let (mut node_to_return, mut arbitrary_to_return) = (node.clone(), arbitrary.clone());
+        for (symbol, replacement) in symbol_map {
+            node_to_return = node_to_return.replace_all_from_symbol(
+                &symbol,
+                &Symbol::new(replacement.clone(), symbol.get_evaluates_to_type()).into(),
+            );
+            arbitrary_to_return = arbitrary_to_return.replace_all_from_symbol(
+                &symbol,
+                &Symbol::new(replacement.clone(), symbol.get_evaluates_to_type()).into(),
+            );
+        }
+        (node_to_return, arbitrary_to_return)
+    }
+
+    pub fn get_evaluates_to_type(&self) -> Type {
+        self.node.get_evaluates_to_type()
+    }
+
+    pub fn instantiate(&self, instantiation: SymbolNode) -> SymbolNode {
+        self.node.replace_all(&self.arbitrary, &instantiation)
+    }
 }
 
 #[derive(Clone, Hash, PartialEq, Eq, Serialize, Deserialize)]
@@ -118,6 +164,53 @@ impl SymbolNode {
         )
     }
 
+    pub fn arbitrary(symbol: Symbol, child: SymbolNode) -> Self {
+        Self::new(SymbolNodeRoot::Arbitrary(symbol), vec![child])
+    }
+
+    pub fn contains_arbitrary_nodes(&self) -> bool {
+        if let SymbolNodeRoot::Arbitrary(_) = self.root {
+            return true;
+        }
+
+        self.children
+            .iter()
+            .any(|child| child.contains_arbitrary_nodes())
+    }
+
+    pub fn get_substatements(&self) -> HashSet<Self> {
+        let mut to_return = self.children.clone();
+        to_return.push(self.clone());
+        to_return.into_iter().collect()
+    }
+
+    pub fn get_predicates(&self) -> HashSet<Predicate> {
+        self.get_substatements()
+            .into_iter()
+            .map(|n| Predicate::new(self.clone(), n))
+            .collect()
+    }
+
+    pub fn get_arbitrary_nodes(&self) -> HashSet<Self> {
+        if let SymbolNodeRoot::Arbitrary(_) = self.get_root() {
+            return vec![self.clone()].into_iter().collect();
+        }
+
+        let mut to_return = HashSet::new();
+        for child in self.children.iter() {
+            to_return = to_return
+                .union(&mut child.get_arbitrary_nodes())
+                .cloned()
+                .collect();
+        }
+
+        to_return
+    }
+
+    pub fn is_arbitrary(&self) -> bool {
+        self.root.is_arbitrary()
+    }
+
     pub fn is_join(&self) -> bool {
         self.root.is_join()
     }
@@ -178,8 +271,11 @@ impl SymbolNode {
 
     pub fn get_symbol(&self) -> Result<&Symbol, SymbolNodeError> {
         match &self.root {
-            SymbolNodeRoot::Join => Err(SymbolNodeError::InvalidFunctionCalledOnJoin),
+            SymbolNodeRoot::Join => {
+                Err(SymbolNodeError::InvalidFunctionCalledOn(self.root.clone()))
+            }
             SymbolNodeRoot::Symbol(s) => Ok(&s),
+            SymbolNodeRoot::Arbitrary(s) => Ok(s),
         }
     }
 
@@ -187,6 +283,7 @@ impl SymbolNode {
         match self.get_root() {
             SymbolNodeRoot::Symbol(s) => s.get_name(),
             SymbolNodeRoot::Join => ", ".to_string(),
+            SymbolNodeRoot::Arbitrary(s) => s.get_name(),
         }
     }
 
@@ -194,6 +291,7 @@ impl SymbolNode {
         match &self.root {
             SymbolNodeRoot::Join => Type::Join,
             SymbolNodeRoot::Symbol(s) => s.get_evaluates_to_type(),
+            SymbolNodeRoot::Arbitrary(s) => s.get_evaluates_to_type(),
         }
     }
 
@@ -311,24 +409,13 @@ impl SymbolNode {
         Ok(Self::new(self.get_root().clone(), new_children))
     }
 
-    pub fn replace_name(&self, from: &str, to: &str) -> Result<Self, SymbolNodeError> {
-        let new_root = if !self.is_join() && (self.get_root_as_string() == from) {
-            Symbol::new(from.to_string(), self.get_evaluates_to_type()).into()
-        } else {
-            self.root.clone()
+    pub fn replace_symbol(&self, from: &Symbol, to: &Symbol) -> Self {
+        let should_replace = match self.get_root() {
+            SymbolNodeRoot::Join => false,
+            SymbolNodeRoot::Symbol(s) => s == from,
+            SymbolNodeRoot::Arbitrary(s) => s == from,
         };
-        let new_children = self
-            .children
-            .iter()
-            .try_fold(Vec::new(), |mut acc, child| {
-                child.replace_name(from, to).map(|c| acc.push(c))?;
-                Ok(acc)
-            })?;
-        Ok(Self::new(new_root, new_children))
-    }
-
-    pub fn replace_symbol(&self, from: &Symbol, to: &Symbol) -> Result<Self, SymbolNodeError> {
-        let new_root = if !self.is_join() && (self.get_symbol()? == from) {
+        let new_root = if should_replace {
             to.clone().into()
         } else {
             self.root.clone().into()
@@ -336,27 +423,40 @@ impl SymbolNode {
         let new_children = self
             .children
             .iter()
-            .try_fold(Vec::new(), |mut acc, child| {
-                child.replace_symbol(from, to).map(|c| acc.push(c))?;
-                Ok(acc)
-            })?;
-        Ok(Self::new(new_root, new_children)).into()
+            .map(|child| child.replace_symbol(from, to))
+            .collect();
+        Self::new(new_root, new_children)
     }
 
-    pub fn replace_all(&self, from: &Symbol, to: &SymbolNode) -> Result<Self, SymbolNodeError> {
-        if !self.is_join() && (self.get_symbol()? == from) {
-            Ok(to.clone())
+    pub fn replace_all(&self, from: &SymbolNode, to: &SymbolNode) -> Self {
+        if self == from {
+            to.clone()
         } else {
-            let children = self.get_children().iter().try_fold(
-                Vec::new(),
-                |mut acc: Vec<SymbolNode>, child: &SymbolNode| {
-                    child
-                        .replace_all(from, to)
-                        .map(|new_child: SymbolNode| acc.push(new_child))?;
-                    Ok(acc)
-                },
-            )?;
-            Ok(Self::new(self.get_root().clone(), children))
+            Self::new(
+                self.root.clone(),
+                self.children
+                    .iter()
+                    .map(|child| child.replace_all(from, to))
+                    .collect(),
+            )
+        }
+    }
+
+    pub fn replace_all_from_symbol(&self, from: &Symbol, to: &SymbolNode) -> Self {
+        let should_replace = match self.get_root() {
+            SymbolNodeRoot::Join => false,
+            SymbolNodeRoot::Arbitrary(s) => s == from,
+            SymbolNodeRoot::Symbol(s) => s == from,
+        };
+        if should_replace {
+            to.clone()
+        } else {
+            let children = self
+                .get_children()
+                .iter()
+                .map(|child| child.replace_all_from_symbol(from, to))
+                .collect();
+            Self::new(self.get_root().clone(), children)
         }
     }
 
@@ -377,6 +477,28 @@ impl SymbolNode {
         *current_node = new_node.clone();
 
         Ok(to_return)
+    }
+
+    pub fn replace_arbitrary_using_predicate(
+        &self,
+        symbol: &Symbol,
+        predicate: &Predicate,
+    ) -> Result<SymbolNode, SymbolNodeError> {
+        // Note that this doesn't check types since we want to allow subtypes!
+        if self.is_arbitrary() && self.get_symbol() == Ok(symbol) {
+            let children = self.get_children();
+            if children.len() != 1 {
+                return Err(SymbolNodeError::ArbitraryNodeHasNonOneChildren);
+            }
+            let child = children[0].clone();
+            return Ok(predicate.instantiate(child));
+        }
+
+        let mut new_children = Vec::new();
+        for child in self.get_children() {
+            new_children.push(child.replace_arbitrary_using_predicate(symbol, predicate)?);
+        }
+        Ok(Self::new(self.root.clone(), new_children))
     }
 
     pub fn find_where(&self, condition: &dyn Fn(Self) -> bool) -> HashSet<SymbolNodeAddress> {
@@ -478,14 +600,29 @@ impl SymbolNode {
     }
 
     pub fn get_symbols(&self) -> HashSet<Symbol> {
+        // TODO The deduplication in get_symbols_in_order isn't needed here since the hashset will
+        // do it
+        self.get_symbols_in_order().into_iter().collect()
+    }
+
+    pub fn get_symbols_in_order(&self) -> Vec<Symbol> {
         let mut result = match self.get_root() {
             SymbolNodeRoot::Symbol(symbol) => vec![symbol.clone()],
             SymbolNodeRoot::Join => Vec::new(),
+            SymbolNodeRoot::Arbitrary(s) => vec![s.clone()],
         };
         for child in &self.children {
-            result.extend(child.get_symbols());
+            result.extend(child.get_symbols().into_iter());
         }
-        result.into_iter().collect()
+        let mut to_return = Vec::new();
+        let mut already_seen = HashSet::new();
+        for symbol in result.into_iter() {
+            if !already_seen.contains(&symbol) {
+                to_return.push(symbol.clone());
+                already_seen.insert(symbol);
+            }
+        }
+        to_return
     }
 
     pub fn get_types(&self) -> HashSet<Type> {
@@ -784,6 +921,7 @@ impl Substitution {
 pub enum SymbolNodeRoot {
     Symbol(Symbol),
     Join,
+    Arbitrary(Symbol),
 }
 
 impl Default for SymbolNodeRoot {
@@ -815,17 +953,28 @@ impl SymbolNodeRoot {
         self == &Self::Join
     }
 
+    pub fn is_arbitrary(&self) -> bool {
+        if let &Self::Arbitrary(_) = self {
+            true
+        } else {
+            false
+        }
+    }
+
     pub fn to_string(&self) -> String {
         match self {
             Self::Join => "Join".to_string(),
             Self::Symbol(s) => s.to_string(),
+            Self::Arbitrary(s) => format!("Arbitrary({})", s.to_string()).to_string(),
         }
     }
 
     pub fn get_name(&self) -> String {
+        // TODO Ensure that this isn't happening for non symbol
         match self {
             Self::Join => "Join".to_string(),
             Self::Symbol(s) => s.get_name(),
+            Self::Arbitrary(s) => format!("Arbitrary({})", s.to_string()).to_string(),
         }
     }
 
@@ -833,11 +982,12 @@ impl SymbolNodeRoot {
         match self {
             Self::Join => Type::Join,
             Self::Symbol(s) => s.get_evaluates_to_type(),
+            Self::Arbitrary(s) => s.get_evaluates_to_type(),
         }
     }
 }
 
-#[derive(Clone, Debug, Default, Hash, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Clone, Debug, Default, Hash, PartialEq, Eq, PartialOrd, Serialize, Deserialize)]
 pub struct Symbol {
     name: SymbolName,
     evaluates_to_type: Type,
@@ -896,6 +1046,144 @@ mod test_statement {
     };
 
     use super::*;
+
+    #[test]
+    fn test_symbol_node_gets_predicates() {
+        let interpretations = vec![
+            Interpretation::infix_operator("=".into(), 1, "Integer".into()),
+            Interpretation::outfix_operator(("|".into(), "|".into()), 2, "Integer".into()),
+            Interpretation::postfix_operator("!".into(), 3, "Integer".into()),
+            Interpretation::prefix_operator("-".into(), 4, "Integer".into()),
+            Interpretation::function("f".into(), 99),
+            Interpretation::singleton("a", "Integer".into()),
+            Interpretation::singleton("b", "Integer".into()),
+            Interpretation::singleton("x", "Integer".into()),
+            Interpretation::singleton("y", "Integer".into()),
+            Interpretation::singleton("z", "Integer".into()),
+            Interpretation::parentheses_like(
+                Token::Object("{".to_string()),
+                Token::Object("}".to_string()),
+            ),
+            Interpretation::function("\\frac".into(), 99),
+            Interpretation::singleton("\\alpha", "Integer".into()),
+            Interpretation::singleton("\\beta", "Integer".into()),
+            Interpretation::singleton("\\gamma", "Integer".into()),
+        ];
+
+        let trivial = SymbolNode::leaf_object("a");
+        assert_eq!(
+            trivial.get_predicates(),
+            vec![Predicate::new(trivial.clone(), trivial.clone())]
+                .into_iter()
+                .collect()
+        );
+
+        let parser = Parser::new(interpretations.clone());
+        let custom_tokens = vec!["=".to_string(), "|".to_string()];
+
+        let parse = |s: &str| parser.parse_from_string(custom_tokens.clone(), s).unwrap();
+
+        let a_equals_b = parse("a=b");
+        let a = parse("a");
+        let b = parse("b");
+        assert_eq!(
+            a_equals_b.get_predicates(),
+            vec![
+                Predicate::new(a.clone(), a.clone()),
+                Predicate::new(a_equals_b.clone(), a.clone()),
+                Predicate::new(a_equals_b.clone(), b.clone())
+            ]
+            .into_iter()
+            .collect()
+        );
+    }
+
+    #[test]
+    fn test_predicate_normalizes() {
+        let interpretations = vec![
+            Interpretation::infix_operator("=".into(), 1, "Integer".into()),
+            Interpretation::outfix_operator(("|".into(), "|".into()), 2, "Integer".into()),
+            Interpretation::postfix_operator("!".into(), 3, "Integer".into()),
+            Interpretation::prefix_operator("-".into(), 4, "Integer".into()),
+            Interpretation::function("f".into(), 99),
+            Interpretation::singleton("a", "Integer".into()),
+            Interpretation::singleton("b", "Integer".into()),
+            Interpretation::singleton("x", "Integer".into()),
+            Interpretation::singleton("y", "Integer".into()),
+            Interpretation::singleton("z", "Integer".into()),
+            Interpretation::parentheses_like(
+                Token::Object("{".to_string()),
+                Token::Object("}".to_string()),
+            ),
+            Interpretation::function("\\frac".into(), 99),
+            Interpretation::singleton("\\alpha", "Integer".into()),
+            Interpretation::singleton("\\beta", "Integer".into()),
+            Interpretation::singleton("\\gamma", "Integer".into()),
+        ];
+
+        let parser = Parser::new(interpretations.clone());
+        let custom_tokens = vec!["=".to_string(), "|".to_string()];
+
+        let parse = |s: &str| parser.parse_from_string(custom_tokens.clone(), s).unwrap();
+
+        let a = Predicate::new(parse("a"), parse("a"));
+        assert_eq!(a, a);
+
+        let b = Predicate::new(parse("b"), parse("b"));
+        assert_eq!(a, b);
+
+        let a_equals_b_on_a = Predicate::new(parse("a=b"), parse("a"));
+        let b_equals_a_on_b = Predicate::new(parse("b=a"), parse("b"));
+
+        assert_ne!(a_equals_b_on_a, b_equals_a_on_b);
+
+        let a_equals_a_on_a = Predicate::new(parse("a=a"), parse("a"));
+        let b_equals_b_on_b = Predicate::new(parse("b=b"), parse("b"));
+
+        assert_eq!(a_equals_a_on_a, b_equals_b_on_b);
+    }
+
+    #[test]
+    fn test_symbol_node_gets_substatements() {
+        let interpretations = vec![
+            Interpretation::infix_operator("=".into(), 1, "Integer".into()),
+            Interpretation::outfix_operator(("|".into(), "|".into()), 2, "Integer".into()),
+            Interpretation::postfix_operator("!".into(), 3, "Integer".into()),
+            Interpretation::prefix_operator("-".into(), 4, "Integer".into()),
+            Interpretation::function("f".into(), 99),
+            Interpretation::singleton("a", "Integer".into()),
+            Interpretation::singleton("b", "Integer".into()),
+            Interpretation::singleton("x", "Integer".into()),
+            Interpretation::singleton("y", "Integer".into()),
+            Interpretation::singleton("z", "Integer".into()),
+            Interpretation::parentheses_like(
+                Token::Object("{".to_string()),
+                Token::Object("}".to_string()),
+            ),
+            Interpretation::function("\\frac".into(), 99),
+            Interpretation::singleton("\\alpha", "Integer".into()),
+            Interpretation::singleton("\\beta", "Integer".into()),
+            Interpretation::singleton("\\gamma", "Integer".into()),
+        ];
+
+        let trivial = SymbolNode::leaf_object("a");
+        assert_eq!(
+            trivial.get_substatements(),
+            vec![trivial].into_iter().collect()
+        );
+        let parser = Parser::new(interpretations.clone());
+        let custom_tokens = vec!["=".to_string(), "|".to_string()];
+
+        let parse = |s: &str| parser.parse_from_string(custom_tokens.clone(), s).unwrap();
+        let a_equals_b = parse("a=b");
+        let a = parse("a");
+        let b = parse("b");
+
+        assert_eq!(
+            a_equals_b.get_substatements(),
+            vec![a_equals_b, a, b].into_iter().collect()
+        );
+    }
 
     #[test]
     fn test_symbol_node_to_interpreted_string() {
@@ -1247,6 +1535,51 @@ mod test_statement {
             SymbolNode::new("=".into(), vec![n_factorial, n_factorial_definition]);
 
         assert_eq!(factorial_definition.get_depth(), 3);
+    }
+
+    #[test]
+    fn test_symbol_node_replaces_all() {
+        let interpretations = vec![
+            Interpretation::infix_operator("=".into(), 1, "=".into()),
+            Interpretation::infix_operator("^".into(), 1, "^".into()),
+            Interpretation::singleton("p".into(), "Boolean".into()),
+            Interpretation::singleton("q".into(), "Boolean".into()),
+            Interpretation::singleton("r".into(), "Boolean".into()),
+            Interpretation::singleton("s".into(), "Boolean".into()),
+            Interpretation::arbitrary_functional("Any".into(), 99, "Boolean".into()),
+        ];
+        let parser = Parser::new(interpretations);
+
+        let custom_tokens = vec!["=".to_string(), "^".to_string()];
+        let p_equals_q = parser
+            .parse_from_string(custom_tokens.clone(), "p=q")
+            .unwrap();
+        let r_equals_s = parser
+            .parse_from_string(custom_tokens.clone(), "r=s")
+            .unwrap();
+        let p_equals_q_equals_r = parser
+            .parse_from_string(custom_tokens.clone(), "(p=q)=r")
+            .unwrap();
+        let r_equals_s_equals_r = parser
+            .parse_from_string(custom_tokens.clone(), "(r=s)=r")
+            .unwrap();
+        assert_eq!(
+            p_equals_q_equals_r.replace_all(&p_equals_q, &r_equals_s),
+            r_equals_s_equals_r
+        );
+
+        let r = parser
+            .parse_from_string(custom_tokens.clone(), "r")
+            .unwrap();
+        let s = parser
+            .parse_from_string(custom_tokens.clone(), "s")
+            .unwrap();
+
+        let s_equals_s_equals_s = parser
+            .parse_from_string(custom_tokens.clone(), "(s=s)=s")
+            .unwrap();
+
+        assert_eq!(r_equals_s_equals_r.replace_all(&r, &s), s_equals_s_equals_s);
     }
 
     #[test]

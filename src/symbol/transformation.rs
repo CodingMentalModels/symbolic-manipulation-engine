@@ -5,7 +5,7 @@ use crate::symbol::symbol_node::{Symbol, SymbolNode, SymbolNodeError};
 use crate::symbol::symbol_type::{Type, TypeError};
 use serde::{Deserialize, Serialize};
 
-use super::symbol_node::{SymbolName, SymbolNodeAddress};
+use super::symbol_node::{SymbolName, SymbolNodeAddress, SymbolNodeRoot};
 use super::symbol_type::TypeHierarchy;
 
 #[derive(Clone, Debug, Hash, PartialEq, Eq, Serialize, Deserialize)]
@@ -90,7 +90,7 @@ impl Transformation {
         statement: &SymbolNode,
     ) -> HashSet<SymbolNode> {
         let mut base_case = vec![statement.clone()].into_iter().collect::<HashSet<_>>();
-        match self.typed_relabel_and_transform_at(hierarchy, statement, vec![]) {
+        match self.transform_at(hierarchy, statement, vec![]) {
             Ok(result) => {
                 base_case.insert(result);
             }
@@ -156,7 +156,7 @@ impl Transformation {
         new_statements
     }
 
-    pub fn typed_relabel_and_transform_at(
+    pub fn transform_at(
         &self,
         hierarchy: &TypeHierarchy,
         statement: &SymbolNode,
@@ -177,6 +177,44 @@ impl Transformation {
             Self::ExplicitTransformation(t) => t.to_interpreted_string(interpretations),
             Self::AdditionAlgorithm(a) => a.to_string(),
             Self::ApplyToBothSidesTransformation(t) => t.to_interpreted_string(interpretations),
+        }
+    }
+
+    pub fn contains_arbitrary_nodes(&self) -> bool {
+        match self {
+            Self::AdditionAlgorithm(_) => false,
+            Self::ExplicitTransformation(t) => t.contains_arbitrary_nodes(),
+            Self::ApplyToBothSidesTransformation(t) => {
+                t.get_transformation().contains_arbitrary_nodes()
+            }
+        }
+    }
+
+    pub fn get_arbitrary_nodes(&self) -> HashSet<SymbolNode> {
+        match self {
+            Self::AdditionAlgorithm(_) => HashSet::new(),
+            Self::ExplicitTransformation(t) => t.get_arbitrary_nodes(),
+            Self::ApplyToBothSidesTransformation(t) => t.get_transformation().get_arbitrary_nodes(),
+        }
+    }
+
+    pub fn instantiate_arbitrary_nodes(
+        &self,
+        hierarchy: &TypeHierarchy,
+        substatements: &HashSet<SymbolNode>,
+    ) -> Result<HashSet<Self>, TransformationError> {
+        match self {
+            Self::AdditionAlgorithm(_) => Ok(vec![self.clone()].into_iter().collect()),
+            Self::ExplicitTransformation(t) => Ok(t
+                .instantiate_arbitrary_nodes(hierarchy, substatements)?
+                .into_iter()
+                .map(|t| t.into())
+                .collect()),
+            Self::ApplyToBothSidesTransformation(t) => Ok(t
+                .instantiate_arbitrary_nodes(hierarchy, substatements)?
+                .into_iter()
+                .map(|t| Self::ApplyToBothSidesTransformation(t))
+                .collect()),
         }
     }
 }
@@ -324,6 +362,19 @@ impl ApplyToBothSidesTransformation {
             self.symbol.to_string()
         )
     }
+
+    pub fn instantiate_arbitrary_nodes(
+        &self,
+        hierarchy: &TypeHierarchy,
+        substatements: &HashSet<SymbolNode>,
+    ) -> Result<HashSet<Self>, TransformationError> {
+        Ok(self
+            .get_transformation()
+            .instantiate_arbitrary_nodes(hierarchy, substatements)?
+            .into_iter()
+            .map(|t| Self::new(self.get_symbol().clone(), t))
+            .collect())
+    }
 }
 
 #[derive(Clone, Debug, Hash, PartialEq, Eq, Serialize, Deserialize)]
@@ -432,6 +483,82 @@ impl ExplicitTransformation {
         variables.into_iter().map(|s| s.get_name()).collect()
     }
 
+    pub fn contains_arbitrary_nodes(&self) -> bool {
+        self.from.contains_arbitrary_nodes() || self.to.contains_arbitrary_nodes()
+    }
+
+    pub fn get_arbitrary_nodes(&self) -> HashSet<SymbolNode> {
+        self.from
+            .get_arbitrary_nodes()
+            .union(&mut self.to.get_arbitrary_nodes())
+            .cloned()
+            .collect()
+    }
+
+    pub fn instantiate_arbitrary_nodes(
+        &self,
+        hierarchy: &TypeHierarchy,
+        substatements: &HashSet<SymbolNode>,
+    ) -> Result<HashSet<Self>, TransformationError> {
+        self.validate_arbitrary_nodes()?;
+
+        let mut to_return = HashSet::new();
+        for arbitrary_node in self.get_arbitrary_nodes() {
+            let substatement_predicates = substatements
+                .iter()
+                .filter_map(|s| {
+                    hierarchy
+                        .is_subtype_of(
+                            &s.get_evaluates_to_type(),
+                            &arbitrary_node.get_evaluates_to_type(),
+                        )
+                        .ok()?
+                        .then(|| s.get_predicates())
+                })
+                .flatten()
+                .collect::<HashSet<_>>();
+            for predicate in substatement_predicates {
+                let new_from = self
+                    .from
+                    .replace_arbitrary_using_predicate(arbitrary_node.get_symbol()?, &predicate)?;
+                let new_to = self
+                    .to
+                    .replace_arbitrary_using_predicate(arbitrary_node.get_symbol()?, &predicate)?;
+
+                let transform = ExplicitTransformation::new(new_from, new_to);
+                to_return.insert(transform);
+            }
+        }
+
+        Ok(to_return)
+    }
+
+    fn validate_arbitrary_nodes(&self) -> Result<(), TransformationError> {
+        if self
+            .get_arbitrary_nodes()
+            .iter()
+            .map(|n| n.get_symbol())
+            .collect::<HashSet<_>>()
+            .len()
+            > 1
+        {
+            return Err(TransformationError::MultipleArbitraryNodeSymbols);
+        }
+
+        if self
+            .get_arbitrary_nodes()
+            .iter()
+            .map(|n| n.get_evaluates_to_type())
+            .collect::<HashSet<_>>()
+            .len()
+            > 1
+        {
+            return Err(TransformationError::MultipleArbitraryNodeTypes);
+        }
+
+        Ok(())
+    }
+
     fn relabel_and_transform_at(
         &self,
         statement: &SymbolNode,
@@ -452,6 +579,9 @@ impl ExplicitTransformation {
         hierarchy: &TypeHierarchy,
         statement: &SymbolNode,
     ) -> Result<SymbolNode, TransformationError> {
+        if self.contains_arbitrary_nodes() {
+            return Err(TransformationError::TransformCalledOnArbitrary);
+        }
         let generalized_transform = self.generalize_to_fit(hierarchy, statement)?;
         generalized_transform.relabel_and_transform(statement)
     }
@@ -590,7 +720,7 @@ impl ExplicitTransformation {
 pub enum TransformationError {
     ConflictingTypes(String, Type, Type),
     InvalidSymbolNodeError(SymbolNodeError),
-    InvalidFunctionCalledOnJoin,
+    InvalidFunctionCalledOn(SymbolNodeRoot),
     InvalidTypes(TypeError),
     RelabellingsKeysMismatch,
     StatementDoesNotMatch(SymbolNode, SymbolNode),
@@ -598,7 +728,11 @@ pub enum TransformationError {
     ApplyToBothSidesCalledOnNChildren(usize),
     StatementTypesDoNotMatch,
     NoValidTransformations,
+    TransformCalledOnArbitrary,
     UnableToParse(SymbolName),
+    ArbitraryNodeHasNonOneChildren,
+    MultipleArbitraryNodeSymbols,
+    MultipleArbitraryNodeTypes,
 }
 
 impl From<SymbolNodeError> for TransformationError {
@@ -607,7 +741,8 @@ impl From<SymbolNodeError> for TransformationError {
             SymbolNodeError::ConflictingTypes(name, t_0, t_1) => {
                 Self::ConflictingTypes(name, t_0, t_1)
             }
-            SymbolNodeError::InvalidFunctionCalledOnJoin => Self::InvalidFunctionCalledOnJoin,
+            SymbolNodeError::ArbitraryNodeHasNonOneChildren => Self::ArbitraryNodeHasNonOneChildren,
+            SymbolNodeError::InvalidFunctionCalledOn(root) => Self::InvalidFunctionCalledOn(root),
             _ => Self::InvalidSymbolNodeError(value),
         }
     }
@@ -627,6 +762,96 @@ mod test_transformation {
     };
 
     use super::*;
+
+    #[test]
+    fn test_transformation_instantiates_arbitrary_nodes() {
+        let mut types = TypeHierarchy::chain(vec!["Boolean".into(), "=".into()]).unwrap();
+        types
+            .add_child_to_parent("&".into(), "Boolean".into())
+            .unwrap();
+        types
+            .add_child_to_parent("Integer".into(), Type::Object)
+            .unwrap();
+        let interpretations = vec![
+            Interpretation::infix_operator("=".into(), 1, "Boolean".into()),
+            Interpretation::infix_operator("&".into(), 2, "Boolean".into()),
+            Interpretation::outfix_operator(("|".into(), "|".into()), 2, "Integer".into()),
+            Interpretation::postfix_operator("!".into(), 3, "Integer".into()),
+            Interpretation::prefix_operator("-".into(), 4, "Integer".into()),
+            Interpretation::singleton("p", "Boolean".into()),
+            Interpretation::singleton("q", "Boolean".into()),
+            Interpretation::singleton("x", "Integer".into()),
+            Interpretation::singleton("y", "Integer".into()),
+            Interpretation::singleton("z", "Integer".into()),
+            Interpretation::arbitrary_functional("F".into(), 99, "Boolean".into()),
+            Interpretation::arbitrary_functional("G".into(), 99, "Boolean".into()),
+        ];
+
+        let parser = Parser::new(interpretations.clone());
+
+        let custom_tokens = vec![
+            "=".to_string(),
+            "&".to_string(),
+            "|".to_string(),
+            "!".to_string(),
+            "-".to_string(),
+        ];
+
+        let parse = |s: &str| parser.parse_from_string(custom_tokens.clone(), s).unwrap();
+
+        let p = parse("p");
+        let q = parse("q");
+        let p_equals_q = parse("p=q");
+        let f_of_p_equals_f_of_q = parse("F(p)=F(q)");
+        let transformation =
+            ExplicitTransformation::new(p_equals_q.clone(), f_of_p_equals_f_of_q.clone());
+        assert_eq!(
+            transformation
+                .instantiate_arbitrary_nodes(&types, &vec![].into_iter().collect())
+                .unwrap(),
+            vec![].into_iter().collect()
+        );
+
+        let substatements = vec![p.clone(), q.clone(), p_equals_q.clone()]
+            .into_iter()
+            .collect::<HashSet<_>>();
+        let expected = vec![
+            ExplicitTransformation::new(p_equals_q.clone(), p_equals_q.clone()),
+            ExplicitTransformation::new(p_equals_q.clone(), parse("(p=p)=(p=q)")),
+            ExplicitTransformation::new(p_equals_q.clone(), parse("(p=q)=(q=q)")),
+            ExplicitTransformation::new(p_equals_q.clone(), p_equals_q.clone()),
+        ]
+        .into_iter()
+        .collect();
+        let actual = transformation
+            .instantiate_arbitrary_nodes(&types, &substatements)
+            .unwrap();
+
+        assert_eq!(
+            actual,
+            expected,
+            "actual:\n{}\n\nexpected:\n{}",
+            actual
+                .iter()
+                .map(|t| t.to_interpreted_string(&interpretations))
+                .collect::<Vec<_>>()
+                .join("\n"),
+            expected
+                .iter()
+                .map(|t| t.to_interpreted_string(&interpretations))
+                .collect::<Vec<_>>()
+                .join("\n"),
+        );
+
+        let f_of_p_equals_g_of_q = parse("F(p)=G(q)");
+        let transformation =
+            ExplicitTransformation::new(p_equals_q.clone(), f_of_p_equals_g_of_q.clone());
+
+        assert_eq!(
+            transformation.instantiate_arbitrary_nodes(&types, &substatements),
+            Err(TransformationError::MultipleArbitraryNodeSymbols)
+        );
+    }
 
     #[test]
     fn test_transformation_joint_transforms() {
@@ -733,13 +958,15 @@ mod test_transformation {
 
     #[test]
     fn test_transformation_gets_valid_transformations() {
-        let hierarchy =
+        let mut hierarchy =
             TypeHierarchy::chain(vec!["Real".into(), "Integer".into(), "=".into()]).unwrap();
+        hierarchy.add_chain(vec!["Boolean".into()]);
         let interpretations = vec![
             Interpretation::infix_operator("=".into(), 1, "=".into()),
             Interpretation::singleton("x", "Integer".into()),
             Interpretation::singleton("y", "Integer".into()),
             Interpretation::singleton("z", "Integer".into()),
+            Interpretation::arbitrary_functional("Any".into(), 99, "Boolean".into()),
         ];
         let parser = Parser::new(interpretations);
 
@@ -899,6 +1126,17 @@ mod test_transformation {
         let actual = transformation.get_valid_transformations(&hierarchy, &x_equals_y_equals_z);
 
         assert_eq!(actual, expected.into_iter().collect());
+
+        let arbitrary_x_equals_arbitrary_y = parser
+            .parse_from_string(custom_tokens.clone(), "Any(x)=Any(y)")
+            .unwrap();
+        let transformation: Transformation =
+            ExplicitTransformation::new(x_equals_y.clone(), arbitrary_x_equals_arbitrary_y.clone())
+                .into();
+        assert_eq!(
+            transformation.transform(&hierarchy, &x_equals_y),
+            Err(TransformationError::TransformCalledOnArbitrary)
+        );
     }
 
     #[test]
@@ -1130,8 +1368,7 @@ mod test_transformation {
             vec![SymbolNode::leaf_object("d"), SymbolNode::leaf_object("b")],
         );
 
-        let transformed =
-            transformation.typed_relabel_and_transform_at(&hierarchy, &a_equals_b, vec![0]);
+        let transformed = transformation.transform_at(&hierarchy, &a_equals_b, vec![0]);
 
         assert_eq!(transformed, Ok(d_equals_b));
 
@@ -1156,11 +1393,7 @@ mod test_transformation {
                 SymbolNode::leaf_object("c"),
             ],
         );
-        let transformed = transformation.typed_relabel_and_transform_at(
-            &hierarchy,
-            &a_equals_b_equals_c,
-            vec![0, 1],
-        );
+        let transformed = transformation.transform_at(&hierarchy, &a_equals_b_equals_c, vec![0, 1]);
 
         assert_eq!(transformed, Ok(a_equals_d_equals_c));
 
@@ -1191,7 +1424,7 @@ mod test_transformation {
             .unwrap();
 
         assert_eq!(
-            transformation.typed_relabel_and_transform_at(&hierarchy, &x_equals_y_equals_z, vec![]),
+            transformation.transform_at(&hierarchy, &x_equals_y_equals_z, vec![]),
             Ok(z_equals_x_equals_y.clone())
         );
 
@@ -1200,11 +1433,7 @@ mod test_transformation {
             .unwrap();
 
         assert_eq!(
-            transformation.typed_relabel_and_transform_at(
-                &hierarchy,
-                &x_equals_y_equals_z,
-                vec![0]
-            ),
+            transformation.transform_at(&hierarchy, &x_equals_y_equals_z, vec![0]),
             Ok(y_equals_x_equals_z)
         );
 
@@ -1217,7 +1446,7 @@ mod test_transformation {
         .into();
 
         assert_eq!(
-            transformation.typed_relabel_and_transform_at(&hierarchy, &x_equals_y_equals_z, vec![]),
+            transformation.transform_at(&hierarchy, &x_equals_y_equals_z, vec![]),
             Ok(z_equals_x_equals_y)
         );
 

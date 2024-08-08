@@ -53,9 +53,11 @@ fn main() {
             ).arg(
                 Arg::new("condition").help("String which the parser will match to trigger the interpretation.")
             ).arg(
-                Arg::new("any-integer").short('n').action(ArgAction::SetTrue)
+                Arg::new("any-integer").long("any-integer").short('n').action(ArgAction::SetTrue).help("Will attempt to interpret any integer as a value and set its type equal to that integer. Cannot be used with OutputType.")
             ).arg(
-                Arg::new("any-numeric").short('f').action(ArgAction::SetTrue)
+                Arg::new("any-numeric").long("any-numeric").short('f').action(ArgAction::SetTrue).help("Will attempt to interpret any number as a value and set its type equal to that number. Cannot be used with OutputType.")
+            ).arg(
+                Arg::new("arbitrary").long("arbitrary").short('a').action(ArgAction::SetTrue).help("Will treat the resulting symbol as arbitrary over its output type.")
                 )
             )
         .subcommand(Command::new("remove-interpretation").about("Remove an Interpretation from the Workspace by its index.")
