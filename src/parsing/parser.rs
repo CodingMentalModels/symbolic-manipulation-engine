@@ -274,6 +274,31 @@ mod test_parser {
     }
 
     #[test]
+    fn test_parser_continues_on_infix() {
+        let tokens = vec!["&".to_string(), "|".to_string()];
+
+        let and = Interpretation::infix_operator("&".into(), 2, "Boolean".into());
+        let or = Interpretation::infix_operator("|".into(), 1, "Boolean".into());
+        let to_predicate = |s: &str| Interpretation::singleton(s.into(), "Boolean".into());
+
+        let parser = Parser::new(vec![
+            and,
+            or,
+            to_predicate("p"),
+            to_predicate("q"),
+            to_predicate("r"),
+            to_predicate("s"),
+        ]);
+        let actual = parser.parse_from_string(tokens.clone(), "p&q|r");
+        let expected = parser.parse_from_string(tokens.clone(), "(p&q)|r");
+        assert_eq!(actual, expected);
+
+        let actual = parser.parse_from_string(tokens.clone(), "p|q&r");
+        let expected = parser.parse_from_string(tokens.clone(), "p|(q&r)");
+        assert_eq!(actual, expected);
+    }
+
+    #[test]
     fn test_parser_parses_p_implies_q() {
         let mut tokens = Tokenizer::new_with_tokens(vec!["=>".to_string()]).tokenize("p=>q");
 
