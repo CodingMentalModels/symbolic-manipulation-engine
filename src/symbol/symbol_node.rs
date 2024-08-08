@@ -479,7 +479,7 @@ impl SymbolNode {
         Ok(to_return)
     }
 
-    pub fn replace_arbitrary_from_predicate(
+    pub fn replace_arbitrary_using_predicate(
         &self,
         symbol: &Symbol,
         predicate: &Predicate,
@@ -496,7 +496,7 @@ impl SymbolNode {
 
         let mut new_children = Vec::new();
         for child in self.get_children() {
-            new_children.push(child.replace_arbitrary_from_predicate(symbol, predicate)?);
+            new_children.push(child.replace_arbitrary_using_predicate(symbol, predicate)?);
         }
         Ok(Self::new(self.root.clone(), new_children))
     }

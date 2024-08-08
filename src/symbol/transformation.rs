@@ -522,10 +522,10 @@ impl ExplicitTransformation {
             for predicate in substatement_predicates {
                 let new_from = self
                     .from
-                    .replace_arbitrary_from_predicate(arbitrary_node.get_symbol()?, &predicate)?;
+                    .replace_arbitrary_using_predicate(arbitrary_node.get_symbol()?, &predicate)?;
                 let new_to = self
                     .to
-                    .replace_arbitrary_from_predicate(arbitrary_node.get_symbol()?, &predicate)?;
+                    .replace_arbitrary_using_predicate(arbitrary_node.get_symbol()?, &predicate)?;
 
                 let transform = ExplicitTransformation::new(new_from, new_to);
                 to_return.insert(transform);
