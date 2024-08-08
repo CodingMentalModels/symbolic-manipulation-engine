@@ -204,7 +204,7 @@ impl Transformation {
         substatements: &HashSet<SymbolNode>,
     ) -> Result<HashSet<Self>, TransformationError> {
         match self {
-            Self::AdditionAlgorithm(_) => Ok(HashSet::new()),
+            Self::AdditionAlgorithm(_) => Ok(vec![self.clone()].into_iter().collect()),
             Self::ExplicitTransformation(t) => Ok(t
                 .instantiate_arbitrary_nodes(hierarchy, substatements)?
                 .into_iter()
