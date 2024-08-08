@@ -270,7 +270,6 @@ impl SymbolNode {
     }
 
     pub fn get_symbol(&self) -> Result<&Symbol, SymbolNodeError> {
-        // TODO Could we be missing symbols here because of Arbitrary Root?
         match &self.root {
             SymbolNodeRoot::Join => {
                 Err(SymbolNodeError::InvalidFunctionCalledOn(self.root.clone()))
