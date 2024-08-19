@@ -98,11 +98,15 @@ impl Transformation {
         };
 
         let mut to_return = base_case.clone();
+        let mut child_to_valid_transformations = HashMap::new();
         for potentially_transformed in base_case.iter() {
-            let child_to_valid_transformations =
-                self.get_child_to_valid_transformations_map(hierarchy, potentially_transformed);
+            self.update_child_to_valid_transformations_map(
+                &mut child_to_valid_transformations,
+                hierarchy,
+                potentially_transformed,
+            );
             let new_statements = self.apply_valid_transformations_to_children(
-                child_to_valid_transformations,
+                &child_to_valid_transformations,
                 potentially_transformed,
             );
             to_return = to_return.union(&new_statements).cloned().collect();
@@ -111,24 +115,25 @@ impl Transformation {
         return to_return;
     }
 
-    fn get_child_to_valid_transformations_map(
+    fn update_child_to_valid_transformations_map(
         &self,
+        child_to_valid_transformations: &mut HashMap<SymbolNode, HashSet<SymbolNode>>,
         hierarchy: &TypeHierarchy,
         statement: &SymbolNode,
-    ) -> HashMap<SymbolNode, HashSet<SymbolNode>> {
-        let mut child_to_valid_transformations = HashMap::new();
+    ) {
         for child in statement.get_children() {
-            let possible_transformations = self.get_valid_transformations(hierarchy, child);
-            if possible_transformations.len() > 0 {
-                child_to_valid_transformations.insert(child.clone(), possible_transformations);
+            if !child_to_valid_transformations.contains_key(child) {
+                let possible_transformations = self.get_valid_transformations(hierarchy, child);
+                if !possible_transformations.is_empty() {
+                    child_to_valid_transformations.insert(child.clone(), possible_transformations);
+                }
             }
         }
-        child_to_valid_transformations
     }
 
     fn apply_valid_transformations_to_children(
         &self,
-        child_to_valid_transformations: HashMap<SymbolNode, HashSet<SymbolNode>>,
+        child_to_valid_transformations: &HashMap<SymbolNode, HashSet<SymbolNode>>,
         statement: &SymbolNode,
     ) -> HashSet<SymbolNode> {
         let mut new_statements = vec![statement.clone()].into_iter().collect::<HashSet<_>>();
@@ -1057,12 +1062,14 @@ mod test_transformation {
                 .unwrap(),
         ];
 
+        let mut map = HashMap::new();
+        transformation.update_child_to_valid_transformations_map(
+            &mut map,
+            &hierarchy,
+            &x_equals_y_equals_z,
+        );
         assert_eq!(
-            transformation.apply_valid_transformations_to_children(
-                transformation
-                    .get_child_to_valid_transformations_map(&hierarchy, &x_equals_y_equals_z),
-                &x_equals_y_equals_z
-            ),
+            transformation.apply_valid_transformations_to_children(&map, &x_equals_y_equals_z),
             expected.into_iter().collect()
         );
 
@@ -1077,12 +1084,14 @@ mod test_transformation {
                 .unwrap(),
         ];
 
+        let mut map = HashMap::new();
+        transformation.update_child_to_valid_transformations_map(
+            &mut map,
+            &hierarchy,
+            &z_equals_x_equals_y,
+        );
         assert_eq!(
-            transformation.apply_valid_transformations_to_children(
-                transformation
-                    .get_child_to_valid_transformations_map(&hierarchy, &z_equals_x_equals_y),
-                &z_equals_x_equals_y
-            ),
+            transformation.apply_valid_transformations_to_children(&map, &z_equals_x_equals_y),
             expected.into_iter().collect()
         );
 
