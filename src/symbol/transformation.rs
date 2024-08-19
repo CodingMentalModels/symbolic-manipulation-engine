@@ -97,7 +97,6 @@ impl Transformation {
             _ => {}
         };
 
-        let mut to_return = base_case.clone();
         let mut child_to_valid_transformations = HashMap::new();
         for potentially_transformed in base_case.iter() {
             self.update_child_to_valid_transformations_map(
@@ -105,6 +104,10 @@ impl Transformation {
                 hierarchy,
                 potentially_transformed,
             );
+        }
+
+        let mut to_return = base_case.clone();
+        for potentially_transformed in base_case.iter() {
             let new_statements = self.apply_valid_transformations_to_children(
                 &child_to_valid_transformations,
                 potentially_transformed,
