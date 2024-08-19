@@ -101,7 +101,7 @@ impl Transformation {
         for potentially_transformed in base_case.iter() {
             let child_to_valid_transformations =
                 self.get_child_to_valid_transformations_map(hierarchy, potentially_transformed);
-            let new_statements = self.get_valid_child_transformations(
+            let new_statements = self.apply_valid_transformations_to_children(
                 child_to_valid_transformations,
                 potentially_transformed,
             );
@@ -126,7 +126,7 @@ impl Transformation {
         child_to_valid_transformations
     }
 
-    fn get_valid_child_transformations(
+    fn apply_valid_transformations_to_children(
         &self,
         child_to_valid_transformations: HashMap<SymbolNode, HashSet<SymbolNode>>,
         statement: &SymbolNode,
@@ -1058,7 +1058,7 @@ mod test_transformation {
         ];
 
         assert_eq!(
-            transformation.get_valid_child_transformations(
+            transformation.apply_valid_transformations_to_children(
                 transformation
                     .get_child_to_valid_transformations_map(&hierarchy, &x_equals_y_equals_z),
                 &x_equals_y_equals_z
@@ -1078,7 +1078,7 @@ mod test_transformation {
         ];
 
         assert_eq!(
-            transformation.get_valid_child_transformations(
+            transformation.apply_valid_transformations_to_children(
                 transformation
                     .get_child_to_valid_transformations_map(&hierarchy, &z_equals_x_equals_y),
                 &z_equals_x_equals_y
