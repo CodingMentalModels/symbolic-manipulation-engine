@@ -119,7 +119,9 @@ impl Transformation {
         let mut child_to_valid_transformations = HashMap::new();
         for child in statement.get_children() {
             let possible_transformations = self.get_valid_transformations(hierarchy, child);
-            child_to_valid_transformations.insert(child.clone(), possible_transformations);
+            if possible_transformations.len() > 0 {
+                child_to_valid_transformations.insert(child.clone(), possible_transformations);
+            }
         }
         child_to_valid_transformations
     }
@@ -134,8 +136,6 @@ impl Transformation {
         let n_subsets = 1 << child_to_valid_transformations.len();
         for bitmask in 0..n_subsets {
             // Bitmask indicates whether to take the child or its transformed versions
-            // TODO: There's a massive opportunity for optimization here by eliminating the cases where
-            // there are no transformations
 
             let mut transformed_statements =
                 vec![statement.clone()].into_iter().collect::<HashSet<_>>();
@@ -143,16 +143,17 @@ impl Transformation {
                 let mut updated_statements = transformed_statements.clone();
                 let should_transform_ith_child = bitmask & (1 << i) != 0;
                 if should_transform_ith_child {
-                    let transformed_children_set = child_to_valid_transformations
-                        .get(child)
-                        .expect("We constructed the map from the same vector.");
-                    for c in transformed_children_set {
-                        for transformed_statement in transformed_statements.iter() {
-                            let updated_statement = transformed_statement
-                                .clone()
-                                .with_child_replaced(i, c.clone())
-                                .expect("Child index is guaranteed to be in range.");
-                            updated_statements.insert(updated_statement);
+                    if let Some(transformed_children_set) =
+                        child_to_valid_transformations.get(child)
+                    {
+                        for c in transformed_children_set {
+                            for transformed_statement in transformed_statements.iter() {
+                                let updated_statement = transformed_statement
+                                    .clone()
+                                    .with_child_replaced(i, c.clone())
+                                    .expect("Child index is guaranteed to be in range.");
+                                updated_statements.insert(updated_statement);
+                            }
                         }
                     }
                 } else {
