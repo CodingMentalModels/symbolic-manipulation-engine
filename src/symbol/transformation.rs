@@ -99,24 +99,36 @@ impl Transformation {
 
         let mut to_return = base_case.clone();
         for potentially_transformed in base_case.iter() {
-            let new_statements =
-                self.get_valid_child_transformations(hierarchy, potentially_transformed);
+            let child_to_valid_transformations =
+                self.get_child_to_valid_transformations_map(hierarchy, potentially_transformed);
+            let new_statements = self.get_valid_child_transformations(
+                child_to_valid_transformations,
+                potentially_transformed,
+            );
             to_return = to_return.union(&new_statements).cloned().collect();
         }
 
         return to_return;
     }
 
-    fn get_valid_child_transformations(
+    fn get_child_to_valid_transformations_map(
         &self,
         hierarchy: &TypeHierarchy,
         statement: &SymbolNode,
-    ) -> HashSet<SymbolNode> {
+    ) -> HashMap<SymbolNode, HashSet<SymbolNode>> {
         let mut child_to_valid_transformations = HashMap::new();
         for child in statement.get_children() {
             let possible_transformations = self.get_valid_transformations(hierarchy, child);
-            child_to_valid_transformations.insert(child, possible_transformations);
+            child_to_valid_transformations.insert(child.clone(), possible_transformations);
         }
+        child_to_valid_transformations
+    }
+
+    fn get_valid_child_transformations(
+        &self,
+        child_to_valid_transformations: HashMap<SymbolNode, HashSet<SymbolNode>>,
+        statement: &SymbolNode,
+    ) -> HashSet<SymbolNode> {
         let mut new_statements = vec![statement.clone()].into_iter().collect::<HashSet<_>>();
 
         let n_subsets = 1 << child_to_valid_transformations.len();
@@ -1045,7 +1057,11 @@ mod test_transformation {
         ];
 
         assert_eq!(
-            transformation.get_valid_child_transformations(&hierarchy, &x_equals_y_equals_z),
+            transformation.get_valid_child_transformations(
+                transformation
+                    .get_child_to_valid_transformations_map(&hierarchy, &x_equals_y_equals_z),
+                &x_equals_y_equals_z
+            ),
             expected.into_iter().collect()
         );
 
@@ -1061,7 +1077,11 @@ mod test_transformation {
         ];
 
         assert_eq!(
-            transformation.get_valid_child_transformations(&hierarchy, &z_equals_x_equals_y),
+            transformation.get_valid_child_transformations(
+                transformation
+                    .get_child_to_valid_transformations_map(&hierarchy, &z_equals_x_equals_y),
+                &z_equals_x_equals_y
+            ),
             expected.into_iter().collect()
         );
 
