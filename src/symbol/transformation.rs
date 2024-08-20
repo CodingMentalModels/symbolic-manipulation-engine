@@ -153,11 +153,11 @@ impl Transformation {
                     _ => {}
                 };
 
-                println!(
-                    "Applying valid transformations to children ({:?}).",
-                    current_statement.get_n_children()
-                );
                 for to_apply in valid_roots {
+                    println!(
+                        "Applying valid transformations to children ({:?}).",
+                        to_apply.get_n_children()
+                    );
                     let result = self.apply_valid_transformations_to_children(
                         &child_to_valid_transformations,
                         &to_apply,
@@ -199,9 +199,20 @@ impl Transformation {
         child_to_valid_transformations: &HashMap<SymbolNode, HashSet<SymbolNode>>,
         statement: &SymbolNode,
     ) -> HashSet<SymbolNode> {
+        println!(
+            "Applying valid transformations ({:?}) to children ({:?})",
+            child_to_valid_transformations.len(),
+            statement.get_n_children()
+        );
+        let children = statement.get_children();
+        let filtered_map: HashMap<SymbolNode, HashSet<SymbolNode>> = child_to_valid_transformations
+            .clone()
+            .into_iter()
+            .filter(|(k, _)| children.contains(k))
+            .collect();
         let mut new_statements = vec![statement.clone()].into_iter().collect::<HashSet<_>>();
 
-        let n_subsets = 1 << child_to_valid_transformations.len();
+        let n_subsets = 1 << filtered_map.len();
         for bitmask in 0..n_subsets {
             // Bitmask indicates whether to take the child or its transformed versions
 
@@ -211,9 +222,7 @@ impl Transformation {
                 let mut updated_statements = transformed_statements.clone();
                 let should_transform_ith_child = bitmask & (1 << i) != 0;
                 if should_transform_ith_child {
-                    if let Some(transformed_children_set) =
-                        child_to_valid_transformations.get(child)
-                    {
+                    if let Some(transformed_children_set) = filtered_map.get(child) {
                         for c in transformed_children_set {
                             for transformed_statement in transformed_statements.iter() {
                                 let updated_statement = transformed_statement
