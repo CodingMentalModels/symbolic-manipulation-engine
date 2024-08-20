@@ -1,6 +1,6 @@
 use std::collections::{HashMap, HashSet};
 
-use crate::constants::MAX_TRANSFORMATIONS_FOR_GET_VALID_TRANSFORMATIONS;
+use crate::constants::MAX_ADDITIONAL_VALID_TRANSFORMATION_DEPTH;
 use crate::parsing::interpretation::Interpretation;
 use crate::symbol::symbol_node::{Symbol, SymbolNode, SymbolNodeError};
 use crate::symbol::symbol_type::{Type, TypeError};
@@ -90,40 +90,36 @@ impl Transformation {
         hierarchy: &TypeHierarchy,
         statement: &SymbolNode,
     ) -> HashSet<SymbolNode> {
-        let mut call_stack = vec![(statement.clone(), false, 0)];
+        let mut call_stack = vec![(statement.clone(), false)];
         let mut already_processed: HashSet<SymbolNode> = HashSet::new();
         let mut child_to_valid_transformations: HashMap<SymbolNode, HashSet<SymbolNode>> =
             HashMap::new();
         let mut to_return = HashSet::new();
+        let max_depth = statement.get_depth() + MAX_ADDITIONAL_VALID_TRANSFORMATION_DEPTH;
 
         println!("get_valid_transformations started");
-        while let Some((current_statement, are_children_processed, n_transformations)) =
-            call_stack.pop()
-        {
+        while let Some((current_statement, are_children_processed)) = call_stack.pop() {
             println!(
-                "Processing: {:?} ({:?}, {:?}); n = {:?}",
+                "Processing: {:?} ({:?}); n = {:?}",
                 current_statement.to_symbol_string(),
                 are_children_processed,
-                n_transformations,
                 child_to_valid_transformations.len(),
             );
 
             // Clear to_return between calls to avoid returning children
             to_return = HashSet::new();
 
-            if (!are_children_processed)
-                && (n_transformations < MAX_TRANSFORMATIONS_FOR_GET_VALID_TRANSFORMATIONS)
-            {
+            if !are_children_processed {
                 // Push the statement back onto the stack with children marked as processed
                 // since we're about to process them
-                call_stack.push((current_statement.clone(), true, n_transformations));
+                call_stack.push((current_statement.clone(), true));
                 already_processed.insert(current_statement.clone());
 
                 // Push the children on to be processed first
                 println!("Adding children.");
                 for child in current_statement.get_children() {
                     if !already_processed.contains(&child) {
-                        call_stack.push((child.clone(), false, n_transformations));
+                        call_stack.push((child.clone(), false));
                     }
                 }
             } else {
@@ -135,8 +131,8 @@ impl Transformation {
                         println!("Transformed {:?}", current_statement.to_symbol_string());
 
                         // Also push the transformed statement on so that it gets processed
-                        if !already_processed.contains(&result) {
-                            call_stack.push((result.clone(), false, n_transformations + 1));
+                        if !already_processed.contains(&result) && result.get_depth() <= max_depth {
+                            call_stack.push((result.clone(), false));
                         }
                         valid_roots.insert(result.clone());
 
@@ -161,6 +157,7 @@ impl Transformation {
                     let result = self.apply_valid_transformations_to_children(
                         &child_to_valid_transformations,
                         &to_apply,
+                        None,
                     );
                     to_return.extend(result.clone());
 
@@ -198,6 +195,7 @@ impl Transformation {
         &self,
         child_to_valid_transformations: &HashMap<SymbolNode, HashSet<SymbolNode>>,
         statement: &SymbolNode,
+        max_additional_depth: Option<usize>,
     ) -> HashSet<SymbolNode> {
         let children = statement.get_children();
         let filtered_map: HashMap<SymbolNode, HashSet<SymbolNode>> = child_to_valid_transformations
@@ -206,9 +204,14 @@ impl Transformation {
             .filter(|(k, _)| children.contains(k))
             .collect();
         println!(
-            "Applying valid transformations ({:?}) to children ({:?})",
+            "Applying valid transformations ({:?}) to children ({:?}){}",
             filtered_map.len(),
-            statement.get_n_children()
+            statement.get_n_children(),
+            if let Some(d) = max_additional_depth {
+                format!(" using max depth {}", d)
+            } else {
+                "".to_string()
+            }
         );
 
         let mut new_statements = vec![statement.clone()].into_iter().collect::<HashSet<_>>();
@@ -242,6 +245,14 @@ impl Transformation {
             new_statements = new_statements
                 .union(&transformed_statements)
                 .cloned()
+                .collect();
+        }
+        if let Some(d) = max_additional_depth {
+            let max_depth = statement.get_depth() + d;
+            println!("Truncating to {:?}", max_depth);
+            new_statements = new_statements
+                .into_iter()
+                .filter(|s| s.get_depth() <= max_depth)
                 .collect();
         }
         new_statements
@@ -1142,7 +1153,11 @@ mod test_transformation {
             &x_equals_y_equals_z,
         );
         assert_eq!(
-            transformation.apply_valid_transformations_to_children(&map, &x_equals_y_equals_z),
+            transformation.apply_valid_transformations_to_children(
+                &map,
+                &x_equals_y_equals_z,
+                None
+            ),
             expected.into_iter().collect()
         );
 
@@ -1164,7 +1179,11 @@ mod test_transformation {
             &z_equals_x_equals_y,
         );
         assert_eq!(
-            transformation.apply_valid_transformations_to_children(&map, &z_equals_x_equals_y),
+            transformation.apply_valid_transformations_to_children(
+                &map,
+                &z_equals_x_equals_y,
+                None
+            ),
             expected.into_iter().collect()
         );
 
