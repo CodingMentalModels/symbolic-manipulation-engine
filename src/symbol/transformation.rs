@@ -1,5 +1,6 @@
 use std::collections::{HashMap, HashSet};
 
+use crate::constants::MAX_TRANSFORMATIONS_FOR_GET_VALID_TRANSFORMATIONS;
 use crate::parsing::interpretation::Interpretation;
 use crate::symbol::symbol_node::{Symbol, SymbolNode, SymbolNodeError};
 use crate::symbol::symbol_type::{Type, TypeError};
@@ -89,33 +90,55 @@ impl Transformation {
         hierarchy: &TypeHierarchy,
         statement: &SymbolNode,
     ) -> HashSet<SymbolNode> {
-        let mut call_stack = vec![(statement.clone(), false)];
+        let mut call_stack = vec![(statement.clone(), false, 0)];
         let mut already_processed: HashSet<SymbolNode> = HashSet::new();
         let mut child_to_valid_transformations: HashMap<SymbolNode, HashSet<SymbolNode>> =
             HashMap::new();
         let mut to_return = HashSet::new();
 
         println!("get_valid_transformations started");
-        while let Some((current_statement, are_children_processed)) = call_stack.pop() {
+        while let Some((current_statement, are_children_processed, n_transformations)) =
+            call_stack.pop()
+        {
             println!(
-                "Processing: {:?} ({:?}); n = {:?}",
+                "Processing: {:?} ({:?}, {:?}); n = {:?}",
                 current_statement.to_symbol_string(),
                 are_children_processed,
+                n_transformations,
                 child_to_valid_transformations.len(),
             );
-            if !are_children_processed {
+
+            // Clear to_return between calls to avoid returning children
+            to_return = HashSet::new();
+
+            if (!are_children_processed)
+                && (n_transformations < MAX_TRANSFORMATIONS_FOR_GET_VALID_TRANSFORMATIONS)
+            {
                 // Push the statement back onto the stack with children marked as processed
                 // since we're about to process them
-                call_stack.push((current_statement.clone(), true));
+                call_stack.push((current_statement.clone(), true, n_transformations));
                 already_processed.insert(current_statement.clone());
 
+                // Push the children on to be processed first
+                println!("Adding children.");
+                for child in current_statement.get_children() {
+                    if !already_processed.contains(&child) {
+                        call_stack.push((child.clone(), false, n_transformations));
+                    }
+                }
+            } else {
+                let mut valid_roots = vec![current_statement.clone()]
+                    .into_iter()
+                    .collect::<HashSet<_>>();
                 match self.transform_at(hierarchy, &current_statement, vec![]) {
                     Ok(result) => {
                         println!("Transformed {:?}", current_statement.to_symbol_string());
+
                         // Also push the transformed statement on so that it gets processed
                         if !already_processed.contains(&result) {
-                            call_stack.push((result.clone(), false));
+                            call_stack.push((result.clone(), false, n_transformations + 1));
                         }
+                        valid_roots.insert(result.clone());
 
                         // Log the transformation as a valid one
                         child_to_valid_transformations
@@ -130,28 +153,45 @@ impl Transformation {
                     _ => {}
                 };
 
-                // Push the children on to be processed first
-                println!("Adding children.");
-                for child in current_statement.get_children() {
-                    if !already_processed.contains(&child) {
-                        call_stack.push((child.clone(), false));
-                    }
-                }
-            } else {
-                let mut function_return: HashSet<SymbolNode> =
-                    vec![current_statement.clone()].into_iter().collect();
-                println!("Applying valid transformations to children.");
-                let new_statements = self.apply_valid_transformations_to_children(
-                    &child_to_valid_transformations,
-                    &current_statement,
+                println!(
+                    "Applying valid transformations to children ({:?}).",
+                    current_statement.get_n_children()
                 );
-                function_return = function_return.union(&new_statements).cloned().collect();
+                for to_apply in valid_roots {
+                    let result = self.apply_valid_transformations_to_children(
+                        &child_to_valid_transformations,
+                        &to_apply,
+                    );
+                    to_return.extend(result.clone());
 
-                to_return.extend(function_return);
+                    // Log the child transformations valid
+                    child_to_valid_transformations
+                        .entry(to_apply.clone())
+                        .and_modify(|value| {
+                            value.extend(result.clone());
+                        })
+                        .or_insert_with(|| result.clone());
+                }
             }
         }
 
         to_return
+    }
+
+    fn update_child_to_valid_transformations_map(
+        &self,
+        child_to_valid_transformations: &mut HashMap<SymbolNode, HashSet<SymbolNode>>,
+        hierarchy: &TypeHierarchy,
+        statement: &SymbolNode,
+    ) {
+        for child in statement.get_children() {
+            if !child_to_valid_transformations.contains_key(child) {
+                let possible_transformations = self.get_valid_transformations(hierarchy, child);
+                if !possible_transformations.is_empty() {
+                    child_to_valid_transformations.insert(child.clone(), possible_transformations);
+                }
+            }
+        }
     }
 
     fn apply_valid_transformations_to_children(

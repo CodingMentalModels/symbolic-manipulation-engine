@@ -12,3 +12,6 @@ pub const COMMA_PRECEDENCE: u8 = 99;
 pub const SERIALIZED_OBJECT_TYPE: &str = "__object_type_do_not_overload";
 pub const SERIALIZED_DELIMITER_TYPE: &str = "__delimiter_type_do_not_overload";
 pub const SERIALIZED_JOIN_TYPE: &str = "__join_type_do_not_overload";
+
+// Transforming
+pub const MAX_TRANSFORMATIONS_FOR_GET_VALID_TRANSFORMATIONS: usize = 5;
