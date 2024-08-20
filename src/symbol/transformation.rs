@@ -199,17 +199,18 @@ impl Transformation {
         child_to_valid_transformations: &HashMap<SymbolNode, HashSet<SymbolNode>>,
         statement: &SymbolNode,
     ) -> HashSet<SymbolNode> {
-        println!(
-            "Applying valid transformations ({:?}) to children ({:?})",
-            child_to_valid_transformations.len(),
-            statement.get_n_children()
-        );
         let children = statement.get_children();
         let filtered_map: HashMap<SymbolNode, HashSet<SymbolNode>> = child_to_valid_transformations
             .clone()
             .into_iter()
             .filter(|(k, _)| children.contains(k))
             .collect();
+        println!(
+            "Applying valid transformations ({:?}) to children ({:?})",
+            filtered_map.len(),
+            statement.get_n_children()
+        );
+
         let mut new_statements = vec![statement.clone()].into_iter().collect::<HashSet<_>>();
 
         let n_subsets = 1 << filtered_map.len();
