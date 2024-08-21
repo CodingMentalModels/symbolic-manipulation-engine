@@ -90,7 +90,7 @@ impl Transformation {
         hierarchy: &TypeHierarchy,
         statement: &SymbolNode,
     ) -> HashSet<SymbolNode> {
-        let mut call_stack = vec![(statement.clone(), false)];
+        let mut call_stack = vec![(statement.clone(), false, 0)];
         let mut already_processed: HashSet<SymbolNode> = HashSet::new();
         let mut child_to_valid_transformations: HashMap<SymbolNode, HashSet<SymbolNode>> =
             HashMap::new();
@@ -98,7 +98,7 @@ impl Transformation {
         let max_depth = statement.get_depth() + MAX_ADDITIONAL_VALID_TRANSFORMATION_DEPTH;
 
         println!("get_valid_transformations started");
-        while let Some((current_statement, are_children_processed)) = call_stack.pop() {
+        while let Some((current_statement, are_children_processed, depth)) = call_stack.pop() {
             println!(
                 "Processing: {:?} ({:?}); n = {:?}",
                 current_statement.to_symbol_string(),
@@ -112,14 +112,14 @@ impl Transformation {
             if !are_children_processed {
                 // Push the statement back onto the stack with children marked as processed
                 // since we're about to process them
-                call_stack.push((current_statement.clone(), true));
+                call_stack.push((current_statement.clone(), true, depth));
                 already_processed.insert(current_statement.clone());
 
                 // Push the children on to be processed first
                 println!("Adding children.");
                 for child in current_statement.get_children() {
                     if !already_processed.contains(&child) {
-                        call_stack.push((child.clone(), false));
+                        call_stack.push((child.clone(), false, depth + 1));
                     }
                 }
             } else {
@@ -128,11 +128,17 @@ impl Transformation {
                     .collect::<HashSet<_>>();
                 match self.transform_at(hierarchy, &current_statement, vec![]) {
                     Ok(result) => {
-                        println!("Transformed {:?}", current_statement.to_symbol_string());
-
                         // Also push the transformed statement on so that it gets processed
-                        if !already_processed.contains(&result) && result.get_depth() <= max_depth {
-                            call_stack.push((result.clone(), false));
+                        let final_max_depth = max_depth.saturating_sub(depth);
+                        println!(
+                            "Transformed {:?} (final_max_depth: {:?})",
+                            current_statement.to_symbol_string(),
+                            final_max_depth
+                        );
+                        if (!already_processed.contains(&result))
+                            && (result.get_depth() <= final_max_depth)
+                        {
+                            call_stack.push((result.clone(), false, depth));
                         }
                         valid_roots.insert(result.clone());
 
