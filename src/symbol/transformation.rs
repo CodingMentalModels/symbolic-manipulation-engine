@@ -97,6 +97,10 @@ impl Transformation {
         hierarchy: &TypeHierarchy,
         statement: &SymbolNode,
     ) -> HashSet<SymbolNode> {
+        // Getting valid transformations can recurse indefinitely, so we use
+        // MAX_ADDITIONAL_VALID_TRANSFORMATION_DEPTH to limit.
+        // We also implement our own call stack to avoid stack overflows and make it easier to
+        // inspect the contents
         let mut call_stack = vec![(statement.clone(), true, false, 0)];
         let mut already_processed: HashSet<SymbolNode> = HashSet::new();
         let mut child_to_valid_transformations: HashMap<SymbolNode, HashSet<SymbolNode>> =
