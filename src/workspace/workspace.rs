@@ -324,15 +324,20 @@ impl Workspace {
         Ok(())
     }
 
-    pub fn get_valid_transformations(&self, partial_statement: &str) -> Vec<SymbolNode> {
+    pub fn get_valid_transformations(
+        &self,
+        partial_statement: &str,
+    ) -> Result<Vec<SymbolNode>, WorkspaceError> {
         // TODO Try to complete partial statements
         let desired = match self.parse_from_string(partial_statement) {
             Err(_) => {
-                return vec![];
+                return Ok(vec![]);
             }
             Ok(s) => s,
         };
-        for transformation in self.get_transformations() {
+        let instantiated_transformations =
+            self.get_instantiated_transformations_with_indices(Some(desired.clone()))?;
+        for (transformation, _) in instantiated_transformations {
             let statements = if transformation.is_joint_transform() {
                 self.get_statement_pairs()
             } else {
@@ -344,11 +349,11 @@ impl Workspace {
                 if valid_transformations.contains(&desired)
                     && !self.get_statements().contains(&desired)
                 {
-                    return vec![desired.clone()];
+                    return Ok(vec![desired.clone()]);
                 }
             }
         }
-        return vec![];
+        return Ok(vec![]);
     }
 
     pub fn try_transform_into_parsed(
@@ -1063,6 +1068,9 @@ mod test_workspace {
         types
             .add_chain(vec!["Proposition".into(), "^".into()])
             .unwrap();
+        types
+            .add_child_to_parent("|".into(), "Proposition".into())
+            .unwrap();
 
         let interpretations = vec![
             Interpretation::infix_operator("=".into(), 1, "=".into()),
@@ -1074,11 +1082,13 @@ mod test_workspace {
             Interpretation::singleton("a".into(), "Integer".into()),
             Interpretation::singleton("b".into(), "Integer".into()),
             Interpretation::singleton("c".into(), "Integer".into()),
-            Interpretation::infix_operator("^".into(), 1, "^".into()),
+            Interpretation::infix_operator("^".into(), 7, "^".into()),
+            Interpretation::infix_operator("|".into(), 7, "^".into()),
             Interpretation::singleton("p".into(), "Proposition".into()),
             Interpretation::singleton("q".into(), "Proposition".into()),
             Interpretation::singleton("r".into(), "Proposition".into()),
             Interpretation::singleton("s".into(), "Proposition".into()),
+            Interpretation::arbitrary_functional("Any".into(), 98, "Proposition".into()),
         ];
         let mut workspace = Workspace::new(types.clone(), vec![], interpretations.clone());
         workspace
@@ -1095,17 +1105,23 @@ mod test_workspace {
 
         workspace.add_parsed_hypothesis("x+y").unwrap();
         let expected = vec![workspace.parse_from_string("y+x").unwrap()];
-        assert_eq!(workspace.get_valid_transformations("y+x"), expected);
+        assert_eq!(
+            workspace.get_valid_transformations("y+x").unwrap(),
+            expected
+        );
 
         workspace.add_parsed_hypothesis("j+k").unwrap();
         assert_eq!(workspace.get_statements().len(), 2);
         let expected = vec![workspace.parse_from_string("k+j").unwrap()];
-        assert_eq!(workspace.get_valid_transformations("k+j"), expected);
+        assert_eq!(
+            workspace.get_valid_transformations("k+j").unwrap(),
+            expected
+        );
 
         workspace.add_parsed_hypothesis("a+(b+c)").unwrap();
         let expected = workspace.parse_from_string("(b+c)+a").unwrap();
         assert_eq!(
-            workspace.get_valid_transformations("(b+c)+a"),
+            workspace.get_valid_transformations("(b+c)+a").unwrap(),
             vec![expected]
         );
 
@@ -1125,7 +1141,7 @@ mod test_workspace {
         workspace.add_parsed_hypothesis("a+(b+c)").unwrap();
         let expected = workspace.parse_from_string("a+(c+b)").unwrap();
         assert_eq!(
-            workspace.get_valid_transformations("a+(c+b)"),
+            workspace.get_valid_transformations("a+(c+b)").unwrap(),
             vec![expected]
         );
 
@@ -1138,10 +1154,28 @@ mod test_workspace {
         workspace.add_parsed_hypothesis("s").unwrap();
 
         let expected = workspace.parse_from_string("r^s").unwrap();
-        assert_eq!(workspace.get_valid_transformations("r^s"), vec![expected]);
+        assert_eq!(
+            workspace.get_valid_transformations("r^s").unwrap(),
+            vec![expected]
+        );
 
         let expected = workspace.parse_from_string("s^r").unwrap();
-        assert_eq!(workspace.get_valid_transformations("s^r"), vec![expected]);
+        assert_eq!(
+            workspace.get_valid_transformations("s^r").unwrap(),
+            vec![expected]
+        );
+
+        let mut workspace = Workspace::new(types.clone(), vec![], interpretations.clone());
+        workspace.add_parsed_hypothesis("p=q").unwrap();
+        workspace
+            .add_parsed_transformation("p=q", "Any(p)=Any(q)")
+            .unwrap();
+
+        let expected = workspace.parse_from_string("p^q=q^q").unwrap();
+        assert_eq!(
+            workspace.get_valid_transformations("p^q=q^q").unwrap(),
+            vec![expected]
+        )
     }
 
     #[test]

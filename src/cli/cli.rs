@@ -237,6 +237,7 @@ impl Cli {
                 let serialized_result = to_string(
                     &workspace
                         .get_valid_transformations(partial_statement)
+                        .map_err(|e| format!("Error getting valid transformations: {:?}", e))?
                         .into_iter()
                         .map(|n| n.to_interpreted_string(workspace.get_interpretations()))
                         .collect::<Vec<_>>(),
