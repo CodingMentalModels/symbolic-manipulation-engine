@@ -87,7 +87,7 @@ impl Cli {
     pub fn ls(&self) -> Result<String, String> {
         self.load_workspace()?
             .to_json()
-            .map_err(|e| format!("Serialization Error: {:?}", e).to_string())
+            .map_err(|e| format!("Serialization Error during ls: {:?}", e).to_string())
     }
 
     pub fn add_interpretation(&mut self, sub_matches: &ArgMatches) -> Result<String, String> {
@@ -377,7 +377,7 @@ impl Cli {
             .map(|s| s.to_string())
             .collect();
         serde_json::to_string(&names)
-            .map_err(|e| format!("Serialization Error: {:?}", e).to_string())
+            .map_err(|e| format!("Serialization Error during ls_contexts: {:?}", e).to_string())
     }
 
     fn update_workspace(&self, workspace: Workspace) -> Result<(), String> {

@@ -1,5 +1,6 @@
 use std::collections::{HashMap, HashSet};
 
+use crate::constants::MAX_ADDITIONAL_VALID_TRANSFORMATION_DEPTH;
 use crate::parsing::interpretation::Interpretation;
 use crate::symbol::symbol_node::{Symbol, SymbolNode, SymbolNodeError};
 use crate::symbol::symbol_type::{Type, TypeError};
@@ -34,6 +35,13 @@ impl From<ApplyToBothSidesTransformation> for Transformation {
 }
 
 impl Transformation {
+    pub fn to_symbol_string(&self) -> String {
+        match self {
+            Self::ExplicitTransformation(t) => t.to_symbol_string(),
+            Self::AdditionAlgorithm(t) => t.to_symbol_string(),
+            Self::ApplyToBothSidesTransformation(t) => t.to_symbol_string(),
+        }
+    }
     pub fn transform(
         &self,
         hierarchy: &TypeHierarchy,
@@ -89,41 +97,103 @@ impl Transformation {
         hierarchy: &TypeHierarchy,
         statement: &SymbolNode,
     ) -> HashSet<SymbolNode> {
-        let mut base_case = vec![statement.clone()].into_iter().collect::<HashSet<_>>();
-        match self.transform_at(hierarchy, statement, vec![]) {
-            Ok(result) => {
-                base_case.insert(result);
-            }
-            _ => {}
-        };
+        // Getting valid transformations can recurse indefinitely, so we use
+        // MAX_ADDITIONAL_VALID_TRANSFORMATION_DEPTH to limit.
+        // We also implement our own call stack to avoid stack overflows and make it easier to
+        // inspect the contents
+        let mut call_stack = vec![(statement.clone(), true, false, 0)];
+        let mut already_processed: HashSet<SymbolNode> = HashSet::new();
+        let mut child_to_valid_transformations: HashMap<SymbolNode, HashSet<SymbolNode>> =
+            HashMap::new();
+        let mut to_return = HashSet::new();
+        let max_depth = statement.get_depth() + MAX_ADDITIONAL_VALID_TRANSFORMATION_DEPTH;
 
-        let mut to_return = base_case.clone();
-        for potentially_transformed in base_case.iter() {
-            let new_statements =
-                self.get_valid_child_transformations(hierarchy, potentially_transformed);
-            to_return = to_return.union(&new_statements).cloned().collect();
+        while let Some((current_statement, should_return, are_children_processed, depth)) =
+            call_stack.pop()
+        {
+            if !are_children_processed {
+                // Push the statement back onto the stack with children marked as processed
+                // since we're about to process them
+                call_stack.push((current_statement.clone(), should_return, true, depth));
+                already_processed.insert(current_statement.clone());
+
+                // Push the children on to be processed first and don't return them
+                for child in current_statement.get_children() {
+                    if !already_processed.contains(&child) {
+                        call_stack.push((child.clone(), false, false, depth + 1));
+                    }
+                }
+            } else {
+                let mut valid_roots = vec![current_statement.clone()]
+                    .into_iter()
+                    .collect::<HashSet<_>>();
+                match self.transform_at(hierarchy, &current_statement, vec![]) {
+                    Ok(result) => {
+                        // Also push the transformed statement on so that it gets processed
+                        let final_max_depth = max_depth.saturating_sub(depth);
+
+                        valid_roots.insert(result.clone());
+                        if (!already_processed.contains(&result))
+                            && (result.get_depth() <= final_max_depth)
+                        {
+                            call_stack.push((result.clone(), should_return, false, depth));
+
+                            // Log the transformation as a valid one
+                            child_to_valid_transformations
+                                .entry(current_statement.clone())
+                                .and_modify(|value| {
+                                    value.insert(result.clone());
+                                })
+                                .or_insert_with(|| {
+                                    vec![result.clone()].into_iter().collect::<HashSet<_>>()
+                                });
+                        }
+                    }
+                    _ => {}
+                };
+
+                for to_apply in valid_roots {
+                    let result = self.apply_valid_transformations_to_children(
+                        &child_to_valid_transformations,
+                        &to_apply,
+                        None,
+                    );
+                    if should_return {
+                        to_return.extend(result.clone());
+                    }
+
+                    // Log the child transformations valid
+                    child_to_valid_transformations
+                        .entry(to_apply.clone())
+                        .and_modify(|value| {
+                            value.extend(result.clone());
+                        })
+                        .or_insert_with(|| result.clone());
+                }
+            }
         }
 
-        return to_return;
+        to_return
     }
 
-    fn get_valid_child_transformations(
+    fn apply_valid_transformations_to_children(
         &self,
-        hierarchy: &TypeHierarchy,
+        child_to_valid_transformations: &HashMap<SymbolNode, HashSet<SymbolNode>>,
         statement: &SymbolNode,
+        max_additional_depth: Option<usize>,
     ) -> HashSet<SymbolNode> {
-        let mut child_to_valid_transformations = HashMap::new();
-        for child in statement.get_children() {
-            let possible_transformations = self.get_valid_transformations(hierarchy, child);
-            child_to_valid_transformations.insert(child, possible_transformations);
-        }
+        let children = statement.get_children();
+        let filtered_map: HashMap<SymbolNode, HashSet<SymbolNode>> = child_to_valid_transformations
+            .clone()
+            .into_iter()
+            .filter(|(k, _)| children.contains(k))
+            .collect();
+
         let mut new_statements = vec![statement.clone()].into_iter().collect::<HashSet<_>>();
 
-        let n_subsets = 1 << child_to_valid_transformations.len();
+        let n_subsets = 1 << filtered_map.len();
         for bitmask in 0..n_subsets {
             // Bitmask indicates whether to take the child or its transformed versions
-            // TODO: There's a massive opportunity for optimization here by eliminating the cases where
-            // there are no transformations
 
             let mut transformed_statements =
                 vec![statement.clone()].into_iter().collect::<HashSet<_>>();
@@ -131,16 +201,15 @@ impl Transformation {
                 let mut updated_statements = transformed_statements.clone();
                 let should_transform_ith_child = bitmask & (1 << i) != 0;
                 if should_transform_ith_child {
-                    let transformed_children_set = child_to_valid_transformations
-                        .get(child)
-                        .expect("We constructed the map from the same vector.");
-                    for c in transformed_children_set {
-                        for transformed_statement in transformed_statements.iter() {
-                            let updated_statement = transformed_statement
-                                .clone()
-                                .with_child_replaced(i, c.clone())
-                                .expect("Child index is guaranteed to be in range.");
-                            updated_statements.insert(updated_statement);
+                    if let Some(transformed_children_set) = filtered_map.get(child) {
+                        for c in transformed_children_set {
+                            for transformed_statement in transformed_statements.iter() {
+                                let updated_statement = transformed_statement
+                                    .clone()
+                                    .with_child_replaced(i, c.clone())
+                                    .expect("Child index is guaranteed to be in range.");
+                                updated_statements.insert(updated_statement);
+                            }
                         }
                     }
                 } else {
@@ -151,6 +220,13 @@ impl Transformation {
             new_statements = new_statements
                 .union(&transformed_statements)
                 .cloned()
+                .collect();
+        }
+        if let Some(d) = max_additional_depth {
+            let max_depth = statement.get_depth() + d;
+            new_statements = new_statements
+                .into_iter()
+                .filter(|s| s.get_depth() <= max_depth)
                 .collect();
         }
         new_statements
@@ -233,6 +309,10 @@ impl AdditionAlgorithm {
         }
     }
 
+    pub fn to_symbol_string(&self) -> String {
+        format!("AdditionAlgorithm({})", self.operator.to_string())
+    }
+
     pub fn get_operator(&self) -> Symbol {
         self.operator.clone()
     }
@@ -308,6 +388,14 @@ impl ApplyToBothSidesTransformation {
             symbol,
             transformation,
         }
+    }
+
+    pub fn to_symbol_string(&self) -> String {
+        format!(
+            "Apply {} to both sides of {}",
+            self.transformation.to_symbol_string(),
+            self.symbol.to_string()
+        )
     }
 
     pub fn get_symbol(&self) -> &Symbol {
@@ -467,6 +555,14 @@ impl ExplicitTransformation {
 
     pub fn to_string(&self) -> String {
         format!("{} -> {}", self.from.to_string(), self.to.to_string())
+    }
+
+    pub fn to_symbol_string(&self) -> String {
+        format!(
+            "{} -> {}",
+            self.from.to_symbol_string(),
+            self.to.to_symbol_string()
+        )
     }
 
     pub fn to_interpreted_string(&self, interpretations: &Vec<Interpretation>) -> String {
@@ -1036,34 +1132,6 @@ mod test_transformation {
         let x_equals_y_equals_z = parser
             .parse_from_string(custom_tokens.clone(), "x=y=z") // ((x=y)=z)
             .unwrap();
-
-        let expected = vec![
-            x_equals_y_equals_z.clone(),
-            parser
-                .parse_from_string(custom_tokens.clone(), "y=x=z") // ((x=y)=z) => ((y=x)=z)
-                .unwrap(),
-        ];
-
-        assert_eq!(
-            transformation.get_valid_child_transformations(&hierarchy, &x_equals_y_equals_z),
-            expected.into_iter().collect()
-        );
-
-        let z_equals_x_equals_y = parser
-            .parse_from_string(custom_tokens.clone(), "z=(x=y)")
-            .unwrap();
-
-        let expected = vec![
-            z_equals_x_equals_y.clone(),
-            parser
-                .parse_from_string(custom_tokens.clone(), "z=(y=x)")
-                .unwrap(),
-        ];
-
-        assert_eq!(
-            transformation.get_valid_child_transformations(&hierarchy, &z_equals_x_equals_y),
-            expected.into_iter().collect()
-        );
 
         let expected = vec![
             x_equals_y_equals_z.clone(),
