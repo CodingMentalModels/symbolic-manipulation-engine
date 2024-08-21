@@ -272,6 +272,15 @@ impl Workspace {
         &self.transformations
     }
 
+    pub fn get_transformations_with_indices(&self) -> Vec<(Transformation, TransformationIndex)> {
+        self.transformations
+            .clone()
+            .into_iter()
+            .enumerate()
+            .map(|(i, t)| (t, i))
+            .collect()
+    }
+
     pub fn get_transformation(
         &self,
         index: TransformationIndex,
@@ -362,8 +371,8 @@ impl Workspace {
             return Err(WorkspaceError::ContainsArbitraryNode);
         }
         let instantiated_transformations =
-            self.get_instantiated_transformations(Some(desired.clone()))?;
-        for (transform_idx, transform) in instantiated_transformations.iter().enumerate() {
+            self.get_instantiated_transformations_with_indices(Some(desired.clone()))?;
+        for (transform, transform_idx) in instantiated_transformations {
             let statements = if transform.is_joint_transform() {
                 self.get_statement_pairs()
             } else {
@@ -480,10 +489,10 @@ impl Workspace {
         self.generated_types.push(generated_type);
     }
 
-    pub fn get_instantiated_transformations(
+    pub fn get_instantiated_transformations_with_indices(
         &self,
         maybe_desired: Option<SymbolNode>,
-    ) -> Result<HashSet<Transformation>, WorkspaceError> {
+    ) -> Result<HashSet<(Transformation, TransformationIndex)>, WorkspaceError> {
         // TODO Desired should probably wind up at the top of what we test, but this vec
         // doesn't stay ordered.  If we pass it down the dependency chain, we could ensure that
         // it's checked first
@@ -501,12 +510,15 @@ impl Workspace {
             .collect::<HashSet<_>>();
 
         let mut to_return = HashSet::new();
-        for transform in self.get_arbitrary_transformations() {
+        for (transform, transform_idx) in self.get_arbitrary_transformations_with_indices() {
             to_return = to_return
                 .union(
                     &transform
                         .instantiate_arbitrary_nodes(self.get_types(), &substatements)
-                        .map_err(|e| Into::<WorkspaceError>::into(e))?,
+                        .map_err(|e| Into::<WorkspaceError>::into(e))?
+                        .into_iter()
+                        .map(|t| (t, transform_idx))
+                        .collect(),
                 )
                 .cloned()
                 .collect();
@@ -515,7 +527,7 @@ impl Workspace {
         to_return = to_return
             .union(
                 &self
-                    .get_non_arbitrary_transformations()
+                    .get_non_arbitrary_transformations_with_indices()
                     .into_iter()
                     .collect::<HashSet<_>>(),
             )
@@ -525,18 +537,22 @@ impl Workspace {
         return Ok(to_return);
     }
 
-    fn get_arbitrary_transformations(&self) -> HashSet<Transformation> {
-        self.transformations
+    fn get_arbitrary_transformations_with_indices(
+        &self,
+    ) -> HashSet<(Transformation, TransformationIndex)> {
+        self.get_transformations_with_indices()
             .iter()
-            .filter(|t| t.contains_arbitrary_nodes())
+            .filter(|(t, _)| t.contains_arbitrary_nodes())
             .cloned()
             .collect()
     }
 
-    fn get_non_arbitrary_transformations(&self) -> HashSet<Transformation> {
-        self.transformations
+    fn get_non_arbitrary_transformations_with_indices(
+        &self,
+    ) -> HashSet<(Transformation, TransformationIndex)> {
+        self.get_transformations_with_indices()
             .iter()
-            .filter(|t| !t.contains_arbitrary_nodes())
+            .filter(|(t, _)| !t.contains_arbitrary_nodes())
             .cloned()
             .collect()
     }
@@ -857,11 +873,14 @@ mod test_workspace {
         workspace.add_parsed_hypothesis("p^s").unwrap();
 
         let instantiate = |s: &str| {
-            ExplicitTransformation::new(
-                workspace.parse_from_string("p=q").unwrap(),
-                workspace.parse_from_string(s).unwrap(),
+            (
+                ExplicitTransformation::new(
+                    workspace.parse_from_string("p=q").unwrap(),
+                    workspace.parse_from_string(s).unwrap(),
+                )
+                .into(),
+                0,
             )
-            .into()
         };
 
         let expected = vec![
@@ -874,7 +893,9 @@ mod test_workspace {
         .into_iter()
         .collect();
         assert_eq!(
-            workspace.get_instantiated_transformations(None).unwrap(),
+            workspace
+                .get_instantiated_transformations_with_indices(None)
+                .unwrap(),
             expected
         );
 
