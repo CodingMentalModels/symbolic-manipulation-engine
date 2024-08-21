@@ -176,22 +176,6 @@ impl Transformation {
         to_return
     }
 
-    fn update_child_to_valid_transformations_map(
-        &self,
-        child_to_valid_transformations: &mut HashMap<SymbolNode, HashSet<SymbolNode>>,
-        hierarchy: &TypeHierarchy,
-        statement: &SymbolNode,
-    ) {
-        for child in statement.get_children() {
-            if !child_to_valid_transformations.contains_key(child) {
-                let possible_transformations = self.get_valid_transformations(hierarchy, child);
-                if !possible_transformations.is_empty() {
-                    child_to_valid_transformations.insert(child.clone(), possible_transformations);
-                }
-            }
-        }
-    }
-
     fn apply_valid_transformations_to_children(
         &self,
         child_to_valid_transformations: &HashMap<SymbolNode, HashSet<SymbolNode>>,
@@ -1148,54 +1132,6 @@ mod test_transformation {
         let x_equals_y_equals_z = parser
             .parse_from_string(custom_tokens.clone(), "x=y=z") // ((x=y)=z)
             .unwrap();
-
-        let expected = vec![
-            x_equals_y_equals_z.clone(),
-            parser
-                .parse_from_string(custom_tokens.clone(), "y=x=z") // ((x=y)=z) => ((y=x)=z)
-                .unwrap(),
-        ];
-
-        let mut map = HashMap::new();
-        transformation.update_child_to_valid_transformations_map(
-            &mut map,
-            &hierarchy,
-            &x_equals_y_equals_z,
-        );
-        assert_eq!(
-            transformation.apply_valid_transformations_to_children(
-                &map,
-                &x_equals_y_equals_z,
-                None
-            ),
-            expected.into_iter().collect()
-        );
-
-        let z_equals_x_equals_y = parser
-            .parse_from_string(custom_tokens.clone(), "z=(x=y)")
-            .unwrap();
-
-        let expected = vec![
-            z_equals_x_equals_y.clone(),
-            parser
-                .parse_from_string(custom_tokens.clone(), "z=(y=x)")
-                .unwrap(),
-        ];
-
-        let mut map = HashMap::new();
-        transformation.update_child_to_valid_transformations_map(
-            &mut map,
-            &hierarchy,
-            &z_equals_x_equals_y,
-        );
-        assert_eq!(
-            transformation.apply_valid_transformations_to_children(
-                &map,
-                &z_equals_x_equals_y,
-                None
-            ),
-            expected.into_iter().collect()
-        );
 
         let expected = vec![
             x_equals_y_equals_z.clone(),
