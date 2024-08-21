@@ -108,18 +108,9 @@ impl Transformation {
         let mut to_return = HashSet::new();
         let max_depth = statement.get_depth() + MAX_ADDITIONAL_VALID_TRANSFORMATION_DEPTH;
 
-        // println!("get_valid_transformations started");
         while let Some((current_statement, should_return, are_children_processed, depth)) =
             call_stack.pop()
         {
-            //            println!(
-            //                "Processing: {:?} ({}{}); n = {:?}",
-            //                current_statement.to_symbol_string(),
-            //                should_return,
-            //                are_children_processed,
-            //                child_to_valid_transformations.len(),
-            //            );
-
             if !are_children_processed {
                 // Push the statement back onto the stack with children marked as processed
                 // since we're about to process them
@@ -127,7 +118,6 @@ impl Transformation {
                 already_processed.insert(current_statement.clone());
 
                 // Push the children on to be processed first and don't return them
-                // println!("Adding children.");
                 for child in current_statement.get_children() {
                     if !already_processed.contains(&child) {
                         call_stack.push((child.clone(), false, false, depth + 1));
@@ -141,13 +131,6 @@ impl Transformation {
                     Ok(result) => {
                         // Also push the transformed statement on so that it gets processed
                         let final_max_depth = max_depth.saturating_sub(depth);
-                        //                        println!(
-                        //                            "Transformed {:?} -> {:?} (depth: {:?}, final_max_depth: {:?})",
-                        //                            current_statement.to_symbol_string(),
-                        //                            result.to_symbol_string(),
-                        //                            result.get_depth(),
-                        //                            final_max_depth
-                        //                        );
 
                         valid_roots.insert(result.clone());
                         if (!already_processed.contains(&result))
@@ -170,10 +153,6 @@ impl Transformation {
                 };
 
                 for to_apply in valid_roots {
-                    //                    println!(
-                    //                        "Applying valid transformations to children ({:?}).",
-                    //                        to_apply.get_n_children()
-                    //                    );
                     let result = self.apply_valid_transformations_to_children(
                         &child_to_valid_transformations,
                         &to_apply,
@@ -194,15 +173,6 @@ impl Transformation {
             }
         }
 
-        println!(
-            "Valid transformations:\n\n{}\n\n",
-            to_return
-                .clone()
-                .into_iter()
-                .map(|s| s.to_symbol_string())
-                .collect::<Vec<_>>()
-                .join("\n\n")
-        );
         to_return
     }
 
@@ -234,16 +204,6 @@ impl Transformation {
             .into_iter()
             .filter(|(k, _)| children.contains(k))
             .collect();
-        //        println!(
-        //            "Applying valid transformations ({:?}) to children ({:?}){}",
-        //            filtered_map.len(),
-        //            statement.get_n_children(),
-        //            if let Some(d) = max_additional_depth {
-        //                format!(" using max depth {}", d)
-        //            } else {
-        //                "".to_string()
-        //            }
-        //        );
 
         let mut new_statements = vec![statement.clone()].into_iter().collect::<HashSet<_>>();
 
@@ -280,7 +240,6 @@ impl Transformation {
         }
         if let Some(d) = max_additional_depth {
             let max_depth = statement.get_depth() + d;
-            // println!("Truncating to {:?}", max_depth);
             new_statements = new_statements
                 .into_iter()
                 .filter(|s| s.get_depth() <= max_depth)
