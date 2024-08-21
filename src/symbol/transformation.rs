@@ -131,26 +131,29 @@ impl Transformation {
                         // Also push the transformed statement on so that it gets processed
                         let final_max_depth = max_depth.saturating_sub(depth);
                         println!(
-                            "Transformed {:?} (final_max_depth: {:?})",
+                            "Transformed {:?} -> {:?} (depth: {:?}, final_max_depth: {:?})",
                             current_statement.to_symbol_string(),
+                            result.to_symbol_string(),
+                            result.get_depth(),
                             final_max_depth
                         );
+
+                        valid_roots.insert(result.clone());
                         if (!already_processed.contains(&result))
                             && (result.get_depth() <= final_max_depth)
                         {
                             call_stack.push((result.clone(), false, depth));
-                        }
-                        valid_roots.insert(result.clone());
 
-                        // Log the transformation as a valid one
-                        child_to_valid_transformations
-                            .entry(current_statement.clone())
-                            .and_modify(|value| {
-                                value.insert(result.clone());
-                            })
-                            .or_insert_with(|| {
-                                vec![result.clone()].into_iter().collect::<HashSet<_>>()
-                            });
+                            // Log the transformation as a valid one
+                            child_to_valid_transformations
+                                .entry(current_statement.clone())
+                                .and_modify(|value| {
+                                    value.insert(result.clone());
+                                })
+                                .or_insert_with(|| {
+                                    vec![result.clone()].into_iter().collect::<HashSet<_>>()
+                                });
+                        }
                     }
                     _ => {}
                 };
