@@ -2009,6 +2009,16 @@ mod test_statement {
     }
 
     #[test]
+    fn test_symbol_node_gets_depth() {
+        let trivial = SymbolNode::leaf_object("x".into());
+        assert_eq!(trivial.get_depth(), 1);
+
+        let mut node = trivial.clone();
+        node.children = vec![trivial.clone()];
+        assert_eq!(node.get_depth(), 2);
+    }
+
+    #[test]
     fn test_symbol_nodes_detect_conflicting_types() {
         let trivial = SymbolNode::leaf_object("x");
         let trivial_types = trivial.get_type_map();
