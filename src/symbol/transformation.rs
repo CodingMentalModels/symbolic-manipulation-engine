@@ -35,6 +35,13 @@ impl From<ApplyToBothSidesTransformation> for Transformation {
 }
 
 impl Transformation {
+    pub fn to_symbol_string(&self) -> String {
+        match self {
+            Self::ExplicitTransformation(t) => t.to_symbol_string(),
+            Self::AdditionAlgorithm(t) => t.to_symbol_string(),
+            Self::ApplyToBothSidesTransformation(t) => t.to_symbol_string(),
+        }
+    }
     pub fn transform(
         &self,
         hierarchy: &TypeHierarchy,
@@ -90,36 +97,36 @@ impl Transformation {
         hierarchy: &TypeHierarchy,
         statement: &SymbolNode,
     ) -> HashSet<SymbolNode> {
-        let mut call_stack = vec![(statement.clone(), false, 0)];
+        let mut call_stack = vec![(statement.clone(), true, false, 0)];
         let mut already_processed: HashSet<SymbolNode> = HashSet::new();
         let mut child_to_valid_transformations: HashMap<SymbolNode, HashSet<SymbolNode>> =
             HashMap::new();
         let mut to_return = HashSet::new();
         let max_depth = statement.get_depth() + MAX_ADDITIONAL_VALID_TRANSFORMATION_DEPTH;
 
-        println!("get_valid_transformations started");
-        while let Some((current_statement, are_children_processed, depth)) = call_stack.pop() {
-            println!(
-                "Processing: {:?} ({:?}); n = {:?}",
-                current_statement.to_symbol_string(),
-                are_children_processed,
-                child_to_valid_transformations.len(),
-            );
-
-            // Clear to_return between calls to avoid returning children
-            to_return = HashSet::new();
+        // println!("get_valid_transformations started");
+        while let Some((current_statement, should_return, are_children_processed, depth)) =
+            call_stack.pop()
+        {
+            //            println!(
+            //                "Processing: {:?} ({}{}); n = {:?}",
+            //                current_statement.to_symbol_string(),
+            //                should_return,
+            //                are_children_processed,
+            //                child_to_valid_transformations.len(),
+            //            );
 
             if !are_children_processed {
                 // Push the statement back onto the stack with children marked as processed
                 // since we're about to process them
-                call_stack.push((current_statement.clone(), true, depth));
+                call_stack.push((current_statement.clone(), should_return, true, depth));
                 already_processed.insert(current_statement.clone());
 
-                // Push the children on to be processed first
-                println!("Adding children.");
+                // Push the children on to be processed first and don't return them
+                // println!("Adding children.");
                 for child in current_statement.get_children() {
                     if !already_processed.contains(&child) {
-                        call_stack.push((child.clone(), false, depth + 1));
+                        call_stack.push((child.clone(), false, false, depth + 1));
                     }
                 }
             } else {
@@ -130,19 +137,19 @@ impl Transformation {
                     Ok(result) => {
                         // Also push the transformed statement on so that it gets processed
                         let final_max_depth = max_depth.saturating_sub(depth);
-                        println!(
-                            "Transformed {:?} -> {:?} (depth: {:?}, final_max_depth: {:?})",
-                            current_statement.to_symbol_string(),
-                            result.to_symbol_string(),
-                            result.get_depth(),
-                            final_max_depth
-                        );
+                        //                        println!(
+                        //                            "Transformed {:?} -> {:?} (depth: {:?}, final_max_depth: {:?})",
+                        //                            current_statement.to_symbol_string(),
+                        //                            result.to_symbol_string(),
+                        //                            result.get_depth(),
+                        //                            final_max_depth
+                        //                        );
 
                         valid_roots.insert(result.clone());
                         if (!already_processed.contains(&result))
                             && (result.get_depth() <= final_max_depth)
                         {
-                            call_stack.push((result.clone(), false, depth));
+                            call_stack.push((result.clone(), should_return, false, depth));
 
                             // Log the transformation as a valid one
                             child_to_valid_transformations
@@ -159,16 +166,18 @@ impl Transformation {
                 };
 
                 for to_apply in valid_roots {
-                    println!(
-                        "Applying valid transformations to children ({:?}).",
-                        to_apply.get_n_children()
-                    );
+                    //                    println!(
+                    //                        "Applying valid transformations to children ({:?}).",
+                    //                        to_apply.get_n_children()
+                    //                    );
                     let result = self.apply_valid_transformations_to_children(
                         &child_to_valid_transformations,
                         &to_apply,
                         None,
                     );
-                    to_return.extend(result.clone());
+                    if should_return {
+                        to_return.extend(result.clone());
+                    }
 
                     // Log the child transformations valid
                     child_to_valid_transformations
@@ -181,6 +190,15 @@ impl Transformation {
             }
         }
 
+        println!(
+            "Valid transformations:\n\n{}\n\n",
+            to_return
+                .clone()
+                .into_iter()
+                .map(|s| s.to_symbol_string())
+                .collect::<Vec<_>>()
+                .join("\n\n")
+        );
         to_return
     }
 
@@ -212,16 +230,16 @@ impl Transformation {
             .into_iter()
             .filter(|(k, _)| children.contains(k))
             .collect();
-        println!(
-            "Applying valid transformations ({:?}) to children ({:?}){}",
-            filtered_map.len(),
-            statement.get_n_children(),
-            if let Some(d) = max_additional_depth {
-                format!(" using max depth {}", d)
-            } else {
-                "".to_string()
-            }
-        );
+        //        println!(
+        //            "Applying valid transformations ({:?}) to children ({:?}){}",
+        //            filtered_map.len(),
+        //            statement.get_n_children(),
+        //            if let Some(d) = max_additional_depth {
+        //                format!(" using max depth {}", d)
+        //            } else {
+        //                "".to_string()
+        //            }
+        //        );
 
         let mut new_statements = vec![statement.clone()].into_iter().collect::<HashSet<_>>();
 
@@ -258,7 +276,7 @@ impl Transformation {
         }
         if let Some(d) = max_additional_depth {
             let max_depth = statement.get_depth() + d;
-            println!("Truncating to {:?}", max_depth);
+            // println!("Truncating to {:?}", max_depth);
             new_statements = new_statements
                 .into_iter()
                 .filter(|s| s.get_depth() <= max_depth)
@@ -344,6 +362,10 @@ impl AdditionAlgorithm {
         }
     }
 
+    pub fn to_symbol_string(&self) -> String {
+        format!("AdditionAlgorithm({})", self.operator.to_string())
+    }
+
     pub fn get_operator(&self) -> Symbol {
         self.operator.clone()
     }
@@ -419,6 +441,14 @@ impl ApplyToBothSidesTransformation {
             symbol,
             transformation,
         }
+    }
+
+    pub fn to_symbol_string(&self) -> String {
+        format!(
+            "Apply {} to both sides of {}",
+            self.transformation.to_symbol_string(),
+            self.symbol.to_string()
+        )
     }
 
     pub fn get_symbol(&self) -> &Symbol {
@@ -578,6 +608,14 @@ impl ExplicitTransformation {
 
     pub fn to_string(&self) -> String {
         format!("{} -> {}", self.from.to_string(), self.to.to_string())
+    }
+
+    pub fn to_symbol_string(&self) -> String {
+        format!(
+            "{} -> {}",
+            self.from.to_symbol_string(),
+            self.to.to_symbol_string()
+        )
     }
 
     pub fn to_interpreted_string(&self, interpretations: &Vec<Interpretation>) -> String {

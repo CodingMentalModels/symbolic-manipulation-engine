@@ -364,12 +364,22 @@ impl Workspace {
         let instantiated_transformations =
             self.get_instantiated_transformations(Some(desired.clone()))?;
         for (transform_idx, transform) in instantiated_transformations.iter().enumerate() {
+            println!(
+                "Processing transform {}: {}",
+                transform_idx,
+                transform.to_symbol_string()
+            );
             let statements = if transform.is_joint_transform() {
                 self.get_statement_pairs()
             } else {
                 self.get_statements().clone()
             };
             for (statement_idx, statement) in statements.iter().enumerate() {
+                println!(
+                    "Processing statement {}: {}",
+                    statement_idx,
+                    statement.to_symbol_string()
+                );
                 match transform.try_transform_into(self.get_types(), &statement, &desired) {
                     Ok(output) => {
                         // TODO Derive the appropriate transform addresses
