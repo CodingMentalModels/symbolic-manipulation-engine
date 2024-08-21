@@ -1175,7 +1175,19 @@ mod test_workspace {
         assert_eq!(
             workspace.get_valid_transformations("p^q=q^q").unwrap(),
             vec![expected]
-        )
+        );
+
+        let mut workspace = Workspace::new(types.clone(), vec![], interpretations.clone());
+        workspace.add_parsed_hypothesis("r=s").unwrap();
+        workspace
+            .add_parsed_transformation("p=q", "Any(p)=Any(q)")
+            .unwrap();
+
+        let expected = workspace.parse_from_string("r^s=s^s").unwrap();
+        assert_eq!(
+            workspace.get_valid_transformations("r^s=s^s").unwrap(),
+            vec![expected]
+        );
     }
 
     #[test]
