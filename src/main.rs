@@ -92,10 +92,11 @@ fn main() {
                     Arg::new("partial-statement").help("Partial statement to use to get valid transformations.")
                 )
             )
-        .subcommand(Command::new("get-transformations-from").about("Takes a statement index and gets all valid transformations from that index."))
+        .subcommand(Command::new("get-transformations-from").about("Takes a statement index and gets all valid transformations from that index.")
             .arg(
                 Arg::new("statement-index").help("Statement index (0-indexed) to get valid transformations from.")
                 )
+            )
         .subcommand(Command::new("derive").about("Checks if the provided statement is valid and adds it to the Workspace if so.").arg(
                 Arg::new("statement").required(true)
                 )
