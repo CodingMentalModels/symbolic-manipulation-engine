@@ -87,8 +87,9 @@ fn main() {
             ).arg(
                 Arg::new("to").required(true).help("Output of the Transformation.")
             ))
-        .subcommand(Command::new("get-transformations").about("Takes a partial statement and gets all valid transformations sorted based on the string.").arg(
-                Arg::new("partial-statement").required(true)
+        .subcommand(Command::new("get-transformations").about("Takes a partial statement and gets all valid transformations sorted based on the string.")
+                .arg(
+                    Arg::new("partial-statement").help("Partial statement to use to get valid transformations.")
                 )
             )
         .subcommand(Command::new("derive").about("Checks if the provided statement is valid and adds it to the Workspace if so.").arg(
