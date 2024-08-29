@@ -939,10 +939,40 @@ mod test_workspace {
             expected
         );
 
-        //        workspace.add_parsed_hypothesis("t^p").unwrap();
-        //        let t_and_equal = workspace.parse_from_string("t^p=t^q").unwrap();
-        //        let expected = vec![and_s_equal, t_and_equal].into_iter().collect();
-        //        assert_eq!(workspace.get_instantiated_transformations(), expected);
+        let instantiate = |from: &str, to: &str| {
+            (
+                ExplicitTransformation::new(
+                    workspace.parse_from_string(from).unwrap(),
+                    workspace.parse_from_string(to).unwrap(),
+                )
+                .into(),
+                0,
+            )
+        };
+        let mut workspace = Workspace::new(types.clone(), vec![], interpretations.clone());
+
+        workspace
+            .add_parsed_transformation("Any(p)", "p=p")
+            .unwrap();
+        workspace.add_parsed_hypothesis("p=q").unwrap();
+        workspace.add_parsed_hypothesis("p^s").unwrap();
+
+        let expected = vec![
+            instantiate("p", "p=p"),
+            instantiate("q", "q=q"),
+            instantiate("s", "s=s"),
+            instantiate("p=q", "(p=q)=(p=q)"),
+            instantiate("p^s", "(p^s)=(p^s)"),
+        ]
+        .into_iter()
+        .collect();
+
+        assert_eq!(
+            workspace
+                .get_instantiated_transformations_with_indices(None)
+                .unwrap(),
+            expected
+        );
     }
 
     #[test]
