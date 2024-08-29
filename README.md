@@ -1,6 +1,17 @@
 # Symbolic Manipulation Engine
 
-Goal: An extensible engine for defining allowable symbolic manipulations, saving them into "Contexts" so that they can be reused / shared / etc., and creating tooling for parsing input (e.g. from a command line) and displaying output (LaTeX, etc.), such that doing math, physics, etc. is faster / easier than doing it on paper / blackboard / whiteboard, etc.
+At the end of the day, math reduces to moving symbols around on a piece of paper. So why not let a computer do it instead?
+
+The Symbolic Manipulation Engine is an extensible engine for defining allowable symbolic manipulations, saving them into "Contexts" so that they can be reused / shared / etc., and creating tooling for parsing input (e.g. from a command line) and displaying output (LaTeX, etc.), such that doing math, physics, etc. is faster / easier than doing it on paper / blackboard / whiteboard, etc.
+
+It's currently under development, sometimes live at https://twitch.tv/codingmentalmodels.
+
+A VSCode front end is also under development but not currently public.
+
+## Upcoming Features
+- Tautologies -- Transformations requiring no starting statement.
+- Algorithms for simplifying other arithmetic expressions (currently only Addition exists).
+- LaTeX support
 
 ## User Stories
 
