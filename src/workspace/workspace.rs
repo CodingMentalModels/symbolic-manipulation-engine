@@ -197,6 +197,10 @@ impl Workspace {
     }
 
     pub fn get_statement_pairs(&self) -> Vec<SymbolNode> {
+        self.get_statement_pairs_including(None)
+    }
+
+    pub fn get_statement_pairs_including(&self, statement: Option<&SymbolNode>) -> Vec<SymbolNode> {
         // Returns pairs of statements for use in joint transforms
         // Returns both orders as well as duplicates since those are valid joint transform args
         let left = self.get_statements();
@@ -204,7 +208,12 @@ impl Workspace {
         let mut to_return = Vec::new();
         for i in 0..left.len() {
             for j in 0..right.len() {
-                to_return.push(left[i].clone().join(right[j].clone()));
+                if statement.is_none()
+                    || (Some(&left[i]) == statement)
+                    || (Some(&right[i]) == statement)
+                {
+                    to_return.push(left[i].clone().join(right[j].clone()));
+                }
             }
         }
         to_return
@@ -354,6 +363,32 @@ impl Workspace {
             }
         }
         return Ok(vec![]);
+    }
+
+    pub fn get_valid_transformations_from(
+        &self,
+        statement_index: StatementIndex,
+    ) -> Result<Vec<SymbolNode>, WorkspaceError> {
+        let from_statement = self.get_statement(statement_index)?;
+        let instantiated_transformations =
+            self.get_instantiated_transformations_with_indices(None)?;
+        let mut to_return = HashSet::new();
+        for (transformation, _) in instantiated_transformations {
+            let statements = if transformation.is_joint_transform() {
+                self.get_statement_pairs_including(Some(&from_statement))
+            } else {
+                vec![from_statement.clone()]
+            };
+            for statement in statements {
+                let valid_transformations =
+                    transformation.get_valid_transformations(self.get_types(), &statement);
+                to_return.extend(valid_transformations);
+            }
+        }
+        return Ok(to_return
+            .into_iter()
+            .filter(|s| !self.statements.contains(s))
+            .collect());
     }
 
     pub fn try_transform_into_parsed(
@@ -1054,6 +1089,90 @@ mod test_workspace {
             expected
         );
         assert!(workspace.get_statements().contains(&expected));
+    }
+
+    #[test]
+    fn test_workspace_gets_valid_transformations_from() {
+        let mut types = TypeHierarchy::chain(vec!["Real".into(), "Integer".into()]).unwrap();
+        types
+            .add_child_to_parent("=".into(), "Real".into())
+            .unwrap();
+        types
+            .add_child_to_parent("+".into(), "Real".into())
+            .unwrap();
+        types
+            .add_chain(vec!["Proposition".into(), "^".into()])
+            .unwrap();
+        types
+            .add_child_to_parent("|".into(), "Proposition".into())
+            .unwrap();
+
+        let interpretations = vec![
+            Interpretation::infix_operator("=".into(), 1, "=".into()),
+            Interpretation::infix_operator("+".into(), 6, "+".into()),
+            Interpretation::singleton("x".into(), "Real".into()),
+            Interpretation::singleton("y".into(), "Real".into()),
+            Interpretation::singleton("j".into(), "Integer".into()),
+            Interpretation::singleton("k".into(), "Integer".into()),
+            Interpretation::singleton("a".into(), "Integer".into()),
+            Interpretation::singleton("b".into(), "Integer".into()),
+            Interpretation::singleton("c".into(), "Integer".into()),
+            Interpretation::infix_operator("^".into(), 7, "^".into()),
+            Interpretation::infix_operator("|".into(), 7, "^".into()),
+            Interpretation::singleton("p".into(), "Proposition".into()),
+            Interpretation::singleton("q".into(), "Proposition".into()),
+            Interpretation::singleton("r".into(), "Proposition".into()),
+            Interpretation::singleton("s".into(), "Proposition".into()),
+            Interpretation::arbitrary_functional("Any".into(), 98, "Proposition".into()),
+        ];
+        let mut workspace = Workspace::new(types.clone(), vec![], interpretations.clone());
+        workspace
+            .add_transformation(
+                ExplicitTransformation::symmetry(
+                    "+".to_string(),
+                    "+".into(),
+                    ("a".to_string(), "b".to_string()),
+                    "Real".into(),
+                )
+                .into(),
+            )
+            .unwrap();
+
+        workspace.add_parsed_hypothesis("x+y").unwrap();
+        let expected = vec![workspace.parse_from_string("y+x").unwrap()];
+        assert_eq!(
+            workspace.get_valid_transformations_from(0).unwrap(),
+            expected
+        );
+        workspace.try_transform_into_parsed("y+x").unwrap();
+        assert_eq!(workspace.get_valid_transformations_from(0).unwrap(), vec![],);
+
+        workspace.add_parsed_hypothesis("j+k").unwrap();
+        assert_eq!(workspace.get_statements().len(), 3);
+        assert_eq!(workspace.get_valid_transformations_from(0).unwrap(), vec![],);
+
+        let expected = vec![workspace.parse_from_string("k+j").unwrap()];
+        assert_eq!(
+            workspace.get_valid_transformations_from(2).unwrap(),
+            expected
+        );
+
+        workspace.add_parsed_hypothesis("a+(b+c)").unwrap();
+        let expected = vec![
+            workspace.parse_from_string("(b+c)+a").unwrap(),
+            workspace.parse_from_string("(c+b)+a").unwrap(),
+            workspace.parse_from_string("a+(c+b)").unwrap(),
+        ]
+        .into_iter()
+        .collect::<HashSet<_>>();
+        assert_eq!(
+            workspace
+                .get_valid_transformations_from(3)
+                .unwrap()
+                .into_iter()
+                .collect::<HashSet<_>>(),
+            expected
+        );
     }
 
     #[test]

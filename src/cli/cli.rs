@@ -248,6 +248,26 @@ impl Cli {
         }
     }
 
+    pub fn get_transformations_from(&self, sub_matches: &ArgMatches) -> Result<String, String> {
+        let workspace = self.load_workspace()?;
+        match sub_matches.get_one::<String>("statement-index") {
+            None => Err("No statement index provided.".to_string()),
+            Some(index_string) => match index_string.parse::<usize>() {
+                Ok(statement_index) => {
+                    let mut result = workspace
+                        .get_valid_transformations_from(statement_index)
+                        .map_err(|e| format!("Error getting valid transformations: {:?}", e))?
+                        .into_iter()
+                        .map(|n| n.to_interpreted_string(workspace.get_interpretations()))
+                        .collect::<Vec<_>>();
+                    result.sort_by(|a, b| a.len().cmp(&b.len()));
+                    let serialized_result = to_string(&result).map_err(|e| e.to_string())?;
+                    Ok(serialized_result)
+                }
+                Err(_) => Err(format!("Unable to parse index: {}", index_string).to_string()),
+            },
+        }
+    }
     pub fn add_transformation(&mut self, sub_matches: &ArgMatches) -> Result<String, String> {
         let mut workspace = self.load_workspace()?;
         let from_as_string = match sub_matches.get_one::<String>("from") {
