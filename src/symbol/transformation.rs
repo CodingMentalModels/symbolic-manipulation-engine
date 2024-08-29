@@ -42,6 +42,7 @@ impl Transformation {
             Self::ApplyToBothSidesTransformation(t) => t.to_symbol_string(),
         }
     }
+
     pub fn transform(
         &self,
         hierarchy: &TypeHierarchy,
