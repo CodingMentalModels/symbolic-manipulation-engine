@@ -861,6 +861,51 @@ mod test_transformation {
     use super::*;
 
     #[test]
+    fn test_transformation_can_be_a_tautology() {
+        let mut types = TypeHierarchy::chain(vec!["Boolean".into(), "=".into()]).unwrap();
+        types
+            .add_child_to_parent("&".into(), "Boolean".into())
+            .unwrap();
+        types
+            .add_child_to_parent("Integer".into(), Type::Object)
+            .unwrap();
+        let interpretations = vec![
+            Interpretation::infix_operator("=".into(), 1, "=".into()),
+            Interpretation::infix_operator("&".into(), 2, "&".into()),
+            Interpretation::outfix_operator(("|".into(), "|".into()), 2, "Integer".into()),
+            Interpretation::singleton("p", "Boolean".into()),
+            Interpretation::singleton("q", "Boolean".into()),
+            Interpretation::arbitrary_functional("F".into(), 99, "Boolean".into()),
+        ];
+
+        let parser = Parser::new(interpretations.clone());
+
+        let custom_tokens = vec!["=".to_string(), "&".to_string(), "|".to_string()];
+
+        let parse = |s: &str| parser.parse_from_string(custom_tokens.clone(), s).unwrap();
+
+        let p = parse("p");
+        let q = parse("q");
+        let f_of_p = parse("F(p)");
+        let p_equals_p = parse("p=p");
+        let reflexivity = ExplicitTransformation::new(f_of_p.clone(), p_equals_p.clone());
+
+        let substatements = vec![p.clone(), q.clone(), p_equals_p.clone()]
+            .into_iter()
+            .collect::<HashSet<_>>();
+        let expected: HashSet<_> = vec![
+            ExplicitTransformation::new(p.clone(), p_equals_p.clone()),
+            ExplicitTransformation::new(p_equals_p.clone(), p_equals_p.clone()),
+        ]
+        .into_iter()
+        .collect();
+        let actual = reflexivity
+            .instantiate_arbitrary_nodes(&types, &substatements)
+            .unwrap();
+        assert_eq!(actual, expected);
+    }
+
+    #[test]
     fn test_transformation_instantiates_arbitrary_nodes() {
         let mut types = TypeHierarchy::chain(vec!["Boolean".into(), "=".into()]).unwrap();
         types
