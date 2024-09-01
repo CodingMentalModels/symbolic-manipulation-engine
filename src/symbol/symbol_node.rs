@@ -1048,6 +1048,54 @@ mod test_statement {
     use super::*;
 
     #[test]
+    fn test_symbol_node_relabels_with_predicate() {
+        let interpretations = vec![
+            Interpretation::infix_operator("=".into(), 1, "Integer".into()),
+            Interpretation::outfix_operator(("|".into(), "|".into()), 2, "Integer".into()),
+            Interpretation::postfix_operator("!".into(), 3, "Integer".into()),
+            Interpretation::prefix_operator("-".into(), 4, "Integer".into()),
+            Interpretation::function("f".into(), 99),
+            Interpretation::singleton("a", "Integer".into()),
+            Interpretation::singleton("b", "Integer".into()),
+            Interpretation::singleton("x", "Integer".into()),
+            Interpretation::singleton("y", "Integer".into()),
+            Interpretation::singleton("z", "Integer".into()),
+            Interpretation::arbitrary_functional("Any".into(), 99, "Integer".into()),
+        ];
+
+        let parser = Parser::new(interpretations.clone());
+        let custom_tokens = vec!["=".to_string(), "|".to_string()];
+
+        let parse = |s: &str| parser.parse_from_string(custom_tokens.clone(), s).unwrap();
+
+        let a_equals_a = parse("a=a");
+        let a_equals_b = parse("a=b");
+        let b_equals_b = parse("b=b");
+        let a = parse("a");
+        let b = parse("b");
+        let reflexivity = parse("Any(a)=Any(a)");
+        assert_eq!(
+            a_equals_b
+                .replace_arbitrary_using_predicate(
+                    &"Any".into(),
+                    &Predicate::new(b.clone(), b.clone()),
+                )
+                .unwrap(),
+            a_equals_b
+        );
+
+        assert_eq!(
+            reflexivity
+                .replace_arbitrary_using_predicate(
+                    &"Any".into(),
+                    &Predicate::new(b.clone(), b.clone()),
+                )
+                .unwrap(),
+            a_equals_a
+        );
+    }
+
+    #[test]
     fn test_symbol_node_gets_predicates() {
         let interpretations = vec![
             Interpretation::infix_operator("=".into(), 1, "Integer".into()),
@@ -1060,14 +1108,6 @@ mod test_statement {
             Interpretation::singleton("x", "Integer".into()),
             Interpretation::singleton("y", "Integer".into()),
             Interpretation::singleton("z", "Integer".into()),
-            Interpretation::parentheses_like(
-                Token::Object("{".to_string()),
-                Token::Object("}".to_string()),
-            ),
-            Interpretation::function("\\frac".into(), 99),
-            Interpretation::singleton("\\alpha", "Integer".into()),
-            Interpretation::singleton("\\beta", "Integer".into()),
-            Interpretation::singleton("\\gamma", "Integer".into()),
         ];
 
         let trivial = SymbolNode::leaf_object("a");
