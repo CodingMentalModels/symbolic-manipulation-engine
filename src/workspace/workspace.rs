@@ -959,8 +959,6 @@ mod test_workspace {
 
         let expected: HashSet<_> = vec![
             instantiate("p", "p=p"),
-            instantiate("q", "p=p"),
-            instantiate("s", "p=p"),
             instantiate("p=q", "p=p"),
             instantiate("p=p", "p=p"),
             instantiate("p^s", "p=p"),

@@ -485,13 +485,7 @@ impl SymbolNode {
         predicate: &Predicate,
     ) -> Result<SymbolNode, SymbolNodeError> {
         // Note that this doesn't check types since we want to allow subtypes!
-        println!(
-            "Replacing {} using symbol {}",
-            self.to_symbol_string(),
-            symbol.to_string()
-        );
         if self.is_arbitrary() && self.get_symbol() == Ok(symbol) {
-            println!("Arbitrary: {}", self.to_symbol_string());
             let children = self.get_children();
             if children.len() != 1 {
                 return Err(SymbolNodeError::ArbitraryNodeHasNonOneChildren);
