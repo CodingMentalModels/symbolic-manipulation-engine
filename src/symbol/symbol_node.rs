@@ -485,7 +485,13 @@ impl SymbolNode {
         predicate: &Predicate,
     ) -> Result<SymbolNode, SymbolNodeError> {
         // Note that this doesn't check types since we want to allow subtypes!
+        println!(
+            "Replacing {} using symbol {}",
+            self.to_symbol_string(),
+            symbol.to_string()
+        );
         if self.is_arbitrary() && self.get_symbol() == Ok(symbol) {
+            println!("Arbitrary: {}", self.to_symbol_string());
             let children = self.get_children();
             if children.len() != 1 {
                 return Err(SymbolNodeError::ArbitraryNodeHasNonOneChildren);
@@ -1077,8 +1083,8 @@ mod test_statement {
         assert_eq!(
             a_equals_b
                 .replace_arbitrary_using_predicate(
-                    &"Any".into(),
-                    &Predicate::new(b.clone(), b.clone()),
+                    &Symbol::new("Any".to_string(), "Integer".into()),
+                    &Predicate::new(a.clone(), a.clone()),
                 )
                 .unwrap(),
             a_equals_b
@@ -1087,8 +1093,18 @@ mod test_statement {
         assert_eq!(
             reflexivity
                 .replace_arbitrary_using_predicate(
-                    &"Any".into(),
+                    &Symbol::new("Any".to_string(), "Integer".into()),
                     &Predicate::new(b.clone(), b.clone()),
+                )
+                .unwrap(),
+            a_equals_a
+        );
+
+        assert_eq!(
+            reflexivity
+                .replace_arbitrary_using_predicate(
+                    &Symbol::new("Any".to_string(), "Integer".into()),
+                    &Predicate::new(a.clone(), a.clone()),
                 )
                 .unwrap(),
             a_equals_a
