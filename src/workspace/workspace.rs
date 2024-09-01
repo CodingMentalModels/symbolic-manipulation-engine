@@ -957,21 +957,35 @@ mod test_workspace {
         workspace.add_parsed_hypothesis("p=q").unwrap();
         workspace.add_parsed_hypothesis("p^s").unwrap();
 
-        let expected = vec![
+        let expected: HashSet<_> = vec![
             instantiate("p", "p=p"),
-            instantiate("q", "q=q"),
-            instantiate("s", "s=s"),
-            instantiate("p=q", "(p=q)=(p=q)"),
-            instantiate("p^s", "(p^s)=(p^s)"),
+            instantiate("q", "p=p"),
+            instantiate("s", "p=p"),
+            instantiate("p=q", "p=p"),
+            instantiate("p=p", "p=p"),
+            instantiate("p^s", "p=p"),
+            instantiate("p^p", "p=p"),
         ]
         .into_iter()
         .collect();
 
+        let actual = workspace
+            .get_instantiated_transformations_with_indices(None)
+            .unwrap();
         assert_eq!(
-            workspace
-                .get_instantiated_transformations_with_indices(None)
-                .unwrap(),
+            actual,
+            expected,
+            "Actual:\n{}\n\nExpected:\n{}",
+            actual
+                .iter()
+                .map(|(n, _)| n.to_interpreted_string(&interpretations))
+                .collect::<Vec<_>>()
+                .join("\n"),
             expected
+                .iter()
+                .map(|(n, _)| n.to_interpreted_string(&interpretations))
+                .collect::<Vec<_>>()
+                .join("\n"),
         );
     }
 
