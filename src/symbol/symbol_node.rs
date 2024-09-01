@@ -1097,7 +1097,7 @@ mod test_statement {
                     &Predicate::new(b.clone(), b.clone()),
                 )
                 .unwrap(),
-            a_equals_a
+            a_equals_a.clone(),
         );
 
         assert_eq!(
@@ -1107,7 +1107,27 @@ mod test_statement {
                     &Predicate::new(a.clone(), a.clone()),
                 )
                 .unwrap(),
-            a_equals_a
+            a_equals_a.clone(),
+        );
+
+        assert_eq!(
+            reflexivity
+                .replace_arbitrary_using_predicate(
+                    &Symbol::new("Any".to_string(), "Integer".into()),
+                    &Predicate::new(a_equals_b.clone(), a.clone()),
+                )
+                .unwrap(),
+            parse("(a=b)=(a=b)")
+        );
+
+        assert_eq!(
+            reflexivity
+                .replace_arbitrary_using_predicate(
+                    &Symbol::new("Any".to_string(), "Integer".into()),
+                    &Predicate::new(a_equals_b.clone(), b.clone()),
+                )
+                .unwrap(),
+            parse("(a=a)=(a=a)")
         );
     }
 
