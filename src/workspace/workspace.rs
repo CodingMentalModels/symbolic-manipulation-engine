@@ -672,6 +672,82 @@ impl Workspace {
     }
 }
 
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct TransactionStore {
+    transactions: Vec<WorkspaceTransaction>,
+    next_index: usize,
+}
+
+impl Default for TransactionStore {
+    fn default() -> Self {
+        Self::empty()
+    }
+}
+
+impl TransactionStore {
+    pub fn empty() -> Self {
+        Self::new(Vec::new())
+    }
+
+    pub fn new(transactions: Vec<WorkspaceTransaction>) -> Self {
+        let next_index = transactions.len();
+        Self {
+            transactions,
+            next_index,
+        }
+    }
+
+    pub fn add(&mut self, transaction: WorkspaceTransaction) {
+        self.clear_undos();
+        self.transactions.push(transaction);
+        self.next_index += 1;
+    }
+
+    pub fn clear_undos(&mut self) {
+        self.transactions.truncate(self.next_index)
+    }
+
+    pub fn get_live_transactions(&self) -> Vec<WorkspaceTransaction> {
+        self.transactions[0..self.next_index].to_vec()
+    }
+
+    pub fn compile(&self) -> Workspace {
+        let mut workspace = Workspace::default();
+        for transaction in self.get_live_transactions() {
+            match transaction {
+                WorkspaceTransaction::AddType(t, parent) => {
+                    workspace.add_type_to_parent(t, parent);
+                }
+            }
+        }
+
+        workspace
+    }
+
+    pub fn undo(&mut self) -> Option<WorkspaceTransaction> {
+        if self.next_index > 0 {
+            self.next_index -= 1;
+            Some(self.transactions[self.next_index].clone())
+        } else {
+            None
+        }
+    }
+
+    pub fn redo(&mut self) -> Option<WorkspaceTransaction> {
+        if self.next_index < self.transactions.len() {
+            self.next_index += 1;
+            Some(self.transactions[self.next_index - 1].clone())
+        } else {
+            None
+        }
+    }
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum WorkspaceTransaction {
+    AddType(Type, Type),
+}
+
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, TS)]
 #[serde(tag = "kind", rename_all = "camelCase")]
 #[ts(export)]
@@ -853,6 +929,45 @@ mod test_workspace {
     };
 
     use super::*;
+
+    #[test]
+    fn test_transaction_store_compiles() {
+        let mut store = TransactionStore::empty();
+        assert_eq!(store.compile(), Workspace::default());
+
+        store.add(WorkspaceTransaction::AddType("Real".into(), Type::Object));
+
+        let expected_0 = Workspace::new(
+            TypeHierarchy::chain(vec!["Real".into()]).unwrap(),
+            Vec::new(),
+            Vec::new(),
+        );
+        assert_eq!(store.compile(), expected_0);
+
+        store.add(WorkspaceTransaction::AddType(
+            "Integer".into(),
+            "Real".into(),
+        ));
+
+        let expected_1 = Workspace::new(
+            TypeHierarchy::chain(vec!["Real".into(), "Integer".into()]).unwrap(),
+            Vec::new(),
+            Vec::new(),
+        );
+        assert_eq!(store.compile(), expected_1);
+
+        store.undo();
+        assert_eq!(store.compile(), expected_0);
+
+        store.undo();
+        assert_eq!(store.compile(), Workspace::default());
+
+        store.redo();
+        assert_eq!(store.compile(), expected_0);
+
+        store.redo();
+        assert_eq!(store.compile(), expected_1);
+    }
 
     #[test]
     fn test_workspace_try_transform_into_with_arbitrary() {
