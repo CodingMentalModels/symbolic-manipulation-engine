@@ -715,8 +715,24 @@ impl TransactionStore {
         let mut workspace = Workspace::default();
         for transaction in self.get_live_transactions() {
             match transaction {
+                WorkspaceTransaction::Snapshot(snapshot) => workspace = snapshot.clone(),
                 WorkspaceTransaction::AddType(t, parent) => {
                     workspace.add_type_to_parent(t, parent);
+                }
+                WorkspaceTransaction::AddGeneratedType(t) => {
+                    workspace.add_generated_type(t);
+                }
+                WorkspaceTransaction::AddInterpretation(interpretation) => {
+                    workspace.add_interpretation(interpretation);
+                }
+                WorkspaceTransaction::RemoveInterpretation(index) => {
+                    workspace.remove_interpretation(index);
+                }
+                WorkspaceTransaction::AddHypothesis(hypothesis) => {
+                    workspace.add_hypothesis(hypothesis);
+                }
+                WorkspaceTransaction::Derive(statement, provenance) => {
+                    workspace.add_derived_statement(statement, provenance);
                 }
             }
         }
@@ -745,7 +761,13 @@ impl TransactionStore {
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum WorkspaceTransaction {
-    AddType(Type, Type),
+    Snapshot(Workspace),
+    AddType(Type, Type), // New Type, Parent
+    AddGeneratedType(GeneratedType),
+    AddInterpretation(Interpretation),
+    RemoveInterpretation(usize),
+    AddHypothesis(SymbolNode),
+    Derive(SymbolNode, Provenance),
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, TS)]
