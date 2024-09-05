@@ -673,18 +673,18 @@ impl Workspace {
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
-pub struct TransactionStore {
+pub struct WorkspaceTransactionStore {
     transactions: Vec<WorkspaceTransaction>,
     next_index: usize,
 }
 
-impl Default for TransactionStore {
+impl Default for WorkspaceTransactionStore {
     fn default() -> Self {
         Self::empty()
     }
 }
 
-impl TransactionStore {
+impl WorkspaceTransactionStore {
     pub fn empty() -> Self {
         Self::new(Vec::new())
     }
@@ -697,14 +697,26 @@ impl TransactionStore {
         }
     }
 
+    pub fn serialize(&self) -> Result<String, WorkspaceError> {
+        toml::to_string(self).map_err(|e| WorkspaceError::UnableToSerialize(e.to_string()))
+    }
+
+    pub fn deserialize(serialized: &str) -> Result<Self, toml::de::Error> {
+        toml::from_str(serialized)
+    }
+
     pub fn len(&self) -> usize {
         self.transactions.len()
     }
 
-    pub fn add(&mut self, transaction: WorkspaceTransaction) {
+    pub fn add(&mut self, transaction: WorkspaceTransaction) -> Result<(), WorkspaceError> {
+        // Ensure that the transaction compiles before adding it
+        Self::apply_transaction(&mut self.compile(), transaction.clone())?;
+
         self.clear_undos();
         self.transactions.push(transaction);
         self.next_index += 1;
+        Ok(())
     }
 
     pub fn clear_undos(&mut self) {
@@ -716,32 +728,43 @@ impl TransactionStore {
     }
 
     pub fn compile(&self) -> Workspace {
+        // Does not check for errors because they've been checked on adding them
         let mut workspace = Workspace::default();
         for transaction in self.get_live_transactions() {
-            match transaction {
-                WorkspaceTransaction::Snapshot(snapshot) => workspace = snapshot.clone(),
-                WorkspaceTransaction::AddType(t, parent) => {
-                    workspace.add_type_to_parent(t, parent);
-                }
-                WorkspaceTransaction::AddGeneratedType(t) => {
-                    workspace.add_generated_type(t);
-                }
-                WorkspaceTransaction::AddInterpretation(interpretation) => {
-                    workspace.add_interpretation(interpretation);
-                }
-                WorkspaceTransaction::RemoveInterpretation(index) => {
-                    workspace.remove_interpretation(index);
-                }
-                WorkspaceTransaction::AddHypothesis(hypothesis) => {
-                    workspace.add_hypothesis(hypothesis);
-                }
-                WorkspaceTransaction::Derive(statement, provenance) => {
-                    workspace.add_derived_statement(statement, provenance);
-                }
-            }
+            Self::apply_transaction(&mut workspace, transaction);
         }
 
         workspace
+    }
+
+    fn apply_transaction(
+        workspace: &mut Workspace,
+        transaction: WorkspaceTransaction,
+    ) -> Result<(), WorkspaceError> {
+        match transaction {
+            WorkspaceTransaction::Snapshot(snapshot) => {
+                *workspace = snapshot.clone();
+            }
+            WorkspaceTransaction::AddType(t, parent) => {
+                workspace.add_type_to_parent(t, parent)?;
+            }
+            WorkspaceTransaction::AddGeneratedType(t) => {
+                workspace.add_generated_type(t);
+            }
+            WorkspaceTransaction::AddInterpretation(interpretation) => {
+                workspace.add_interpretation(interpretation)?;
+            }
+            WorkspaceTransaction::RemoveInterpretation(index) => {
+                workspace.remove_interpretation(index)?;
+            }
+            WorkspaceTransaction::AddHypothesis(hypothesis) => {
+                workspace.add_hypothesis(hypothesis)?;
+            }
+            WorkspaceTransaction::Derive(statement, provenance) => {
+                workspace.add_derived_statement(statement, provenance);
+            }
+        };
+        Ok(())
     }
 
     pub fn truncate(&mut self, n_incremental_to_keep: usize) {
@@ -993,7 +1016,7 @@ mod test_workspace {
 
     #[test]
     fn test_truncation_store_snapshots_all_if_truncation_is_too_much() {
-        let mut store = TransactionStore::empty();
+        let mut store = WorkspaceTransactionStore::empty();
         assert_eq!(store.compile(), Workspace::default());
 
         store.add(WorkspaceTransaction::AddType("Real".into(), Type::Object));
@@ -1029,7 +1052,7 @@ mod test_workspace {
 
     #[test]
     fn test_transaction_store_truncates() {
-        let mut store = TransactionStore::empty();
+        let mut store = WorkspaceTransactionStore::empty();
         assert_eq!(store.compile(), Workspace::default());
 
         store.add(WorkspaceTransaction::AddType("Real".into(), Type::Object));
@@ -1076,7 +1099,7 @@ mod test_workspace {
 
     #[test]
     fn test_transaction_store_compiles() {
-        let mut store = TransactionStore::empty();
+        let mut store = WorkspaceTransactionStore::empty();
         assert_eq!(store.compile(), Workspace::default());
 
         store.add(WorkspaceTransaction::AddType("Real".into(), Type::Object));

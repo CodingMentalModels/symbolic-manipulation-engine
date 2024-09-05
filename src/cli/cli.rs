@@ -6,6 +6,7 @@ use serde_json::to_string;
 use crate::{
     cli::filesystem::FileSystem,
     config::{CONTEXT_DIRECTORY_RELATIVE_PATH, STATE_DIRECTORY_RELATIVE_PATH},
+    constants::*,
     context::context::Context,
     parsing::{
         interpretation::{
@@ -18,7 +19,7 @@ use crate::{
         symbol_type::{GeneratedType, GeneratedTypeCondition, Type},
         transformation::ExplicitTransformation,
     },
-    workspace::workspace::Workspace,
+    workspace::workspace::{Workspace, WorkspaceTransaction, WorkspaceTransactionStore},
 };
 
 pub struct Cli {
@@ -48,8 +49,8 @@ impl Cli {
             }
         }
 
-        let workspace = Workspace::default();
-        self.update_workspace(workspace)?;
+        let workspace_store = WorkspaceTransactionStore::default();
+        self.update_workspace_store(workspace_store)?;
         return Ok(format!(
             "Initialized new workspace in {}",
             self.filesystem.get_root_directory_path()
@@ -85,13 +86,14 @@ impl Cli {
     }
 
     pub fn ls(&self) -> Result<String, String> {
-        self.load_workspace()?
+        self.load_workspace_store()?
+            .compile()
             .to_json()
             .map_err(|e| format!("Serialization Error during ls: {:?}", e).to_string())
     }
 
     pub fn add_interpretation(&mut self, sub_matches: &ArgMatches) -> Result<String, String> {
-        let mut workspace = self.load_workspace()?;
+        let mut workspace_store = self.load_workspace_store()?;
         let maybe_condition = sub_matches.get_one::<String>("condition");
         let is_generated_integer = sub_matches.get_flag("any-integer");
         let is_generated_numeric = sub_matches.get_flag("any-numeric");
@@ -142,13 +144,14 @@ impl Cli {
                 }
             }
         };
-        workspace
-            .add_interpretation(Interpretation::new(
-                condition.clone(),
-                expression_type,
-                precedence,
-                interpretation_output_type.clone(),
-            ))
+        let new_interpretation = Interpretation::new(
+            condition.clone(),
+            expression_type,
+            precedence,
+            interpretation_output_type.clone(),
+        );
+        workspace_store
+            .add(WorkspaceTransaction::AddInterpretation(new_interpretation))
             .map_err(|e| format!("Workspace Error: {:?}", e).to_string())?;
         if interpretation_output_type == InterpretedType::SameAsValue {
             let generated_type_condition = match condition {
@@ -165,25 +168,25 @@ impl Cli {
                 generated_type_condition,
                 vec![output_type].into_iter().collect(),
             );
-            workspace.add_generated_type(generated_type);
+            workspace_store.add(WorkspaceTransaction::AddGeneratedType(generated_type));
         }
-        self.update_workspace(workspace)?;
+        self.update_workspace_store(workspace_store)?;
         return Ok("Interpretation added.".to_string());
     }
 
     pub fn remove_interpretation(&mut self, sub_matches: &ArgMatches) -> Result<String, String> {
-        let mut workspace = self.load_workspace()?;
+        let mut workspace_store = self.load_workspace_store()?;
         match sub_matches.get_one::<String>("index") {
             None => Err("Invalid Interpretation Index.".to_string()),
             Some(index_string) => match index_string.parse::<usize>() {
                 Ok(index) => {
-                    let to_return = workspace
-                        .remove_interpretation(index)
+                    let to_return = workspace_store
+                        .add(WorkspaceTransaction::RemoveInterpretation(index))
                         .map_err(|e| format!("Workspace Error: {:?}", e).to_string())
                         .map(|interpretation| {
                             format!("Removed Interpretation: {:?}", interpretation).to_string()
                         });
-                    self.update_workspace(workspace)?;
+                    self.update_workspace_store(workspace_store)?;
                     to_return
                 }
                 Err(_) => Err(format!("Unable to parse index: {}", index_string).to_string()),
@@ -194,7 +197,8 @@ impl Cli {
     pub fn add_type(&mut self, sub_matches: &ArgMatches) -> Result<String, String> {
         let maybe_type_name = sub_matches.get_one::<String>("type-name");
         let maybe_parent_name = sub_matches.get_one::<String>("parent-type-name");
-        let mut workspace = self.load_workspace()?;
+        let mut workspace_store = self.load_workspace_store()?;
+        let workspace = workspace_store.compile();
         match maybe_type_name {
             Some(type_name) => {
                 let parent_type = match maybe_parent_name {
@@ -217,11 +221,14 @@ impl Cli {
                         }
                     }
                 };
-                workspace
-                    .add_type_to_parent(type_name.into(), parent_type.clone())
+                workspace_store
+                    .add(WorkspaceTransaction::AddType(
+                        type_name.into(),
+                        parent_type.clone(),
+                    ))
                     .map_err(|e| format!("Workspace Error: {:?}", e).to_string())?;
 
-                self.update_workspace(workspace)?;
+                self.update_workspace_store(workspace_store)?;
 
                 Ok(format!("{} added to {}.", type_name, parent_type.pretty_print()).to_string())
             }
@@ -230,16 +237,19 @@ impl Cli {
     }
 
     pub fn get_transformations(&self, sub_matches: &ArgMatches) -> Result<String, String> {
-        let workspace = self.load_workspace()?;
+        let workspace_store = self.load_workspace_store()?;
         match sub_matches.get_one::<String>("partial-statement") {
             None => Err("No partial statement provided.".to_string()),
             Some(partial_statement) => {
+                let workspace = workspace_store.compile();
                 let serialized_result = to_string(
                     &workspace
                         .get_valid_transformations(partial_statement)
                         .map_err(|e| format!("Error getting valid transformations: {:?}", e))?
                         .into_iter()
-                        .map(|n| n.to_interpreted_string(workspace.get_interpretations()))
+                        .map(|n| {
+                            n.to_interpreted_string(workspace_store.compile().get_interpretations())
+                        })
                         .collect::<Vec<_>>(),
                 )
                 .map_err(|e| e.to_string())?;
@@ -249,16 +259,19 @@ impl Cli {
     }
 
     pub fn get_transformations_from(&self, sub_matches: &ArgMatches) -> Result<String, String> {
-        let workspace = self.load_workspace()?;
+        let workspace_store = self.load_workspace_store()?;
         match sub_matches.get_one::<String>("statement-index") {
             None => Err("No statement index provided.".to_string()),
             Some(index_string) => match index_string.parse::<usize>() {
                 Ok(statement_index) => {
+                    let workspace = workspace_store.compile();
                     let mut result = workspace
                         .get_valid_transformations_from(statement_index)
                         .map_err(|e| format!("Error getting valid transformations: {:?}", e))?
                         .into_iter()
-                        .map(|n| n.to_interpreted_string(workspace.get_interpretations()))
+                        .map(|n| {
+                            n.to_interpreted_string(workspace_store.compile().get_interpretations())
+                        })
                         .collect::<Vec<_>>();
                     result.sort_by(|a, b| a.len().cmp(&b.len()));
                     let serialized_result = to_string(&result).map_err(|e| e.to_string())?;
@@ -269,7 +282,7 @@ impl Cli {
         }
     }
     pub fn add_transformation(&mut self, sub_matches: &ArgMatches) -> Result<String, String> {
-        let mut workspace = self.load_workspace()?;
+        let mut workspace_store = self.load_workspace_store()?;
         let from_as_string = match sub_matches.get_one::<String>("from") {
             None => return Err("No from provided.".to_string()),
             Some(from) => from,
@@ -278,15 +291,15 @@ impl Cli {
             None => return Err("No to provided.".to_string()),
             Some(to) => to,
         };
-        let _from = workspace
+        workspace_store
             .add_parsed_transformation(&from_as_string, &to_as_string)
             .map_err(|e| format!("Workspace Error: {:?}", e).to_string())?;
-        self.update_workspace(workspace)?;
+        self.update_workspace_store(workspace_store)?;
         return Ok("Transformation added.".to_string());
     }
 
     pub fn add_joint_transformation(&mut self, sub_matches: &ArgMatches) -> Result<String, String> {
-        let mut workspace = self.load_workspace()?;
+        let mut workspace_store = self.load_workspace_store()?;
         let left_from_as_string = match sub_matches.get_one::<String>("left-from") {
             None => return Err("No left-from provided.".to_string()),
             Some(from) => from,
@@ -299,52 +312,52 @@ impl Cli {
             None => return Err("No to provided.".to_string()),
             Some(to) => to,
         };
-        let _from = workspace
+        workspace_store
             .add_parsed_joint_transformation(
                 &left_from_as_string,
                 right_from_as_string,
                 &to_as_string,
             )
             .map_err(|e| format!("Workspace Error: {:?}", e).to_string())?;
-        self.update_workspace(workspace)?;
+        self.update_workspace_store(workspace_store)?;
         return Ok("Transformation added.".to_string());
     }
 
     pub fn hypothesize(&self, sub_matches: &ArgMatches) -> Result<String, String> {
-        let mut workspace = self.load_workspace()?;
+        let mut workspace_store = self.load_workspace_store()?;
         match sub_matches.get_one::<String>("statement") {
             None => Err("No statement provided to derive".to_string()),
             Some(statement) => {
-                let to_return = workspace
+                let to_return = workspace_store
                     .add_parsed_hypothesis(statement)
                     .map_err(|e| format!("Parser Error: {:?}", e).to_string())
                     .map(|_| "Hypthesis added.".to_string());
-                self.update_workspace(workspace)?;
+                self.update_workspace_store(workspace_store)?;
                 to_return
             }
         }
     }
 
     pub fn derive(&self, sub_matches: &ArgMatches) -> Result<String, String> {
-        let mut workspace = self.load_workspace()?;
+        let mut workspace_store = self.load_workspace_store()?;
         match sub_matches.get_one::<String>("statement") {
             None => return Err("No statement provided to derive".to_string()),
             Some(statement) => {
-                let to_return = workspace
+                let to_return = workspace_store
                     .try_transform_into_parsed(statement)
                     .map_err(|e| format!("Workspace error: {:?} (Statement: {})", e, statement))
                     .map(|statement| {
-                        statement.to_interpreted_string(workspace.get_interpretations())
+                        statement.to_interpreted_string(workspace_store.get_interpretations())
                     });
-                self.update_workspace(workspace)?;
+                self.update_workspace_store(workspace_store)?;
                 to_return
             }
         }
     }
 
     pub fn export_context(&self, sub_matches: &ArgMatches) -> Result<String, String> {
-        let workspace = self.load_workspace()?;
-        let context = Context::from_workspace(&workspace)
+        let workspace_store = self.load_workspace_store()?;
+        let context = Context::from_workspace(&workspace_store.compile())
             .map_err(|e| format!("Error exporting workspace: {:?}", e))?;
         let name = match sub_matches.get_one::<String>("name") {
             None => {
@@ -368,7 +381,7 @@ impl Cli {
     }
 
     pub fn import_context(&self, sub_matches: &ArgMatches) -> Result<String, String> {
-        let mut workspace = self.load_workspace()?;
+        let mut workspace_store = self.load_workspace_store()?;
         let name = match sub_matches.get_one::<String>("name") {
             None => {
                 return Err("No name provided.".to_string());
@@ -381,10 +394,10 @@ impl Cli {
             .read_file(CONTEXT_DIRECTORY_RELATIVE_PATH, &filename)?;
         let context = Context::deserialize(&serialized_context)
             .map_err(|e| format!("Couldn't deserialize context: {:?}.", e))?;
-        workspace
+        workspace_store
             .try_import_context(context)
             .map_err(|e| format!("Error importing context: {:?}", e))?;
-        self.update_workspace(workspace)?;
+        self.update_workspace_store(workspace_store)?;
         Ok("Context imported.".to_string())
     }
 
@@ -401,16 +414,22 @@ impl Cli {
             .map_err(|e| format!("Serialization Error during ls_contexts: {:?}", e).to_string())
     }
 
-    fn update_workspace(&self, workspace: Workspace) -> Result<(), String> {
+    fn update_workspace_store(
+        &self,
+        workspace_store: WorkspaceTransactionStore,
+    ) -> Result<(), String> {
+        workspace_store.truncate(N_TRANSACTIONS_TO_KEEP_ON_WORKSPACE_STORE_TRUNCATION);
         self.filesystem.write_file(
             STATE_DIRECTORY_RELATIVE_PATH,
             "workspace.toml",
-            workspace.serialize().map_err(|e| format!("{:?}", e))?,
+            workspace_store
+                .serialize()
+                .map_err(|e| format!("{:?}", e))?,
             true,
         )
     }
 
-    fn load_workspace(&self) -> Result<Workspace, String> {
+    fn load_workspace_store(&self) -> Result<WorkspaceTransactionStore, String> {
         if !self.filesystem.path_exists(STATE_DIRECTORY_RELATIVE_PATH) {
             return Err("No workspace exists in this directory".to_string());
         }
@@ -419,8 +438,8 @@ impl Cli {
             .filesystem
             .read_file(STATE_DIRECTORY_RELATIVE_PATH, "workspace.toml")
         {
-            Ok(contents) => match Workspace::deserialize(&contents) {
-                Ok(workspace) => return Ok(workspace),
+            Ok(contents) => match WorkspaceTransactionStore::deserialize(&contents) {
+                Ok(workspace_store) => return Ok(workspace_store),
                 Err(e) => {
                     return Err(format!("Couldn't deserialize workspace.toml: {}", e));
                 }
