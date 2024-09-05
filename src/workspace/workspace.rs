@@ -672,7 +672,7 @@ impl Workspace {
     }
 }
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub struct TransactionStore {
     transactions: Vec<WorkspaceTransaction>,
     next_index: usize,
@@ -695,6 +695,10 @@ impl TransactionStore {
             transactions,
             next_index,
         }
+    }
+
+    pub fn len(&self) -> usize {
+        self.transactions.len()
     }
 
     pub fn add(&mut self, transaction: WorkspaceTransaction) {
@@ -740,6 +744,41 @@ impl TransactionStore {
         workspace
     }
 
+    pub fn truncate(&mut self, n_incremental_to_keep: usize) {
+        let n_to_compile = self.len().saturating_sub(n_incremental_to_keep);
+        if n_to_compile == 0 {
+            return;
+        }
+
+        self.compile_first_n_to_snapshot(n_to_compile);
+    }
+
+    fn compile_to_snapshot(&mut self) {
+        // Forgets anything beyond the pointer
+        let snapshot = Self::new(self.transactions[0..self.next_index].to_vec()).compile();
+        self.transactions = vec![WorkspaceTransaction::Snapshot(snapshot)];
+        self.next_index = self.len();
+    }
+
+    fn compile_first_n_to_snapshot(&mut self, n: usize) {
+        let to_snapshot = self.transactions[0..n].to_vec();
+        let mut remaining = self.transactions[n..].to_vec();
+
+        let next_index_pointed_at_compiled = self.next_index < n;
+        if next_index_pointed_at_compiled {
+            // If the next index is somewhere within the compilation
+            // we need to just compile it to a snapshot and forget the rest
+            self.compile_to_snapshot();
+            return;
+        }
+
+        let snapshot = Self::new(to_snapshot).compile();
+        self.transactions = vec![WorkspaceTransaction::Snapshot(snapshot)];
+        self.transactions.append(&mut remaining);
+
+        self.next_index -= (n - 1);
+    }
+
     pub fn undo(&mut self) -> Option<WorkspaceTransaction> {
         if self.next_index > 0 {
             self.next_index -= 1;
@@ -759,7 +798,7 @@ impl TransactionStore {
     }
 }
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub enum WorkspaceTransaction {
     Snapshot(Workspace),
     AddType(Type, Type), // New Type, Parent
@@ -951,6 +990,89 @@ mod test_workspace {
     };
 
     use super::*;
+
+    #[test]
+    fn test_truncation_store_snapshots_all_if_truncation_is_too_much() {
+        let mut store = TransactionStore::empty();
+        assert_eq!(store.compile(), Workspace::default());
+
+        store.add(WorkspaceTransaction::AddType("Real".into(), Type::Object));
+        store.add(WorkspaceTransaction::AddType(
+            "Integer".into(),
+            "Real".into(),
+        ));
+        store.add(WorkspaceTransaction::AddInterpretation(
+            Interpretation::infix_operator("+".into(), 1, "Real".into()),
+        ));
+        let cached_workspace = store.compile();
+        store.add(WorkspaceTransaction::AddInterpretation(
+            Interpretation::infix_operator("-".into(), 1, "Real".into()),
+        ));
+        assert_eq!(store.len(), 4);
+        store.add(WorkspaceTransaction::RemoveInterpretation(1));
+        assert_eq!(store.len(), 5);
+
+        store.undo();
+        store.undo();
+        store.undo();
+        store.undo();
+        assert_eq!(store.next_index, 1);
+
+        let cached_workspace = store.compile();
+
+        store.truncate(3);
+        assert_eq!(store.len(), 1);
+        assert_eq!(store.next_index, 1);
+
+        assert_eq!(store.compile(), cached_workspace);
+    }
+
+    #[test]
+    fn test_transaction_store_truncates() {
+        let mut store = TransactionStore::empty();
+        assert_eq!(store.compile(), Workspace::default());
+
+        store.add(WorkspaceTransaction::AddType("Real".into(), Type::Object));
+        store.add(WorkspaceTransaction::AddType(
+            "Integer".into(),
+            "Real".into(),
+        ));
+        store.add(WorkspaceTransaction::AddInterpretation(
+            Interpretation::infix_operator("+".into(), 1, "Real".into()),
+        ));
+        let cached_workspace = store.compile();
+        store.add(WorkspaceTransaction::AddInterpretation(
+            Interpretation::infix_operator("-".into(), 1, "Real".into()),
+        ));
+        assert_eq!(store.len(), 4);
+        store.add(WorkspaceTransaction::RemoveInterpretation(1));
+        assert_eq!(store.len(), 5);
+        assert_eq!(store.compile(), cached_workspace);
+
+        let cached_workspace = store.compile();
+        store.truncate(10);
+        assert_eq!(store.compile(), cached_workspace);
+        assert_eq!(store.len(), 5);
+
+        store.truncate(4);
+        assert_eq!(store.len(), 5); // Snapshot + 4
+        assert_eq!(store.next_index, 5);
+        assert_eq!(store.compile(), cached_workspace);
+
+        store.truncate(3);
+        assert_eq!(store.len(), 4); // Snapshot + 3
+        assert_eq!(store.next_index, 4);
+        assert_eq!(store.compile(), cached_workspace);
+
+        store.truncate(0);
+        assert_eq!(store.len(), 1); // Just the snapshot
+        assert_eq!(store.next_index, 1);
+        assert_eq!(store.compile(), cached_workspace);
+
+        let cached_store = store.clone();
+        store.truncate(10);
+        assert_eq!(store, cached_store);
+    }
 
     #[test]
     fn test_transaction_store_compiles() {
