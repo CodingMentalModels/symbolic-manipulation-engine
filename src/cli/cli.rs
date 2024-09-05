@@ -416,9 +416,9 @@ impl Cli {
 
     fn update_workspace_store(
         &self,
-        workspace_store: WorkspaceTransactionStore,
+        mut workspace_store: WorkspaceTransactionStore,
     ) -> Result<(), String> {
-        workspace_store.truncate(N_TRANSACTIONS_TO_KEEP_ON_WORKSPACE_STORE_TRUNCATION);
+        workspace_store.truncate(N_TRANSACTIONS_TO_KEEP_IN_WORKSPACE_STORE);
         self.filesystem.write_file(
             STATE_DIRECTORY_RELATIVE_PATH,
             "workspace.toml",
