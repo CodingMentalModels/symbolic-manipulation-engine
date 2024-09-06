@@ -19,7 +19,9 @@ use crate::{
         symbol_type::{GeneratedType, GeneratedTypeCondition, Type},
         transformation::ExplicitTransformation,
     },
-    workspace::workspace::{Workspace, WorkspaceTransaction, WorkspaceTransactionStore},
+    workspace::workspace::{
+        Workspace, WorkspaceTransaction, WorkspaceTransactionItem, WorkspaceTransactionStore,
+    },
 };
 
 pub struct Cli {
@@ -151,7 +153,7 @@ impl Cli {
             interpretation_output_type.clone(),
         );
         workspace_store
-            .add(WorkspaceTransaction::AddInterpretation(new_interpretation))
+            .add(WorkspaceTransactionItem::AddInterpretation(new_interpretation).into())
             .map_err(|e| format!("Workspace Error: {:?}", e).to_string())?;
         if interpretation_output_type == InterpretedType::SameAsValue {
             let generated_type_condition = match condition {
@@ -168,7 +170,7 @@ impl Cli {
                 generated_type_condition,
                 vec![output_type].into_iter().collect(),
             );
-            workspace_store.add(WorkspaceTransaction::AddGeneratedType(generated_type));
+            workspace_store.add(WorkspaceTransactionItem::AddGeneratedType(generated_type).into());
         }
         self.update_workspace_store(workspace_store)?;
         return Ok("Interpretation added.".to_string());
@@ -181,7 +183,7 @@ impl Cli {
             Some(index_string) => match index_string.parse::<usize>() {
                 Ok(index) => {
                     let to_return = workspace_store
-                        .add(WorkspaceTransaction::RemoveInterpretation(index))
+                        .add(WorkspaceTransactionItem::RemoveInterpretation(index).into())
                         .map_err(|e| format!("Workspace Error: {:?}", e).to_string())
                         .map(|interpretation| {
                             format!("Removed Interpretation: {:?}", interpretation).to_string()
@@ -222,10 +224,7 @@ impl Cli {
                     }
                 };
                 workspace_store
-                    .add(WorkspaceTransaction::AddType(
-                        type_name.into(),
-                        parent_type.clone(),
-                    ))
+                    .add_type_to_parent(type_name.into(), parent_type.clone())
                     .map_err(|e| format!("Workspace Error: {:?}", e).to_string())?;
 
                 self.update_workspace_store(workspace_store)?;

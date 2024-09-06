@@ -214,20 +214,19 @@ impl Workspace {
         Ok(self.interpretations.remove(interpretation_index))
     }
 
-    pub fn add_type_to_parent(&mut self, t: Type, parent: Type) -> Result<Type, WorkspaceError> {
+    fn add_type_to_parent(&mut self, t: Type, parent: Type) -> Result<Type, WorkspaceError> {
         self.types
             .add_child_to_parent(t, parent)
             .map_err(|e| e.into())
     }
 
-    pub fn add_hypothesis(&mut self, statement: SymbolNode) -> Result<(), WorkspaceError> {
+    fn add_hypothesis(&mut self, statement: SymbolNode) -> Result<(), WorkspaceError> {
         self.types
             .binds_statement_or_error(&statement)
             .map_err(|x| WorkspaceError::from(x))?;
         if statement.get_arbitrary_nodes().len() > 0 {
             return Err(WorkspaceError::ContainsArbitraryNode);
         }
-        self.generate_types_in_bulk(vec![statement.clone()].into_iter().collect())?;
         self.statements.push(statement);
         self.provenance.push(Provenance::Hypothesis);
         Ok(())
@@ -262,34 +261,8 @@ impl Workspace {
         }
     }
 
-    pub fn add_transformation(
-        &mut self,
-        transformation: Transformation,
-    ) -> Result<(), WorkspaceError> {
+    fn add_transformation(&mut self, transformation: Transformation) -> Result<(), WorkspaceError> {
         self.types.binds_transformation_or_error(&transformation)?;
-        match &transformation {
-            Transformation::ExplicitTransformation(t) => {
-                self.generate_types_in_bulk(
-                    vec![t.get_from().clone(), t.get_to().clone()]
-                        .into_iter()
-                        .collect(),
-                )?;
-            }
-            Transformation::AdditionAlgorithm(_) => {
-                // Nothing to generate
-            }
-            Transformation::ApplyToBothSidesTransformation(t) => {
-                let transformation = t.get_transformation();
-                self.generate_types_in_bulk(
-                    vec![
-                        transformation.get_from().clone(),
-                        transformation.get_to().clone(),
-                    ]
-                    .into_iter()
-                    .collect(),
-                )?;
-            }
-        }
         self.transformations.push(transformation);
         Ok(())
     }
@@ -441,7 +414,7 @@ impl Workspace {
         &self.generated_types
     }
 
-    pub fn add_generated_type(&mut self, generated_type: GeneratedType) {
+    fn add_generated_type(&mut self, generated_type: GeneratedType) {
         self.generated_types.push(generated_type);
     }
 
@@ -714,6 +687,10 @@ impl WorkspaceTransactionStore {
         }
     }
 
+    pub fn add_type_to_parent(&mut self, t: Type, parent: Type) -> Result<(), WorkspaceError> {
+        self.add(WorkspaceTransactionItem::AddType(t, parent).into())
+    }
+
     pub fn import_context(&mut self, context: Context) -> Result<(), WorkspaceError> {
         let mut workspace = self.compile();
         workspace.try_import_context(context)?;
@@ -723,8 +700,9 @@ impl WorkspaceTransactionStore {
 
     pub fn add_parsed_hypothesis(&mut self, s: &str) -> Result<SymbolNode, WorkspaceError> {
         let parsed = self.compile().parse_from_string(s)?;
-        self.generate_types(&parsed)?;
-        self.add(WorkspaceTransactionItem::AddHypothesis(parsed.clone()).into())?;
+        let mut transaction = self.get_generated_types_transaction(&parsed)?;
+        transaction.add(WorkspaceTransactionItem::AddHypothesis(parsed.clone()));
+        self.add(transaction)?;
         Ok(parsed)
     }
 
@@ -737,12 +715,18 @@ impl WorkspaceTransactionStore {
         let workspace = self.compile();
         let parsed_from = (workspace.parse_from_string(left_from)?)
             .join(workspace.parse_from_string(right_from)?);
-        self.generate_types(&parsed_from)?;
+        let from_transaction = self.get_generated_types_transaction(&parsed_from)?;
         let parsed_to = workspace.parse_from_string(to)?;
-        self.generate_types(&parsed_to)?;
+        let to_transaction = self.get_generated_types_transaction(&parsed_to)?;
+        let mut transaction = from_transaction.combine(to_transaction);
+        // TODO Do we need to handle the case where from and to transactions try to add the same
+        // type?
         let transformation: Transformation =
             ExplicitTransformation::new(parsed_from, parsed_to).into();
-        self.add(WorkspaceTransactionItem::AddTransformation(transformation.clone()).into())?;
+        transaction.add(WorkspaceTransactionItem::AddTransformation(
+            transformation.clone(),
+        ));
+        self.add(transaction)?;
         Ok(transformation)
     }
 
@@ -753,12 +737,18 @@ impl WorkspaceTransactionStore {
     ) -> Result<Transformation, WorkspaceError> {
         let workspace = self.compile();
         let parsed_from = workspace.parse_from_string(from)?;
-        self.generate_types(&parsed_from)?;
+        let from_transaction = self.get_generated_types_transaction(&parsed_from)?;
         let parsed_to = workspace.parse_from_string(to)?;
-        self.generate_types(&parsed_to)?;
+        let to_transaction = self.get_generated_types_transaction(&parsed_to)?;
+        let mut transaction = from_transaction.combine(to_transaction);
+        // TODO Similar to above, do we need to get rid of duplicative AddType transactions between
+        // from and to?
         let transformation: Transformation =
             ExplicitTransformation::new(parsed_from, parsed_to).into();
-        self.add(WorkspaceTransactionItem::AddTransformation(transformation.clone()).into())?;
+        transaction.add(WorkspaceTransactionItem::AddTransformation(
+            transformation.clone(),
+        ));
+        self.add(transaction)?;
         Ok(transformation)
     }
 
@@ -767,7 +757,6 @@ impl WorkspaceTransactionStore {
         desired: &str,
     ) -> Result<SymbolNode, WorkspaceError> {
         let parsed = self.compile().parse_from_string(desired)?;
-        self.generate_types(&parsed)?;
         self.try_transform_into(parsed)
     }
 
@@ -775,6 +764,7 @@ impl WorkspaceTransactionStore {
         &mut self,
         desired: SymbolNode,
     ) -> Result<SymbolNode, WorkspaceError> {
+        let mut transaction = self.get_generated_types_transaction(&desired)?;
         let workspace = self.compile();
         if workspace.statements.contains(&desired) {
             return Err(WorkspaceError::StatementsAlreadyInclude(desired.clone()));
@@ -796,7 +786,9 @@ impl WorkspaceTransactionStore {
                         // TODO Derive the appropriate transform addresses
                         let provenance =
                             Provenance::Derived((statement_idx, transform_idx, vec![]));
-                        self.add(WorkspaceTransaction::Derive(output.clone(), provenance));
+                        transaction
+                            .add(WorkspaceTransactionItem::Derive(output.clone(), provenance));
+                        self.add(transaction);
                         return Ok(output);
                     }
                     Err(_) => {
@@ -808,27 +800,31 @@ impl WorkspaceTransactionStore {
         return Err(WorkspaceError::NoTransformationsPossible);
     }
 
-    fn get_generate_types_transaction(
+    fn get_generated_types_transaction(
         &mut self,
         statement: &SymbolNode,
     ) -> Result<WorkspaceTransaction, WorkspaceError> {
         let workspace = self.compile();
         let mut items = Vec::new();
+        let mut already_added = HashSet::new();
         for generated_type in workspace.get_generated_types().clone() {
             for (t, parents) in generated_type.generate(statement) {
-                items.extend(self.get_add_type_to_parents_items(t, &parents));
+                if !already_added.contains(&t) {
+                    items.extend(self.get_add_type_to_parents_items(t.clone(), &parents));
+                    already_added.insert(t);
+                }
             }
         }
         Ok(WorkspaceTransaction(items))
     }
 
-    fn get_generate_types_in_bulk_transaction(
+    fn get_generated_types_in_bulk_transaction(
         &mut self,
         statements: HashSet<SymbolNode>,
     ) -> Result<WorkspaceTransaction, WorkspaceError> {
         let mut items = Vec::new();
         for statement in statements {
-            items.extend(self.get_generate_types_transaction(&statement)?.0);
+            items.extend(self.get_generated_types_transaction(&statement)?.0);
         }
         Ok(WorkspaceTransaction(items))
     }
@@ -852,6 +848,18 @@ pub struct WorkspaceTransaction(Vec<WorkspaceTransactionItem>);
 impl From<WorkspaceTransactionItem> for WorkspaceTransaction {
     fn from(value: WorkspaceTransactionItem) -> Self {
         Self(vec![value])
+    }
+}
+
+impl WorkspaceTransaction {
+    pub fn add(&mut self, item: WorkspaceTransactionItem) {
+        self.0.push(item);
+    }
+
+    pub fn combine(self, other: Self) -> Self {
+        let mut new_items = self.0;
+        new_items.extend(other.0);
+        Self(new_items)
     }
 }
 
@@ -1054,20 +1062,27 @@ mod test_workspace {
         let mut store = WorkspaceTransactionStore::empty();
         assert_eq!(store.compile(), Workspace::default());
 
-        store.add(WorkspaceTransaction::AddType("Real".into(), Type::Object));
-        store.add(WorkspaceTransaction::AddType(
-            "Integer".into(),
-            "Real".into(),
-        ));
-        store.add(WorkspaceTransaction::AddInterpretation(
-            Interpretation::infix_operator("+".into(), 1, "Real".into()),
-        ));
+        store.add(WorkspaceTransactionItem::AddType("Real".into(), Type::Object).into());
+        store.add(WorkspaceTransactionItem::AddType("Integer".into(), "Real".into()).into());
+        store.add(
+            WorkspaceTransactionItem::AddInterpretation(Interpretation::infix_operator(
+                "+".into(),
+                1,
+                "Real".into(),
+            ))
+            .into(),
+        );
         let cached_workspace = store.compile();
-        store.add(WorkspaceTransaction::AddInterpretation(
-            Interpretation::infix_operator("-".into(), 1, "Real".into()),
-        ));
+        store.add(
+            WorkspaceTransactionItem::AddInterpretation(Interpretation::infix_operator(
+                "-".into(),
+                1,
+                "Real".into(),
+            ))
+            .into(),
+        );
         assert_eq!(store.len(), 4);
-        store.add(WorkspaceTransaction::RemoveInterpretation(1));
+        store.add(WorkspaceTransactionItem::RemoveInterpretation(1).into());
         assert_eq!(store.len(), 5);
 
         store.undo();
@@ -1090,20 +1105,27 @@ mod test_workspace {
         let mut store = WorkspaceTransactionStore::empty();
         assert_eq!(store.compile(), Workspace::default());
 
-        store.add(WorkspaceTransaction::AddType("Real".into(), Type::Object));
-        store.add(WorkspaceTransaction::AddType(
-            "Integer".into(),
-            "Real".into(),
-        ));
-        store.add(WorkspaceTransaction::AddInterpretation(
-            Interpretation::infix_operator("+".into(), 1, "Real".into()),
-        ));
+        store.add(WorkspaceTransactionItem::AddType("Real".into(), Type::Object).into());
+        store.add(WorkspaceTransactionItem::AddType("Integer".into(), "Real".into()).into());
+        store.add(
+            WorkspaceTransactionItem::AddInterpretation(Interpretation::infix_operator(
+                "+".into(),
+                1,
+                "Real".into(),
+            ))
+            .into(),
+        );
         let cached_workspace = store.compile();
-        store.add(WorkspaceTransaction::AddInterpretation(
-            Interpretation::infix_operator("-".into(), 1, "Real".into()),
-        ));
+        store.add(
+            WorkspaceTransactionItem::AddInterpretation(Interpretation::infix_operator(
+                "-".into(),
+                1,
+                "Real".into(),
+            ))
+            .into(),
+        );
         assert_eq!(store.len(), 4);
-        store.add(WorkspaceTransaction::RemoveInterpretation(1));
+        store.add(WorkspaceTransactionItem::RemoveInterpretation(1).into());
         assert_eq!(store.len(), 5);
         assert_eq!(store.compile(), cached_workspace);
 
@@ -1137,7 +1159,7 @@ mod test_workspace {
         let mut store = WorkspaceTransactionStore::empty();
         assert_eq!(store.compile(), Workspace::default());
 
-        store.add(WorkspaceTransaction::AddType("Real".into(), Type::Object));
+        store.add(WorkspaceTransactionItem::AddType("Real".into(), Type::Object).into());
 
         let expected_0 = Workspace::new(
             TypeHierarchy::chain(vec!["Real".into()]).unwrap(),
@@ -1146,10 +1168,7 @@ mod test_workspace {
         );
         assert_eq!(store.compile(), expected_0);
 
-        store.add(WorkspaceTransaction::AddType(
-            "Integer".into(),
-            "Real".into(),
-        ));
+        store.add(WorkspaceTransactionItem::AddType("Integer".into(), "Real".into()).into());
 
         let expected_1 = Workspace::new(
             TypeHierarchy::chain(vec!["Real".into(), "Integer".into()]).unwrap(),
@@ -1188,19 +1207,29 @@ mod test_workspace {
             Interpretation::arbitrary_functional("Any".into(), 99, "Boolean".into()),
         ];
 
-        let mut workspace = Workspace::new(types.clone(), vec![], interpretations.clone());
-        workspace
+        let workspace = Workspace::new(types.clone(), vec![], interpretations.clone());
+        let mut workspace_store = WorkspaceTransactionStore::snapshot(workspace);
+
+        workspace_store
             .add_parsed_transformation("p=q", "Any(p)=Any(q)")
             .unwrap();
 
-        workspace.add_parsed_hypothesis("p=q").unwrap();
+        workspace_store.add_parsed_hypothesis("p=q").unwrap();
 
-        let expected = workspace.parse_from_string("p^s=q^s").unwrap();
+        let expected = workspace_store
+            .compile()
+            .parse_from_string("p^s=q^s")
+            .unwrap();
         assert_eq!(
-            workspace.try_transform_into_parsed("p^s=q^s").unwrap(),
+            workspace_store
+                .try_transform_into_parsed("p^s=q^s")
+                .unwrap(),
             expected
         );
-        assert!(workspace.get_statements().contains(&expected));
+        assert!(workspace_store
+            .compile()
+            .get_statements()
+            .contains(&expected));
     }
 
     #[test]
@@ -1221,19 +1250,20 @@ mod test_workspace {
             Interpretation::arbitrary_functional("Any".into(), 99, "Boolean".into()),
         ];
 
-        let mut workspace = Workspace::new(types.clone(), vec![], interpretations.clone());
+        let workspace = Workspace::new(types.clone(), vec![], interpretations.clone());
+        let mut workspace_store = WorkspaceTransactionStore::snapshot(workspace);
 
-        workspace
+        workspace_store
             .add_parsed_transformation("p=q", "Any(p)=Any(q)")
             .unwrap();
-        workspace.add_parsed_hypothesis("p=q").unwrap();
-        workspace.add_parsed_hypothesis("p^s").unwrap();
+        workspace_store.add_parsed_hypothesis("p=q").unwrap();
+        workspace_store.add_parsed_hypothesis("p^s").unwrap();
 
         let instantiate = |s: &str| {
             (
                 ExplicitTransformation::new(
-                    workspace.parse_from_string("p=q").unwrap(),
-                    workspace.parse_from_string(s).unwrap(),
+                    workspace_store.compile().parse_from_string("p=q").unwrap(),
+                    workspace_store.compile().parse_from_string(s).unwrap(),
                 )
                 .into(),
                 0,
@@ -1250,7 +1280,8 @@ mod test_workspace {
         .into_iter()
         .collect();
         assert_eq!(
-            workspace
+            workspace_store
+                .compile()
                 .get_instantiated_transformations_with_indices(None)
                 .unwrap(),
             expected
@@ -1259,20 +1290,21 @@ mod test_workspace {
         let instantiate = |from: &str, to: &str| {
             (
                 ExplicitTransformation::new(
-                    workspace.parse_from_string(from).unwrap(),
-                    workspace.parse_from_string(to).unwrap(),
+                    workspace_store.compile().parse_from_string(from).unwrap(),
+                    workspace_store.compile().parse_from_string(to).unwrap(),
                 )
                 .into(),
                 0,
             )
         };
         let mut workspace = Workspace::new(types.clone(), vec![], interpretations.clone());
+        let mut workspace_store = WorkspaceTransactionStore::snapshot(workspace);
 
-        workspace
+        workspace_store
             .add_parsed_transformation("Any(p)", "p=p")
             .unwrap();
-        workspace.add_parsed_hypothesis("p=q").unwrap();
-        workspace.add_parsed_hypothesis("p^s").unwrap();
+        workspace_store.add_parsed_hypothesis("p=q").unwrap();
+        workspace_store.add_parsed_hypothesis("p^s").unwrap();
 
         let expected: HashSet<_> = vec![
             instantiate("p", "p=p"),
@@ -1284,7 +1316,8 @@ mod test_workspace {
         .into_iter()
         .collect();
 
-        let actual = workspace
+        let actual = workspace_store
+            .compile()
             .get_instantiated_transformations_with_indices(None)
             .unwrap();
         assert_eq!(
@@ -1322,19 +1355,20 @@ mod test_workspace {
             Interpretation::arbitrary_functional("Any".into(), 99, "Boolean".into()),
         ];
 
-        let mut workspace = Workspace::new(types.clone(), vec![], interpretations.clone());
+        let workspace = Workspace::new(types.clone(), vec![], interpretations.clone());
+        let mut workspace_store = WorkspaceTransactionStore::snapshot(workspace);
         assert_eq!(
-            workspace.add_parsed_hypothesis("Any(p)"),
+            workspace_store.add_parsed_hypothesis("Any(p)"),
             Err(WorkspaceError::ContainsArbitraryNode)
         );
         assert_eq!(
-            workspace.add_parsed_hypothesis("Any(p)=q"),
+            workspace_store.add_parsed_hypothesis("Any(p)=q"),
             Err(WorkspaceError::ContainsArbitraryNode)
         );
 
-        workspace.add_parsed_hypothesis("p=q").unwrap();
+        workspace_store.add_parsed_hypothesis("p=q").unwrap();
         assert_eq!(
-            workspace.try_transform_into_parsed("Any(p)=Any(q)"),
+            workspace_store.try_transform_into_parsed("Any(p)=Any(q)"),
             Err(WorkspaceError::ContainsArbitraryNode)
         );
     }
@@ -1369,85 +1403,101 @@ mod test_workspace {
             Interpretation::singleton("s".into(), "Proposition".into()),
             Interpretation::singleton("s".into(), "Proposition".into()),
         ];
-        let mut workspace = Workspace::new(types.clone(), vec![], interpretations.clone());
-        workspace
-            .add_transformation(
-                ExplicitTransformation::symmetry(
-                    "+".to_string(),
-                    "+".into(),
-                    ("a".to_string(), "b".to_string()),
-                    "Real".into(),
-                )
-                .into(),
-            )
+        let workspace = Workspace::new(types.clone(), vec![], interpretations.clone());
+        let mut workspace_store = WorkspaceTransactionStore::snapshot(workspace);
+
+        workspace_store
+            .add_parsed_transformation("a+b", "b+a")
             .unwrap();
 
-        workspace.add_parsed_hypothesis("x+y").unwrap();
-        let expected = workspace.parse_from_string("y+x").unwrap();
+        workspace_store.add_parsed_hypothesis("x+y").unwrap();
+        let expected = workspace_store.compile().parse_from_string("y+x").unwrap();
         assert_eq!(
-            workspace.try_transform_into_parsed("y+x").unwrap(),
+            workspace_store.try_transform_into_parsed("y+x").unwrap(),
             expected
         );
-        assert!(workspace.get_statements().contains(&expected));
+        assert!(workspace_store
+            .compile()
+            .get_statements()
+            .contains(&expected));
 
-        workspace.add_parsed_hypothesis("j+k").unwrap();
-        let expected = workspace.parse_from_string("k+j").unwrap();
+        workspace_store.add_parsed_hypothesis("j+k").unwrap();
+        let expected = workspace_store.compile().parse_from_string("k+j").unwrap();
         assert_eq!(
-            workspace.try_transform_into_parsed("k+j").unwrap(),
+            workspace_store.try_transform_into_parsed("k+j").unwrap(),
             expected
         );
-        assert!(workspace.get_statements().contains(&expected));
+        assert!(workspace_store
+            .compile()
+            .get_statements()
+            .contains(&expected));
 
-        workspace.add_parsed_hypothesis("a+(b+c)").unwrap();
-        let expected = workspace.parse_from_string("(b+c)+a").unwrap();
+        workspace_store.add_parsed_hypothesis("a+(b+c)").unwrap();
+        let expected = workspace_store
+            .compile()
+            .parse_from_string("(b+c)+a")
+            .unwrap();
         assert_eq!(
-            workspace.try_transform_into_parsed("(b+c)+a").unwrap(),
+            workspace_store
+                .try_transform_into_parsed("(b+c)+a")
+                .unwrap(),
             expected
         );
-        assert!(workspace.get_statements().contains(&expected));
+        assert!(workspace_store
+            .compile()
+            .get_statements()
+            .contains(&expected));
 
-        let mut workspace = Workspace::new(types.clone(), vec![], interpretations.clone());
-        workspace
-            .add_transformation(
-                ExplicitTransformation::symmetry(
-                    "+".to_string(),
-                    "+".into(),
-                    ("a".to_string(), "b".to_string()),
-                    "Real".into(),
-                )
-                .into(),
-            )
+        let workspace = Workspace::new(types.clone(), vec![], interpretations.clone());
+        let mut workspace_store = WorkspaceTransactionStore::snapshot(workspace);
+        workspace_store
+            .add_parsed_transformation("a+b", "b+a")
             .unwrap();
 
-        workspace.add_parsed_hypothesis("a+(b+c)").unwrap();
-        let expected = workspace.parse_from_string("a+(c+b)").unwrap();
+        workspace_store.add_parsed_hypothesis("a+(b+c)").unwrap();
+        let expected = workspace_store
+            .compile()
+            .parse_from_string("a+(c+b)")
+            .unwrap();
         assert_eq!(
-            workspace.try_transform_into_parsed("a+(c+b)").unwrap(),
+            workspace_store
+                .try_transform_into_parsed("a+(c+b)")
+                .unwrap(),
             expected
         );
-        assert!(workspace.get_statements().contains(&expected));
+        assert!(workspace_store
+            .compile()
+            .get_statements()
+            .contains(&expected));
 
-        let mut workspace = Workspace::new(types.clone(), vec![], interpretations.clone());
-        workspace
+        let workspace = Workspace::new(types.clone(), vec![], interpretations.clone());
+        let mut workspace_store = WorkspaceTransactionStore::snapshot(workspace);
+        workspace_store
             .add_parsed_joint_transformation("p", "q", "p^q")
             .unwrap();
 
-        workspace.add_parsed_hypothesis("r").unwrap();
-        workspace.add_parsed_hypothesis("s").unwrap();
+        workspace_store.add_parsed_hypothesis("r").unwrap();
+        workspace_store.add_parsed_hypothesis("s").unwrap();
 
-        let expected = workspace.parse_from_string("r^s").unwrap();
+        let expected = workspace_store.compile().parse_from_string("r^s").unwrap();
         assert_eq!(
-            workspace.try_transform_into_parsed("r^s").unwrap(),
+            workspace_store.try_transform_into_parsed("r^s").unwrap(),
             expected
         );
-        assert!(workspace.get_statements().contains(&expected));
+        assert!(workspace_store
+            .compile()
+            .get_statements()
+            .contains(&expected));
 
-        let expected = workspace.parse_from_string("s^r").unwrap();
+        let expected = workspace_store.compile().parse_from_string("s^r").unwrap();
         assert_eq!(
-            workspace.try_transform_into_parsed("s^r").unwrap(),
+            workspace_store.try_transform_into_parsed("s^r").unwrap(),
             expected
         );
-        assert!(workspace.get_statements().contains(&expected));
+        assert!(workspace_store
+            .compile()
+            .get_statements()
+            .contains(&expected));
     }
 
     #[test]
@@ -1484,48 +1534,69 @@ mod test_workspace {
             Interpretation::singleton("s".into(), "Proposition".into()),
             Interpretation::arbitrary_functional("Any".into(), 98, "Proposition".into()),
         ];
-        let mut workspace = Workspace::new(types.clone(), vec![], interpretations.clone());
-        workspace
-            .add_transformation(
-                ExplicitTransformation::symmetry(
-                    "+".to_string(),
-                    "+".into(),
-                    ("a".to_string(), "b".to_string()),
-                    "Real".into(),
-                )
-                .into(),
-            )
+        let workspace = Workspace::new(types.clone(), vec![], interpretations.clone());
+        let mut workspace_store = WorkspaceTransactionStore::snapshot(workspace);
+        workspace_store
+            .add_parsed_transformation("a+b", "b+a")
             .unwrap();
 
-        workspace.add_parsed_hypothesis("x+y").unwrap();
-        let expected = vec![workspace.parse_from_string("y+x").unwrap()];
+        workspace_store.add_parsed_hypothesis("x+y").unwrap();
+        let expected = vec![workspace_store.compile().parse_from_string("y+x").unwrap()];
         assert_eq!(
-            workspace.get_valid_transformations_from(0).unwrap(),
+            workspace_store
+                .compile()
+                .get_valid_transformations_from(0)
+                .unwrap(),
             expected
         );
-        workspace.try_transform_into_parsed("y+x").unwrap();
-        assert_eq!(workspace.get_valid_transformations_from(0).unwrap(), vec![],);
-
-        workspace.add_parsed_hypothesis("j+k").unwrap();
-        assert_eq!(workspace.get_statements().len(), 3);
-        assert_eq!(workspace.get_valid_transformations_from(0).unwrap(), vec![],);
-
-        let expected = vec![workspace.parse_from_string("k+j").unwrap()];
+        workspace_store.try_transform_into_parsed("y+x").unwrap();
         assert_eq!(
-            workspace.get_valid_transformations_from(2).unwrap(),
+            workspace_store
+                .compile()
+                .get_valid_transformations_from(0)
+                .unwrap(),
+            vec![],
+        );
+
+        workspace_store.add_parsed_hypothesis("j+k").unwrap();
+        assert_eq!(workspace_store.compile().get_statements().len(), 3);
+        assert_eq!(
+            workspace_store
+                .compile()
+                .get_valid_transformations_from(0)
+                .unwrap(),
+            vec![],
+        );
+
+        let expected = vec![workspace_store.compile().parse_from_string("k+j").unwrap()];
+        assert_eq!(
+            workspace_store
+                .compile()
+                .get_valid_transformations_from(2)
+                .unwrap(),
             expected
         );
 
-        workspace.add_parsed_hypothesis("a+(b+c)").unwrap();
+        workspace_store.add_parsed_hypothesis("a+(b+c)").unwrap();
         let expected = vec![
-            workspace.parse_from_string("(b+c)+a").unwrap(),
-            workspace.parse_from_string("(c+b)+a").unwrap(),
-            workspace.parse_from_string("a+(c+b)").unwrap(),
+            workspace_store
+                .compile()
+                .parse_from_string("(b+c)+a")
+                .unwrap(),
+            workspace_store
+                .compile()
+                .parse_from_string("(c+b)+a")
+                .unwrap(),
+            workspace_store
+                .compile()
+                .parse_from_string("a+(c+b)")
+                .unwrap(),
         ]
         .into_iter()
         .collect::<HashSet<_>>();
         assert_eq!(
-            workspace
+            workspace_store
+                .compile()
                 .get_valid_transformations_from(3)
                 .unwrap()
                 .into_iter()
@@ -1568,102 +1639,127 @@ mod test_workspace {
             Interpretation::singleton("s".into(), "Proposition".into()),
             Interpretation::arbitrary_functional("Any".into(), 98, "Proposition".into()),
         ];
-        let mut workspace = Workspace::new(types.clone(), vec![], interpretations.clone());
-        workspace
-            .add_transformation(
-                ExplicitTransformation::symmetry(
-                    "+".to_string(),
-                    "+".into(),
-                    ("a".to_string(), "b".to_string()),
-                    "Real".into(),
-                )
-                .into(),
-            )
+        let workspace = Workspace::new(types.clone(), vec![], interpretations.clone());
+        let mut workspace_store = WorkspaceTransactionStore::snapshot(workspace.clone());
+        workspace_store
+            .add_parsed_transformation("a+b", "b+a")
             .unwrap();
 
-        workspace.add_parsed_hypothesis("x+y").unwrap();
-        let expected = vec![workspace.parse_from_string("y+x").unwrap()];
+        workspace_store.add_parsed_hypothesis("x+y").unwrap();
+        let expected = vec![workspace_store.compile().parse_from_string("y+x").unwrap()];
         assert_eq!(
-            workspace.get_valid_transformations("y+x").unwrap(),
+            workspace_store
+                .compile()
+                .get_valid_transformations("y+x")
+                .unwrap(),
             expected
         );
 
-        workspace.add_parsed_hypothesis("j+k").unwrap();
-        assert_eq!(workspace.get_statements().len(), 2);
-        let expected = vec![workspace.parse_from_string("k+j").unwrap()];
+        workspace_store.add_parsed_hypothesis("j+k").unwrap();
+        assert_eq!(workspace_store.compile().get_statements().len(), 2);
+        let expected = vec![workspace_store.compile().parse_from_string("k+j").unwrap()];
         assert_eq!(
-            workspace.get_valid_transformations("k+j").unwrap(),
+            workspace_store
+                .compile()
+                .get_valid_transformations("k+j")
+                .unwrap(),
             expected
         );
 
-        workspace.add_parsed_hypothesis("a+(b+c)").unwrap();
-        let expected = workspace.parse_from_string("(b+c)+a").unwrap();
+        workspace_store.add_parsed_hypothesis("a+(b+c)").unwrap();
+        let expected = workspace_store
+            .compile()
+            .parse_from_string("(b+c)+a")
+            .unwrap();
         assert_eq!(
-            workspace.get_valid_transformations("(b+c)+a").unwrap(),
+            workspace_store
+                .compile()
+                .get_valid_transformations("(b+c)+a")
+                .unwrap(),
             vec![expected]
         );
 
-        let mut workspace = Workspace::new(types.clone(), vec![], interpretations.clone());
-        workspace
-            .add_transformation(
-                ExplicitTransformation::symmetry(
-                    "+".to_string(),
-                    "+".into(),
-                    ("a".to_string(), "b".to_string()),
-                    "Real".into(),
-                )
-                .into(),
-            )
+        let workspace = Workspace::new(types.clone(), vec![], interpretations.clone());
+        let mut workspace_store = WorkspaceTransactionStore::snapshot(workspace);
+        workspace_store
+            .add_parsed_transformation("a+b", "b+a")
             .unwrap();
 
-        workspace.add_parsed_hypothesis("a+(b+c)").unwrap();
-        let expected = workspace.parse_from_string("a+(c+b)").unwrap();
+        workspace_store.add_parsed_hypothesis("a+(b+c)").unwrap();
+        let expected = workspace_store
+            .compile()
+            .parse_from_string("a+(c+b)")
+            .unwrap();
         assert_eq!(
-            workspace.get_valid_transformations("a+(c+b)").unwrap(),
+            workspace_store
+                .compile()
+                .get_valid_transformations("a+(c+b)")
+                .unwrap(),
             vec![expected]
         );
 
-        let mut workspace = Workspace::new(types.clone(), vec![], interpretations.clone());
-        workspace
+        let workspace = Workspace::new(types.clone(), vec![], interpretations.clone());
+        let mut workspace_store = WorkspaceTransactionStore::snapshot(workspace);
+        workspace_store
             .add_parsed_joint_transformation("p", "q", "p^q")
             .unwrap();
 
-        workspace.add_parsed_hypothesis("r").unwrap();
-        workspace.add_parsed_hypothesis("s").unwrap();
+        workspace_store.add_parsed_hypothesis("r").unwrap();
+        workspace_store.add_parsed_hypothesis("s").unwrap();
 
-        let expected = workspace.parse_from_string("r^s").unwrap();
+        let expected = workspace_store.compile().parse_from_string("r^s").unwrap();
         assert_eq!(
-            workspace.get_valid_transformations("r^s").unwrap(),
+            workspace_store
+                .compile()
+                .get_valid_transformations("r^s")
+                .unwrap(),
             vec![expected]
         );
 
-        let expected = workspace.parse_from_string("s^r").unwrap();
+        let expected = workspace_store.compile().parse_from_string("s^r").unwrap();
         assert_eq!(
-            workspace.get_valid_transformations("s^r").unwrap(),
+            workspace_store
+                .compile()
+                .get_valid_transformations("s^r")
+                .unwrap(),
             vec![expected]
         );
 
-        let mut workspace = Workspace::new(types.clone(), vec![], interpretations.clone());
-        workspace.add_parsed_hypothesis("p=q").unwrap();
-        workspace
+        let workspace = Workspace::new(types.clone(), vec![], interpretations.clone());
+        let mut workspace_store = WorkspaceTransactionStore::snapshot(workspace);
+        workspace_store.add_parsed_hypothesis("p=q").unwrap();
+        workspace_store
             .add_parsed_transformation("p=q", "Any(p)=Any(q)")
             .unwrap();
 
-        let expected = workspace.parse_from_string("p^q=q^q").unwrap();
+        let expected = workspace_store
+            .compile()
+            .parse_from_string("p^q=q^q")
+            .unwrap();
         assert_eq!(
-            workspace.get_valid_transformations("p^q=q^q").unwrap(),
+            workspace_store
+                .compile()
+                .get_valid_transformations("p^q=q^q")
+                .unwrap(),
             vec![expected]
         );
 
-        let mut workspace = Workspace::new(types.clone(), vec![], interpretations.clone());
-        workspace.add_parsed_hypothesis("r=s").unwrap();
-        workspace
+        let workspace = Workspace::new(types.clone(), vec![], interpretations.clone());
+        let mut workspace_store = WorkspaceTransactionStore::snapshot(workspace);
+        workspace_store.add_parsed_hypothesis("r=s").unwrap();
+        workspace_store
             .add_parsed_transformation("p=q", "Any(p)=Any(q)")
             .unwrap();
 
-        let expected = workspace.parse_from_string("r^s=s^s").unwrap();
+        let expected = workspace_store
+            .compile()
+            .parse_from_string("r^s=s^s")
+            .unwrap();
         assert_eq!(
-            workspace.get_valid_transformations("r^s=s^s").unwrap(),
+            workspace_store
+                .compile()
+                .get_valid_transformations("r^s=s^s")
+                .unwrap(),
             vec![expected]
         );
     }
@@ -1700,7 +1796,9 @@ mod test_workspace {
             vec![plus, integer_interpretation],
         );
 
-        assert!(workspace.add_parsed_hypothesis("2+2").is_ok());
+        assert!(WorkspaceTransactionStore::snapshot(workspace.clone())
+            .add_parsed_hypothesis("2+2")
+            .is_ok());
         let mut expected =
             TypeHierarchy::chain(vec!["Real".into(), "Integer".into(), "2".into()]).unwrap();
         expected.add_chain(vec!["+".into()]).unwrap();
@@ -1716,33 +1814,34 @@ mod test_workspace {
     #[test]
     fn test_workspace_transforms_statement_and_maintains_provenance() {
         let types = TypeHierarchy::new();
-        let mut workspace = Workspace::new(types, vec![], vec![]);
-        let statement = SymbolNode::leaf_object("a");
-        assert_eq!(workspace.add_hypothesis(statement), Ok(()));
-        assert_eq!(workspace.statements.len(), 1);
+        let workspace = Workspace::new(types, vec![], vec![]);
+        let mut workspace_store = WorkspaceTransactionStore::snapshot(workspace);
+        assert!(workspace_store.add_parsed_hypothesis("a").is_ok());
+        assert_eq!(workspace_store.compile().statements.len(), 1);
 
-        let transformation =
-            ExplicitTransformation::new(SymbolNode::leaf_object("a"), SymbolNode::leaf_object("b"));
-        workspace.add_transformation(transformation.into()).unwrap();
-        assert_eq!(workspace.transformations.len(), 1);
+        workspace_store.add_parsed_transformation("a", "b").unwrap();
+        assert_eq!(workspace_store.compile().transformations.len(), 1);
 
-        let _transformed = workspace.try_transform_into_parsed("b").unwrap();
-        assert_eq!(workspace.statements.len(), 2);
+        let _transformed = workspace_store.try_transform_into_parsed("b").unwrap();
+        assert_eq!(workspace_store.compile().statements.len(), 2);
         assert_eq!(
-            workspace.statements,
+            workspace_store.compile().statements,
             vec![SymbolNode::leaf_object("a"), SymbolNode::leaf_object("b")]
         );
 
-        assert_eq!(workspace.get_provenance(0), Ok(Provenance::Hypothesis));
+        assert_eq!(
+            workspace_store.compile().get_provenance(0),
+            Ok(Provenance::Hypothesis)
+        );
         // TODO Currently we don't derive the transformation addresses but this assertion should
         // fail
         assert_eq!(
-            workspace.get_provenance(1),
+            workspace_store.compile().get_provenance(1),
             Ok(Provenance::Derived((0, 0, vec![])))
         );
 
         assert_eq!(
-            workspace.get_provenance_lineage(0),
+            workspace_store.compile().get_provenance_lineage(0),
             Ok(vec![Provenance::Hypothesis])
         );
     }
