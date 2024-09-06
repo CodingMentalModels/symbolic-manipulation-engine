@@ -340,6 +340,7 @@ impl Cli {
 
     pub fn derive(&self, sub_matches: &ArgMatches) -> Result<String, String> {
         let mut workspace_store = self.load_workspace_store()?;
+        let workspace = workspace_store.compile();
         match sub_matches.get_one::<String>("statement") {
             None => return Err("No statement provided to derive".to_string()),
             Some(statement) => {
@@ -347,7 +348,7 @@ impl Cli {
                     .try_transform_into_parsed(statement)
                     .map_err(|e| format!("Workspace error: {:?} (Statement: {})", e, statement))
                     .map(|statement| {
-                        statement.to_interpreted_string(workspace_store.get_interpretations())
+                        statement.to_interpreted_string(workspace.get_interpretations())
                     });
                 self.update_workspace_store(workspace_store)?;
                 to_return
@@ -395,7 +396,7 @@ impl Cli {
         let context = Context::deserialize(&serialized_context)
             .map_err(|e| format!("Couldn't deserialize context: {:?}.", e))?;
         workspace_store
-            .try_import_context(context)
+            .import_context(context)
             .map_err(|e| format!("Error importing context: {:?}", e))?;
         self.update_workspace_store(workspace_store)?;
         Ok("Context imported.".to_string())

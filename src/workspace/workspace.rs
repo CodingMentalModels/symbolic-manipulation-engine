@@ -689,6 +689,10 @@ impl WorkspaceTransactionStore {
         Self::new(Vec::new())
     }
 
+    pub fn snapshot(workspace: Workspace) -> Self {
+        Self::new(vec![WorkspaceTransaction::Snapshot(workspace)])
+    }
+
     pub fn new(transactions: Vec<WorkspaceTransaction>) -> Self {
         let next_index = transactions.len();
         Self {
@@ -760,6 +764,9 @@ impl WorkspaceTransactionStore {
             WorkspaceTransaction::AddHypothesis(hypothesis) => {
                 workspace.add_hypothesis(hypothesis)?;
             }
+            WorkspaceTransaction::AddTransformation(transformation) => {
+                workspace.add_transformation(transformation)?;
+            }
             WorkspaceTransaction::Derive(statement, provenance) => {
                 workspace.add_derived_statement(statement, provenance);
             }
@@ -819,6 +826,140 @@ impl WorkspaceTransactionStore {
             None
         }
     }
+
+    pub fn import_context(&mut self, context: Context) -> Result<(), WorkspaceError> {
+        let mut workspace = self.compile();
+        workspace.try_import_context(context)?;
+        *self = Self::snapshot(workspace);
+        Ok(())
+    }
+
+    pub fn add_parsed_hypothesis(&mut self, s: &str) -> Result<SymbolNode, WorkspaceError> {
+        let parsed = self.compile().parse_from_string(s)?;
+        self.generate_types(&parsed)?;
+        self.add(WorkspaceTransaction::AddHypothesis(parsed.clone()))?;
+        Ok(parsed)
+    }
+
+    pub fn add_parsed_joint_transformation(
+        &mut self,
+        left_from: &str,
+        right_from: &str,
+        to: &str,
+    ) -> Result<Transformation, WorkspaceError> {
+        let workspace = self.compile();
+        let parsed_from = (workspace.parse_from_string(left_from)?)
+            .join(workspace.parse_from_string(right_from)?);
+        self.generate_types(&parsed_from)?;
+        let parsed_to = workspace.parse_from_string(to)?;
+        self.generate_types(&parsed_to)?;
+        let transformation: Transformation =
+            ExplicitTransformation::new(parsed_from, parsed_to).into();
+        self.add(WorkspaceTransaction::AddTransformation(
+            transformation.clone(),
+        ))?;
+        Ok(transformation)
+    }
+
+    pub fn add_parsed_transformation(
+        &mut self,
+        from: &str,
+        to: &str,
+    ) -> Result<Transformation, WorkspaceError> {
+        let workspace = self.compile();
+        let parsed_from = workspace.parse_from_string(from)?;
+        self.generate_types(&parsed_from)?;
+        let parsed_to = workspace.parse_from_string(to)?;
+        self.generate_types(&parsed_to)?;
+        let transformation: Transformation =
+            ExplicitTransformation::new(parsed_from, parsed_to).into();
+        self.add(WorkspaceTransaction::AddTransformation(
+            transformation.clone(),
+        ))?;
+        Ok(transformation)
+    }
+
+    pub fn try_transform_into_parsed(
+        &mut self,
+        desired: &str,
+    ) -> Result<SymbolNode, WorkspaceError> {
+        let parsed = self.compile().parse_from_string(desired)?;
+        self.generate_types(&parsed)?;
+        self.try_transform_into(parsed)
+    }
+
+    pub fn try_transform_into(
+        &mut self,
+        desired: SymbolNode,
+    ) -> Result<SymbolNode, WorkspaceError> {
+        let workspace = self.compile();
+        if workspace.statements.contains(&desired) {
+            return Err(WorkspaceError::StatementsAlreadyInclude(desired.clone()));
+        }
+        if desired.get_arbitrary_nodes().len() > 0 {
+            return Err(WorkspaceError::ContainsArbitraryNode);
+        }
+        let instantiated_transformations =
+            workspace.get_instantiated_transformations_with_indices(Some(desired.clone()))?;
+        for (transform, transform_idx) in instantiated_transformations {
+            let statements = if transform.is_joint_transform() {
+                workspace.get_statement_pairs()
+            } else {
+                workspace.get_statements().clone()
+            };
+            for (statement_idx, statement) in statements.iter().enumerate() {
+                match transform.try_transform_into(workspace.get_types(), &statement, &desired) {
+                    Ok(output) => {
+                        // TODO Derive the appropriate transform addresses
+                        let provenance =
+                            Provenance::Derived((statement_idx, transform_idx, vec![]));
+                        self.add(WorkspaceTransaction::Derive(output.clone(), provenance));
+                        return Ok(output);
+                    }
+                    Err(_) => {
+                        // Do nothing, keep trying transformations
+                    }
+                }
+            }
+        }
+        return Err(WorkspaceError::NoTransformationsPossible);
+    }
+
+    fn generate_types(&mut self, statement: &SymbolNode) -> Result<(), WorkspaceError> {
+        let workspace = self.compile();
+        for generated_type in workspace.get_generated_types().clone() {
+            let result: Option<WorkspaceError> = generated_type
+                .generate(statement)
+                .into_iter()
+                .map(|(t, parents)| self.add_type_to_parents(t, &parents))
+                .filter(|r| match r {
+                    Err(WorkspaceError::TypeHierarchyAlreadyIncludes(_prior_type)) => {
+                        // TODO Check that prior_type parents == parents
+                        false
+                    }
+                    Err(_) => true,
+                    _ => false,
+                })
+                .map(|r| r.expect_err("We just checked that it's an error."))
+                .next();
+            match result {
+                Some(e) => return Err(e.into()),
+                None => {}
+            }
+        }
+        Ok(())
+    }
+
+    fn add_type_to_parents(
+        &mut self,
+        t: Type,
+        parents: &HashSet<Type>,
+    ) -> Result<(), WorkspaceError> {
+        for parent in parents {
+            self.add(WorkspaceTransaction::AddType(t.clone(), parent.clone()))?;
+        }
+        Ok(())
+    }
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
@@ -829,6 +970,7 @@ pub enum WorkspaceTransaction {
     AddInterpretation(Interpretation),
     RemoveInterpretation(usize),
     AddHypothesis(SymbolNode),
+    AddTransformation(Transformation),
     Derive(SymbolNode, Provenance),
 }
 
