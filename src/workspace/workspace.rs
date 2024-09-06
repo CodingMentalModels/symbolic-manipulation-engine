@@ -103,7 +103,7 @@ impl Workspace {
         &self.interpretations
     }
 
-    pub fn try_import_context(&mut self, context: Context) -> Result<(), WorkspaceError> {
+    fn try_import_context(&mut self, context: Context) -> Result<(), WorkspaceError> {
         let mut shared_types = self.types.get_shared_types(context.get_types());
         shared_types.remove(&Type::Object);
         shared_types.remove(&Type::Join);
@@ -144,45 +144,6 @@ impl Workspace {
         self.interpretations = new_interpretations;
         self.transformations = context.get_transformations().clone();
         Ok(())
-    }
-
-    pub fn add_parsed_hypothesis(&mut self, s: &str) -> Result<SymbolNode, WorkspaceError> {
-        let parsed = self.parse_from_string(s)?;
-        self.generate_types(&parsed)?;
-        self.add_hypothesis(parsed.clone())?;
-        Ok(parsed)
-    }
-
-    pub fn add_parsed_joint_transformation(
-        &mut self,
-        left_from: &str,
-        right_from: &str,
-        to: &str,
-    ) -> Result<Transformation, WorkspaceError> {
-        let parsed_from =
-            (self.parse_from_string(left_from)?).join(self.parse_from_string(right_from)?);
-        self.generate_types(&parsed_from)?;
-        let parsed_to = self.parse_from_string(to)?;
-        self.generate_types(&parsed_to)?;
-        let transformation: Transformation =
-            ExplicitTransformation::new(parsed_from, parsed_to).into();
-        self.add_transformation(transformation.clone())?;
-        Ok(transformation)
-    }
-
-    pub fn add_parsed_transformation(
-        &mut self,
-        from: &str,
-        to: &str,
-    ) -> Result<Transformation, WorkspaceError> {
-        let parsed_from = self.parse_from_string(from)?;
-        self.generate_types(&parsed_from)?;
-        let parsed_to = self.parse_from_string(to)?;
-        self.generate_types(&parsed_to)?;
-        let transformation: Transformation =
-            ExplicitTransformation::new(parsed_from, parsed_to).into();
-        self.add_transformation(transformation.clone())?;
-        Ok(transformation)
     }
 
     fn parse_from_string(&self, s: &str) -> Result<SymbolNode, WorkspaceError> {
@@ -391,51 +352,6 @@ impl Workspace {
             .collect());
     }
 
-    pub fn try_transform_into_parsed(
-        &mut self,
-        desired: &str,
-    ) -> Result<SymbolNode, WorkspaceError> {
-        let parsed = self.parse_from_string(desired)?;
-        self.generate_types(&parsed)?;
-        self.try_transform_into(parsed)
-    }
-
-    pub fn try_transform_into(
-        &mut self,
-        desired: SymbolNode,
-    ) -> Result<SymbolNode, WorkspaceError> {
-        if self.statements.contains(&desired) {
-            return Err(WorkspaceError::StatementsAlreadyInclude(desired.clone()));
-        }
-        if desired.get_arbitrary_nodes().len() > 0 {
-            return Err(WorkspaceError::ContainsArbitraryNode);
-        }
-        let instantiated_transformations =
-            self.get_instantiated_transformations_with_indices(Some(desired.clone()))?;
-        for (transform, transform_idx) in instantiated_transformations {
-            let statements = if transform.is_joint_transform() {
-                self.get_statement_pairs()
-            } else {
-                self.get_statements().clone()
-            };
-            for (statement_idx, statement) in statements.iter().enumerate() {
-                match transform.try_transform_into(self.get_types(), &statement, &desired) {
-                    Ok(output) => {
-                        // TODO Derive the appropriate transform addresses
-                        let provenance =
-                            Provenance::Derived((statement_idx, transform_idx, vec![]));
-                        self.add_derived_statement(output.clone(), provenance);
-                        return Ok(output);
-                    }
-                    Err(_) => {
-                        // Do nothing, keep trying transformations
-                    }
-                }
-            }
-        }
-        return Err(WorkspaceError::NoTransformationsPossible);
-    }
-
     pub fn get_provenance_lineage(
         &self,
         index: StatementIndex,
@@ -630,45 +546,6 @@ impl Workspace {
 
     fn get_parent_types(&self, t: &Type) -> Result<HashSet<Type>, WorkspaceError> {
         self.types.get_parents(t).map_err(|e| e.into())
-    }
-
-    fn generate_types_in_bulk(
-        &mut self,
-        statements: HashSet<SymbolNode>,
-    ) -> Result<(), WorkspaceError> {
-        for statement in statements {
-            match self.generate_types(&statement) {
-                Ok(()) => {}
-                Err(e) => {
-                    return Err(e.into());
-                }
-            };
-        }
-        Ok(())
-    }
-
-    fn generate_types(&mut self, statement: &SymbolNode) -> Result<(), WorkspaceError> {
-        for generated_type in self.get_generated_types().clone() {
-            let result: Option<WorkspaceError> = generated_type
-                .generate(statement)
-                .into_iter()
-                .map(|(t, parents)| self.add_type_to_parents(t, &parents))
-                .filter(|r| match r {
-                    Err(WorkspaceError::TypeHierarchyAlreadyIncludes(prior_type)) => {
-                        // TODO Check that prior_type parents == parents
-                        false
-                    }
-                    Err(_) => true,
-                    _ => false,
-                })
-                .map(|r| r.expect_err("We just checked that it's an error."))
-                .next();
-            match result {
-                Some(e) => return Err(e.into()),
-                None => {}
-            }
-        }
-        Ok(())
     }
 }
 
@@ -946,6 +823,21 @@ impl WorkspaceTransactionStore {
                 Some(e) => return Err(e.into()),
                 None => {}
             }
+        }
+        Ok(())
+    }
+
+    fn generate_types_in_bulk(
+        &mut self,
+        statements: HashSet<SymbolNode>,
+    ) -> Result<(), WorkspaceError> {
+        for statement in statements {
+            match self.generate_types(&statement) {
+                Ok(()) => {}
+                Err(e) => {
+                    return Err(e.into());
+                }
+            };
         }
         Ok(())
     }
