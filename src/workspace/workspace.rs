@@ -567,7 +567,7 @@ impl WorkspaceTransactionStore {
     }
 
     pub fn snapshot(workspace: Workspace) -> Self {
-        Self::new(vec![WorkspaceTransaction::Snapshot(workspace)])
+        Self::new(vec![WorkspaceTransactionItem::Snapshot(workspace).into()])
     }
 
     pub fn new(transactions: Vec<WorkspaceTransaction>) -> Self {
@@ -622,29 +622,39 @@ impl WorkspaceTransactionStore {
         workspace: &mut Workspace,
         transaction: WorkspaceTransaction,
     ) -> Result<(), WorkspaceError> {
+        for item in transaction.0 {
+            Self::apply_transaction_item(workspace, item)?;
+        }
+        Ok(())
+    }
+
+    fn apply_transaction_item(
+        workspace: &mut Workspace,
+        transaction: WorkspaceTransactionItem,
+    ) -> Result<(), WorkspaceError> {
         match transaction {
-            WorkspaceTransaction::Snapshot(snapshot) => {
+            WorkspaceTransactionItem::Snapshot(snapshot) => {
                 *workspace = snapshot.clone();
             }
-            WorkspaceTransaction::AddType(t, parent) => {
+            WorkspaceTransactionItem::AddType(t, parent) => {
                 workspace.add_type_to_parent(t, parent)?;
             }
-            WorkspaceTransaction::AddGeneratedType(t) => {
+            WorkspaceTransactionItem::AddGeneratedType(t) => {
                 workspace.add_generated_type(t);
             }
-            WorkspaceTransaction::AddInterpretation(interpretation) => {
+            WorkspaceTransactionItem::AddInterpretation(interpretation) => {
                 workspace.add_interpretation(interpretation)?;
             }
-            WorkspaceTransaction::RemoveInterpretation(index) => {
+            WorkspaceTransactionItem::RemoveInterpretation(index) => {
                 workspace.remove_interpretation(index)?;
             }
-            WorkspaceTransaction::AddHypothesis(hypothesis) => {
+            WorkspaceTransactionItem::AddHypothesis(hypothesis) => {
                 workspace.add_hypothesis(hypothesis)?;
             }
-            WorkspaceTransaction::AddTransformation(transformation) => {
+            WorkspaceTransactionItem::AddTransformation(transformation) => {
                 workspace.add_transformation(transformation)?;
             }
-            WorkspaceTransaction::Derive(statement, provenance) => {
+            WorkspaceTransactionItem::Derive(statement, provenance) => {
                 workspace.add_derived_statement(statement, provenance);
             }
         };
@@ -663,7 +673,7 @@ impl WorkspaceTransactionStore {
     fn compile_to_snapshot(&mut self) {
         // Forgets anything beyond the pointer
         let snapshot = Self::new(self.transactions[0..self.next_index].to_vec()).compile();
-        self.transactions = vec![WorkspaceTransaction::Snapshot(snapshot)];
+        self.transactions = vec![WorkspaceTransactionItem::Snapshot(snapshot).into()];
         self.next_index = self.len();
     }
 
@@ -680,10 +690,10 @@ impl WorkspaceTransactionStore {
         }
 
         let snapshot = Self::new(to_snapshot).compile();
-        self.transactions = vec![WorkspaceTransaction::Snapshot(snapshot)];
+        self.transactions = vec![WorkspaceTransactionItem::Snapshot(snapshot).into()];
         self.transactions.append(&mut remaining);
 
-        self.next_index -= (n - 1);
+        self.next_index -= n - 1;
     }
 
     pub fn undo(&mut self) -> Option<WorkspaceTransaction> {
@@ -714,7 +724,7 @@ impl WorkspaceTransactionStore {
     pub fn add_parsed_hypothesis(&mut self, s: &str) -> Result<SymbolNode, WorkspaceError> {
         let parsed = self.compile().parse_from_string(s)?;
         self.generate_types(&parsed)?;
-        self.add(WorkspaceTransaction::AddHypothesis(parsed.clone()))?;
+        self.add(WorkspaceTransactionItem::AddHypothesis(parsed.clone()).into())?;
         Ok(parsed)
     }
 
@@ -732,9 +742,7 @@ impl WorkspaceTransactionStore {
         self.generate_types(&parsed_to)?;
         let transformation: Transformation =
             ExplicitTransformation::new(parsed_from, parsed_to).into();
-        self.add(WorkspaceTransaction::AddTransformation(
-            transformation.clone(),
-        ))?;
+        self.add(WorkspaceTransactionItem::AddTransformation(transformation.clone()).into())?;
         Ok(transformation)
     }
 
@@ -750,9 +758,7 @@ impl WorkspaceTransactionStore {
         self.generate_types(&parsed_to)?;
         let transformation: Transformation =
             ExplicitTransformation::new(parsed_from, parsed_to).into();
-        self.add(WorkspaceTransaction::AddTransformation(
-            transformation.clone(),
-        ))?;
+        self.add(WorkspaceTransactionItem::AddTransformation(transformation.clone()).into())?;
         Ok(transformation)
     }
 
@@ -802,60 +808,55 @@ impl WorkspaceTransactionStore {
         return Err(WorkspaceError::NoTransformationsPossible);
     }
 
-    fn generate_types(&mut self, statement: &SymbolNode) -> Result<(), WorkspaceError> {
+    fn get_generate_types_transaction(
+        &mut self,
+        statement: &SymbolNode,
+    ) -> Result<WorkspaceTransaction, WorkspaceError> {
         let workspace = self.compile();
+        let mut items = Vec::new();
         for generated_type in workspace.get_generated_types().clone() {
-            let result: Option<WorkspaceError> = generated_type
-                .generate(statement)
-                .into_iter()
-                .map(|(t, parents)| self.add_type_to_parents(t, &parents))
-                .filter(|r| match r {
-                    Err(WorkspaceError::TypeHierarchyAlreadyIncludes(_prior_type)) => {
-                        // TODO Check that prior_type parents == parents
-                        false
-                    }
-                    Err(_) => true,
-                    _ => false,
-                })
-                .map(|r| r.expect_err("We just checked that it's an error."))
-                .next();
-            match result {
-                Some(e) => return Err(e.into()),
-                None => {}
+            for (t, parents) in generated_type.generate(statement) {
+                items.extend(self.get_add_type_to_parents_items(t, &parents));
             }
         }
-        Ok(())
+        Ok(WorkspaceTransaction(items))
     }
 
-    fn generate_types_in_bulk(
+    fn get_generate_types_in_bulk_transaction(
         &mut self,
         statements: HashSet<SymbolNode>,
-    ) -> Result<(), WorkspaceError> {
+    ) -> Result<WorkspaceTransaction, WorkspaceError> {
+        let mut items = Vec::new();
         for statement in statements {
-            match self.generate_types(&statement) {
-                Ok(()) => {}
-                Err(e) => {
-                    return Err(e.into());
-                }
-            };
+            items.extend(self.get_generate_types_transaction(&statement)?.0);
         }
-        Ok(())
+        Ok(WorkspaceTransaction(items))
     }
 
-    fn add_type_to_parents(
+    fn get_add_type_to_parents_items(
         &mut self,
         t: Type,
         parents: &HashSet<Type>,
-    ) -> Result<(), WorkspaceError> {
-        for parent in parents {
-            self.add(WorkspaceTransaction::AddType(t.clone(), parent.clone()))?;
-        }
-        Ok(())
+    ) -> Vec<WorkspaceTransactionItem> {
+        let items = parents
+            .iter()
+            .map(|parent| WorkspaceTransactionItem::AddType(t.clone(), parent.clone()))
+            .collect();
+        items
     }
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
-pub enum WorkspaceTransaction {
+pub struct WorkspaceTransaction(Vec<WorkspaceTransactionItem>);
+
+impl From<WorkspaceTransactionItem> for WorkspaceTransaction {
+    fn from(value: WorkspaceTransactionItem) -> Self {
+        Self(vec![value])
+    }
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+pub enum WorkspaceTransactionItem {
     Snapshot(Workspace),
     AddType(Type, Type), // New Type, Parent
     AddGeneratedType(GeneratedType),
