@@ -1624,8 +1624,8 @@ mod test_workspace {
         let interpretations = vec![
             Interpretation::infix_operator("=".into(), 1, "=".into()),
             Interpretation::infix_operator("+".into(), 6, "+".into()),
-            Interpretation::singleton("x".into(), "Real".into()),
-            Interpretation::singleton("y".into(), "Real".into()),
+            Interpretation::singleton("x".into(), "Integer".into()),
+            Interpretation::singleton("y".into(), "Integer".into()),
             Interpretation::singleton("j".into(), "Integer".into()),
             Interpretation::singleton("k".into(), "Integer".into()),
             Interpretation::singleton("a".into(), "Integer".into()),
@@ -1652,7 +1652,10 @@ mod test_workspace {
                 .compile()
                 .get_valid_transformations("y+x")
                 .unwrap(),
-            expected
+            expected,
+            "workspace_store:\n{:?}\nworkspace:\n{:?}",
+            workspace_store,
+            workspace_store.compile(),
         );
 
         workspace_store.add_parsed_hypothesis("j+k").unwrap();
@@ -1790,25 +1793,24 @@ mod test_workspace {
 
         let mut types = TypeHierarchy::chain(vec!["Real".into(), "Integer".into()]).unwrap();
         types.add_chain(vec!["+".into()]).unwrap();
-        let mut workspace = Workspace::new(
+        let workspace = Workspace::new(
             types,
             vec![integer_generated_type],
             vec![plus, integer_interpretation],
         );
+        let mut workspace_store = WorkspaceTransactionStore::snapshot(workspace);
 
-        assert!(WorkspaceTransactionStore::snapshot(workspace.clone())
-            .add_parsed_hypothesis("2+2")
-            .is_ok());
+        assert!(workspace_store.add_parsed_hypothesis("2+2").is_ok());
         let mut expected =
             TypeHierarchy::chain(vec!["Real".into(), "Integer".into(), "2".into()]).unwrap();
         expected.add_chain(vec!["+".into()]).unwrap();
-        assert_eq!(workspace.types, expected);
+        assert_eq!(workspace_store.compile().types, expected);
 
         let expected = SymbolNode::new_from_symbol(
             Symbol::new("+".to_string(), "Integer".into()),
             vec![SymbolNode::singleton("2"), SymbolNode::singleton("2")],
         );
-        assert_eq!(workspace.statements, vec![expected]);
+        assert_eq!(workspace_store.compile().statements, vec![expected]);
     }
 
     #[test]
