@@ -170,7 +170,9 @@ impl Cli {
                 generated_type_condition,
                 vec![output_type].into_iter().collect(),
             );
-            workspace_store.add(WorkspaceTransactionItem::AddGeneratedType(generated_type).into());
+            workspace_store
+                .add(WorkspaceTransactionItem::AddGeneratedType(generated_type).into())
+                .map_err(|e| format!("Unable to add generated type: {:?}", e).to_string())?;
         }
         self.update_workspace_store(workspace_store)?;
         return Ok("Interpretation added.".to_string());
