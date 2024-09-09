@@ -78,6 +78,8 @@ fn main() {
                 Arg::new("from").required(true).help("Input to the Transformation.")
             ).arg(
                 Arg::new("to").required(true).help("Output of the Transformation.")
+            ).arg(
+                Arg::new("is-equivalence").long("is-equivalence").short('e').action(ArgAction::SetTrue).help("Denotes that the transformation is an equivalence, i.e. that both directions of the transformation are valid.")
             ))
         .subcommand(Command::new("add-joint-transformation").about("Add a Joint Transformation (one with two inputs) to the Workspace via a 'from' and a 'to' statement, parsed using the Workspace's Interpretations.")
             .arg(
