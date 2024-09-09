@@ -355,6 +355,28 @@ impl Cli {
         }
     }
 
+    pub fn undo(&self) -> Result<String, String> {
+        let mut workspace_store = self.load_workspace_store()?;
+        let did_undo = workspace_store.undo().is_some();
+        self.update_workspace_store(workspace_store)?;
+        if did_undo {
+            return Ok("Undo complete.".to_string());
+        } else {
+            return Ok("Nothing to undo.".to_string());
+        }
+    }
+
+    pub fn redo(&self) -> Result<String, String> {
+        let mut workspace_store = self.load_workspace_store()?;
+        let did_redo = workspace_store.redo().is_some();
+        self.update_workspace_store(workspace_store)?;
+        if did_redo {
+            return Ok("Redo complete.".to_string());
+        } else {
+            return Ok("Nothing to redo.".to_string());
+        }
+    }
+
     pub fn export_context(&self, sub_matches: &ArgMatches) -> Result<String, String> {
         let workspace_store = self.load_workspace_store()?;
         let context = Context::from_workspace(&workspace_store.compile())

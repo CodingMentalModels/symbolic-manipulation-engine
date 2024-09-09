@@ -101,6 +101,8 @@ fn main() {
                 Arg::new("statement").required(true)
                 )
             )
+        .subcommand(Command::new("undo").about("Undoes the previous command (if possible)."))
+        .subcommand(Command::new("redo").about("Redoes the previous undo (if possible)."))
         .get_matches();
 
     let current_directory = match current_dir() {
@@ -134,6 +136,8 @@ fn main() {
         }
         Some(("hypothesize", sub_matches)) => cli.hypothesize(sub_matches),
         Some(("derive", sub_matches)) => cli.derive(sub_matches),
+        Some(("undo", _sub_matches)) => cli.undo(),
+        Some(("redo", _sub_matches)) => cli.redo(),
         _ => Err("No subcommand was provided".to_string()),
     };
 
