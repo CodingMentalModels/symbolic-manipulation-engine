@@ -595,7 +595,7 @@ impl WorkspaceTransactionStore {
         workspace: &mut Workspace,
         transaction: WorkspaceTransaction,
     ) -> Result<(), WorkspaceError> {
-        for item in transaction.0 {
+        for item in transaction.items {
             Self::apply_transaction_item(workspace, item)?;
         }
         Ok(())
@@ -609,7 +609,7 @@ impl WorkspaceTransactionStore {
             WorkspaceTransactionItem::Snapshot(snapshot) => {
                 *workspace = snapshot.clone();
             }
-            WorkspaceTransactionItem::AddType(t, parent) => {
+            WorkspaceTransactionItem::AddType((t, parent)) => {
                 workspace.add_type_to_parent(t, parent)?;
             }
             WorkspaceTransactionItem::AddGeneratedType(t) => {
@@ -688,7 +688,7 @@ impl WorkspaceTransactionStore {
     }
 
     pub fn add_type_to_parent(&mut self, t: Type, parent: Type) -> Result<(), WorkspaceError> {
-        self.add(WorkspaceTransactionItem::AddType(t, parent).into())
+        self.add(WorkspaceTransactionItem::AddType((t, parent)).into())
     }
 
     pub fn import_context(&mut self, context: Context) -> Result<(), WorkspaceError> {
@@ -815,7 +815,7 @@ impl WorkspaceTransactionStore {
                 }
             }
         }
-        Ok(WorkspaceTransaction(items))
+        Ok(WorkspaceTransaction::new(items))
     }
 
     fn get_generated_types_in_bulk_transaction(
@@ -824,9 +824,9 @@ impl WorkspaceTransactionStore {
     ) -> Result<WorkspaceTransaction, WorkspaceError> {
         let mut items = Vec::new();
         for statement in statements {
-            items.extend(self.get_generated_types_transaction(&statement)?.0);
+            items.extend(self.get_generated_types_transaction(&statement)?.items);
         }
-        Ok(WorkspaceTransaction(items))
+        Ok(WorkspaceTransaction::new(items))
     }
 
     fn get_add_type_to_parents_items(
@@ -836,37 +836,43 @@ impl WorkspaceTransactionStore {
     ) -> Vec<WorkspaceTransactionItem> {
         let items = parents
             .iter()
-            .map(|parent| WorkspaceTransactionItem::AddType(t.clone(), parent.clone()))
+            .map(|parent| WorkspaceTransactionItem::AddType((t.clone(), parent.clone())))
             .collect();
         items
     }
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
-pub struct WorkspaceTransaction(Vec<WorkspaceTransactionItem>);
+pub struct WorkspaceTransaction {
+    pub items: Vec<WorkspaceTransactionItem>,
+}
 
 impl From<WorkspaceTransactionItem> for WorkspaceTransaction {
     fn from(value: WorkspaceTransactionItem) -> Self {
-        Self(vec![value])
+        Self::new(vec![value])
     }
 }
 
 impl WorkspaceTransaction {
+    pub fn new(items: Vec<WorkspaceTransactionItem>) -> Self {
+        Self { items }
+    }
+
     pub fn add(&mut self, item: WorkspaceTransactionItem) {
-        self.0.push(item);
+        self.items.push(item);
     }
 
     pub fn combine(self, other: Self) -> Self {
-        let mut new_items = self.0;
-        new_items.extend(other.0);
-        Self(new_items)
+        let mut new_items = self.items;
+        new_items.extend(other.items);
+        Self::new(new_items)
     }
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub enum WorkspaceTransactionItem {
     Snapshot(Workspace),
-    AddType(Type, Type), // New Type, Parent
+    AddType((Type, Type)), // New Type, Parent
     AddGeneratedType(GeneratedType),
     AddInterpretation(Interpretation),
     RemoveInterpretation(usize),
@@ -1062,8 +1068,8 @@ mod test_workspace {
         let mut store = WorkspaceTransactionStore::empty();
         assert_eq!(store.compile(), Workspace::default());
 
-        store.add(WorkspaceTransactionItem::AddType("Real".into(), Type::Object).into());
-        store.add(WorkspaceTransactionItem::AddType("Integer".into(), "Real".into()).into());
+        store.add(WorkspaceTransactionItem::AddType(("Real".into(), Type::Object)).into());
+        store.add(WorkspaceTransactionItem::AddType(("Integer".into(), "Real".into())).into());
         store.add(
             WorkspaceTransactionItem::AddInterpretation(Interpretation::infix_operator(
                 "+".into(),
@@ -1072,7 +1078,6 @@ mod test_workspace {
             ))
             .into(),
         );
-        let cached_workspace = store.compile();
         store.add(
             WorkspaceTransactionItem::AddInterpretation(Interpretation::infix_operator(
                 "-".into(),
@@ -1105,8 +1110,8 @@ mod test_workspace {
         let mut store = WorkspaceTransactionStore::empty();
         assert_eq!(store.compile(), Workspace::default());
 
-        store.add(WorkspaceTransactionItem::AddType("Real".into(), Type::Object).into());
-        store.add(WorkspaceTransactionItem::AddType("Integer".into(), "Real".into()).into());
+        store.add(WorkspaceTransactionItem::AddType(("Real".into(), Type::Object)).into());
+        store.add(WorkspaceTransactionItem::AddType(("Integer".into(), "Real".into())).into());
         store.add(
             WorkspaceTransactionItem::AddInterpretation(Interpretation::infix_operator(
                 "+".into(),
@@ -1159,7 +1164,7 @@ mod test_workspace {
         let mut store = WorkspaceTransactionStore::empty();
         assert_eq!(store.compile(), Workspace::default());
 
-        store.add(WorkspaceTransactionItem::AddType("Real".into(), Type::Object).into());
+        store.add(WorkspaceTransactionItem::AddType(("Real".into(), Type::Object)).into());
 
         let expected_0 = Workspace::new(
             TypeHierarchy::chain(vec!["Real".into()]).unwrap(),
@@ -1168,7 +1173,7 @@ mod test_workspace {
         );
         assert_eq!(store.compile(), expected_0);
 
-        store.add(WorkspaceTransactionItem::AddType("Integer".into(), "Real".into()).into());
+        store.add(WorkspaceTransactionItem::AddType(("Integer".into(), "Real".into())).into());
 
         let expected_1 = Workspace::new(
             TypeHierarchy::chain(vec!["Real".into(), "Integer".into()]).unwrap(),
