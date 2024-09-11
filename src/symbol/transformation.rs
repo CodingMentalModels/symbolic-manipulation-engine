@@ -87,7 +87,18 @@ impl Transformation {
         to: &SymbolNode,
     ) -> Result<SymbolNode, TransformationError> {
         let valid_transformations = self.get_valid_transformations(hierarchy, from);
+        println!("Desired: {}", to.to_string());
+        println!(
+            "Valid transformations: {}",
+            valid_transformations
+                .clone()
+                .into_iter()
+                .map(|t| t.to_string())
+                .collect::<Vec<_>>()
+                .join("\n")
+        );
         if valid_transformations.contains(to) {
+            println!("Found match!");
             Ok(to.clone())
         } else {
             Err(TransformationError::NoValidTransformations)

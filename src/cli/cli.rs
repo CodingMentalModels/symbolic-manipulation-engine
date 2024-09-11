@@ -16,6 +16,7 @@ use crate::{
         parser::Parser,
     },
     symbol::{
+        algorithm::AlgorithmType,
         symbol_type::{GeneratedType, GeneratedTypeCondition, Type},
         transformation::ExplicitTransformation,
     },
@@ -282,6 +283,7 @@ impl Cli {
             },
         }
     }
+
     pub fn add_transformation(&mut self, sub_matches: &ArgMatches) -> Result<String, String> {
         let mut workspace_store = self.load_workspace_store()?;
         let from_as_string = match sub_matches.get_one::<String>("from") {
@@ -298,6 +300,38 @@ impl Cli {
             .map_err(|e| format!("Workspace Error: {:?}", e).to_string())?;
         self.update_workspace_store(workspace_store)?;
         return Ok("Transformation added.".to_string());
+    }
+
+    pub fn add_algorithm(&mut self, sub_matches: &ArgMatches) -> Result<String, String> {
+        let mut workspace_store = self.load_workspace_store()?;
+        let algorithm_type = match sub_matches.get_one::<String>("algorithm-type") {
+            None => return Err("No algorithm-type provided.".to_string()),
+            Some(algorithm_type_string) => AlgorithmType::from_string(algorithm_type_string)
+                .map_err(|_| {
+                    format!(
+                        "Invalid Algorithm Type {}.  Valid types are:\n{}",
+                        algorithm_type_string,
+                        AlgorithmType::all()
+                            .into_iter()
+                            .map(|t| t.to_string())
+                            .collect::<Vec<_>>()
+                            .join("\n"),
+                    )
+                })?,
+        };
+        let input_type = match sub_matches.get_one::<String>("input-type") {
+            None => return Err("No input-type provided.".to_string()),
+            Some(input_type) => input_type,
+        };
+        let operator = match sub_matches.get_one::<String>("operator") {
+            None => return Err("No operator provided.".to_string()),
+            Some(operator) => operator,
+        };
+        workspace_store
+            .add_algorithm(&algorithm_type, &input_type, &operator)
+            .map_err(|e| format!("Workspace Error: {:?}", e).to_string())?;
+        self.update_workspace_store(workspace_store)?;
+        return Ok("Algorithm added.".to_string());
     }
 
     pub fn add_joint_transformation(&mut self, sub_matches: &ArgMatches) -> Result<String, String> {

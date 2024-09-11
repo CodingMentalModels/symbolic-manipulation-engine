@@ -11,12 +11,15 @@ use crate::{
         parser::{Parser, ParserError},
     },
     symbol::{
-        symbol_node::{SymbolName, SymbolNode, SymbolNodeAddress, SymbolNodeError},
+        algorithm::AlgorithmType,
+        symbol_node::{Symbol, SymbolName, SymbolNode, SymbolNodeAddress, SymbolNodeError},
         symbol_type::{
             DisplayGeneratedType, DisplayTypeHierarchyNode, GeneratedType, Type, TypeError,
             TypeHierarchy, TypeName,
         },
-        transformation::{ExplicitTransformation, Transformation, TransformationError},
+        transformation::{
+            AlgorithmTransformation, ExplicitTransformation, Transformation, TransformationError,
+        },
     },
 };
 
@@ -97,6 +100,26 @@ impl Workspace {
 
     pub fn get_types(&self) -> &TypeHierarchy {
         &self.types
+    }
+
+    pub fn get_type_from_name(&self, name: &str) -> Result<Type, WorkspaceError> {
+        let types = self
+            .get_types()
+            .get_types()
+            .into_iter()
+            .filter(|t| t.to_string() == name)
+            .collect::<HashSet<_>>();
+        if types.len() == 0 {
+            Err(WorkspaceError::NoSuchType(name.to_string()))
+        } else if types.len() > 1 {
+            Err(WorkspaceError::AmbiguousTypeName(name.to_string()))
+        } else {
+            Ok(types
+                .iter()
+                .next()
+                .expect("We just checked that there's at least one.")
+                .clone())
+        }
     }
 
     pub fn get_interpretations(&self) -> &Vec<Interpretation> {
@@ -701,6 +724,7 @@ impl WorkspaceTransactionStore {
     pub fn add_parsed_hypothesis(&mut self, s: &str) -> Result<SymbolNode, WorkspaceError> {
         let parsed = self.compile().parse_from_string(s)?;
         let mut transaction = self.get_generated_types_transaction(&parsed)?;
+        println!("Generated types transaction: {:?}", transaction);
         transaction.add(WorkspaceTransactionItem::AddHypothesis(parsed.clone()));
         self.add(transaction)?;
         Ok(parsed)
@@ -760,6 +784,23 @@ impl WorkspaceTransactionStore {
         Ok(transformation)
     }
 
+    pub fn add_algorithm(
+        &mut self,
+        algorithm_type: &AlgorithmType,
+        operator_name: &str,
+        input_type_name: &str,
+    ) -> Result<Transformation, WorkspaceError> {
+        let input_type = self.compile().get_type_from_name(input_type_name)?;
+        let operator_type = self.compile().get_type_from_name(operator_name)?;
+        let operator = Symbol::new(operator_name.to_string(), operator_type);
+        let transformation: Transformation =
+            AlgorithmTransformation::new(algorithm_type.clone(), operator, input_type).into();
+        let transaction =
+            WorkspaceTransactionItem::AddTransformation(transformation.clone()).into();
+        self.add(transaction)?;
+        Ok(transformation)
+    }
+
     pub fn try_transform_into_parsed(
         &mut self,
         desired: &str,
@@ -796,7 +837,7 @@ impl WorkspaceTransactionStore {
                             Provenance::Derived((statement_idx, transform_idx, vec![]));
                         transaction
                             .add(WorkspaceTransactionItem::Derive(output.clone(), provenance));
-                        self.add(transaction);
+                        self.add(transaction)?;
                         return Ok(output);
                     }
                     Err(_) => {
@@ -816,8 +857,10 @@ impl WorkspaceTransactionStore {
         let mut items = Vec::new();
         let mut already_added = HashSet::new();
         for generated_type in workspace.get_generated_types().clone() {
+            println!("generated_type: {:?}", generated_type);
             for (t, parents) in generated_type.generate(statement) {
                 if !already_added.contains(&t) {
+                    println!("Adding {:?} to {:?}", t, parents);
                     items.extend(self.get_add_type_to_parents_items(t.clone(), &parents));
                     already_added.insert(t);
                 }
@@ -1000,6 +1043,8 @@ pub enum WorkspaceError {
     StatementsAlreadyInclude(SymbolNode),
     TypeHierarchyAlreadyIncludes(Type),
     InvalidType(Type),
+    NoSuchType(String),
+    AmbiguousTypeName(String),
     ParentTypeNotFound(Type),
     UnsupportedOperation(String),
     ArbitraryNodeHasNonOneChildren,
@@ -1824,6 +1869,41 @@ mod test_workspace {
             vec![SymbolNode::singleton("2"), SymbolNode::singleton("2")],
         );
         assert_eq!(workspace_store.compile().statements, vec![expected]);
+    }
+
+    #[test]
+    fn test_workspace_adds_and_executes_algorithms() {
+        let types = TypeHierarchy::chain(vec!["Real".into(), "+".into()]).unwrap();
+        let plus_interpretation = Interpretation::infix_operator("+".into(), 1, "+".into());
+        let real_interpretation = Interpretation::generated_type(GeneratedTypeCondition::IsNumeric);
+        let real_generated_type = GeneratedType::new(
+            GeneratedTypeCondition::IsNumeric,
+            vec!["Real".into()].into_iter().collect(),
+        );
+        let generated_types = vec![real_generated_type];
+        let interpretations = vec![plus_interpretation, real_interpretation];
+        let workspace = Workspace::new(types, generated_types, interpretations);
+
+        let mut workspace_store = WorkspaceTransactionStore::snapshot(workspace);
+
+        assert!(workspace_store.add_parsed_hypothesis("2+2").is_ok());
+        assert_eq!(workspace_store.compile().statements.len(), 1);
+        let two = SymbolNode::leaf(Symbol::new("2".to_string(), "2".into()));
+        assert_eq!(
+            workspace_store.compile().statements,
+            vec![SymbolNode::new(
+                Symbol::new_with_same_type_as_value("+").into(),
+                vec![two.clone(), two.clone()]
+            )]
+        );
+
+        workspace_store
+            .add_algorithm(&AlgorithmType::Addition, "+", "Real")
+            .unwrap();
+        assert_eq!(workspace_store.compile().transformations.len(), 1);
+
+        let _transformed = workspace_store.try_transform_into_parsed("4").unwrap();
+        assert_eq!(workspace_store.compile().statements.len(), 2);
     }
 
     #[test]

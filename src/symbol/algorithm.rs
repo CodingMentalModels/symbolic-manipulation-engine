@@ -1,4 +1,7 @@
-use std::ops::{Add, Div, Mul, Sub};
+use std::{
+    collections::HashSet,
+    ops::{Add, Div, Mul, Sub},
+};
 
 use serde::{Deserialize, Serialize};
 
@@ -13,6 +16,17 @@ pub enum AlgorithmType {
 }
 
 impl AlgorithmType {
+    pub fn all() -> HashSet<Self> {
+        vec![
+            Self::Addition,
+            Self::Subtraction,
+            Self::Multiplication,
+            Self::Division,
+        ]
+        .into_iter()
+        .collect()
+    }
+
     pub fn to_string(&self) -> String {
         match self {
             Self::Addition => "Addition",
@@ -22,6 +36,17 @@ impl AlgorithmType {
         }
         .to_string()
     }
+
+    pub fn from_string(s: &str) -> Result<Self, TransformationError> {
+        match s.to_ascii_lowercase().as_ref() {
+            "addition" => Ok(Self::Addition),
+            "subtraction" => Ok(Self::Subtraction),
+            "multiplication" => Ok(Self::Multiplication),
+            "division" => Ok(Self::Division),
+            &_ => Err(TransformationError::UnableToParse(s.to_string())),
+        }
+    }
+
     pub fn transform(&self, left: &str, right: &str) -> Result<String, TransformationError> {
         let left_value = Rational::parse(left)?;
         let right_value = Rational::parse(right)?;
