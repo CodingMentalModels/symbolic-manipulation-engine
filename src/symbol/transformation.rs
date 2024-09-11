@@ -6,13 +6,14 @@ use crate::symbol::symbol_node::{Symbol, SymbolNode, SymbolNodeError};
 use crate::symbol::symbol_type::{Type, TypeError};
 use serde::{Deserialize, Serialize};
 
+use super::algorithm::AlgorithmType;
 use super::symbol_node::{SymbolName, SymbolNodeAddress, SymbolNodeRoot};
 use super::symbol_type::TypeHierarchy;
 
 #[derive(Clone, Debug, Hash, PartialEq, Eq, Serialize, Deserialize)]
 pub enum Transformation {
     ExplicitTransformation(ExplicitTransformation),
-    AdditionAlgorithm(AdditionAlgorithm),
+    AlgorithmTransformation(AlgorithmTransformation),
     ApplyToBothSidesTransformation(ApplyToBothSidesTransformation),
 }
 
@@ -22,9 +23,9 @@ impl From<ExplicitTransformation> for Transformation {
     }
 }
 
-impl From<AdditionAlgorithm> for Transformation {
-    fn from(algorithm: AdditionAlgorithm) -> Self {
-        Self::AdditionAlgorithm(algorithm)
+impl From<AlgorithmTransformation> for Transformation {
+    fn from(algorithm: AlgorithmTransformation) -> Self {
+        Self::AlgorithmTransformation(algorithm)
     }
 }
 
@@ -38,7 +39,7 @@ impl Transformation {
     pub fn to_symbol_string(&self) -> String {
         match self {
             Self::ExplicitTransformation(t) => t.to_symbol_string(),
-            Self::AdditionAlgorithm(t) => t.to_symbol_string(),
+            Self::AlgorithmTransformation(t) => t.to_symbol_string(),
             Self::ApplyToBothSidesTransformation(t) => t.to_symbol_string(),
         }
     }
@@ -50,7 +51,7 @@ impl Transformation {
     ) -> Result<SymbolNode, TransformationError> {
         match self {
             Self::ExplicitTransformation(t) => t.typed_relabel_and_transform(hierarchy, statement),
-            Self::AdditionAlgorithm(t) => t.transform(hierarchy, statement),
+            Self::AlgorithmTransformation(t) => t.transform(hierarchy, statement),
             Self::ApplyToBothSidesTransformation(t) => t.transform(hierarchy, statement),
         }
     }
@@ -252,14 +253,14 @@ impl Transformation {
     pub fn to_interpreted_string(&self, interpretations: &Vec<Interpretation>) -> String {
         match self {
             Self::ExplicitTransformation(t) => t.to_interpreted_string(interpretations),
-            Self::AdditionAlgorithm(a) => a.to_string(),
+            Self::AlgorithmTransformation(a) => a.to_string(),
             Self::ApplyToBothSidesTransformation(t) => t.to_interpreted_string(interpretations),
         }
     }
 
     pub fn contains_arbitrary_nodes(&self) -> bool {
         match self {
-            Self::AdditionAlgorithm(_) => false,
+            Self::AlgorithmTransformation(_) => false,
             Self::ExplicitTransformation(t) => t.contains_arbitrary_nodes(),
             Self::ApplyToBothSidesTransformation(t) => {
                 t.get_transformation().contains_arbitrary_nodes()
@@ -269,7 +270,7 @@ impl Transformation {
 
     pub fn get_arbitrary_nodes(&self) -> HashSet<SymbolNode> {
         match self {
-            Self::AdditionAlgorithm(_) => HashSet::new(),
+            Self::AlgorithmTransformation(_) => HashSet::new(),
             Self::ExplicitTransformation(t) => t.get_arbitrary_nodes(),
             Self::ApplyToBothSidesTransformation(t) => t.get_transformation().get_arbitrary_nodes(),
         }
@@ -281,7 +282,7 @@ impl Transformation {
         substatements: &HashSet<SymbolNode>,
     ) -> Result<HashSet<Self>, TransformationError> {
         match self {
-            Self::AdditionAlgorithm(_) => Ok(vec![self.clone()].into_iter().collect()),
+            Self::AlgorithmTransformation(_) => Ok(vec![self.clone()].into_iter().collect()),
             Self::ExplicitTransformation(t) => Ok(t
                 .instantiate_arbitrary_nodes(hierarchy, substatements)?
                 .into_iter()
@@ -297,21 +298,27 @@ impl Transformation {
 }
 
 #[derive(Clone, Debug, Hash, PartialEq, Eq, Serialize, Deserialize)]
-pub struct AdditionAlgorithm {
+pub struct AlgorithmTransformation {
+    algorithm_type: AlgorithmType,
     operator: Symbol,
     input_type: Type,
 }
 
-impl AdditionAlgorithm {
-    pub fn new(operator: Symbol, input_type: Type) -> Self {
+impl AlgorithmTransformation {
+    pub fn new(algorithm_type: AlgorithmType, operator: Symbol, input_type: Type) -> Self {
         Self {
+            algorithm_type,
             operator,
             input_type,
         }
     }
 
     pub fn to_symbol_string(&self) -> String {
-        format!("AdditionAlgorithm({})", self.operator.to_string())
+        format!(
+            "{}({})",
+            self.algorithm_type.to_string(),
+            self.operator.to_string()
+        )
     }
 
     pub fn get_operator(&self) -> Symbol {
@@ -320,6 +327,10 @@ impl AdditionAlgorithm {
 
     pub fn get_input_type(&self) -> Type {
         self.input_type.clone()
+    }
+
+    pub fn get_algorithm_type(&self) -> AlgorithmType {
+        self.algorithm_type.clone()
     }
 
     pub fn transform(
@@ -349,12 +360,11 @@ impl AdditionAlgorithm {
         let left = self.transform(hierarchy, &children[0])?;
         let right = self.transform(hierarchy, &children[1])?;
 
-        let left_value = Self::try_parse_number(&left.get_root_as_string())?;
-        let right_value = Self::try_parse_number(&right.get_root_as_string())?;
-        // TODO This will overflow on big enough numbers
-        let final_value = left_value + right_value;
+        let final_value = self
+            .algorithm_type
+            .transform(&left.get_root_as_string(), &right.get_root_as_string())?;
         Ok(SymbolNode::leaf(Symbol::new(
-            final_value.to_string(),
+            final_value,
             self.input_type.clone(),
         )))
     }
@@ -1067,8 +1077,11 @@ mod test_transformation {
 
     #[test]
     fn test_transformation_applies_algorithm() {
-        let algorithm =
-            AdditionAlgorithm::new(Symbol::new("+".to_string(), "Real".into()), "Real".into());
+        let algorithm = AlgorithmTransformation::new(
+            AlgorithmType::Addition,
+            Symbol::new("+".to_string(), "Real".into()),
+            "Real".into(),
+        );
         let parser = Parser::new(vec![
             Interpretation::singleton("a", "Real".into()),
             Interpretation::singleton("b", "Real".into()),

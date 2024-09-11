@@ -343,7 +343,7 @@ impl TypeHierarchy {
                 self.binds_statement_or_error(t.get_from())?;
                 self.binds_statement_or_error(t.get_to())
             }
-            Transformation::AdditionAlgorithm(a) => {
+            Transformation::AlgorithmTransformation(a) => {
                 if self.contains_type(&a.get_input_type()) {
                     Ok(())
                 } else {
