@@ -8,7 +8,7 @@ use serde::{Deserialize, Serialize};
 
 use super::algorithm::AlgorithmType;
 use super::symbol_node::{SymbolName, SymbolNodeAddress, SymbolNodeRoot};
-use super::symbol_type::TypeHierarchy;
+use super::symbol_type::{GeneratedType, TypeHierarchy};
 
 #[derive(Clone, Debug, Hash, PartialEq, Eq, Serialize, Deserialize)]
 pub enum Transformation {
@@ -312,11 +312,11 @@ impl Transformation {
 pub struct AlgorithmTransformation {
     algorithm_type: AlgorithmType,
     operator: Symbol,
-    input_type: Type,
+    input_type: GeneratedType,
 }
 
 impl AlgorithmTransformation {
-    pub fn new(algorithm_type: AlgorithmType, operator: Symbol, input_type: Type) -> Self {
+    pub fn new(algorithm_type: AlgorithmType, operator: Symbol, input_type: GeneratedType) -> Self {
         Self {
             algorithm_type,
             operator,
@@ -336,7 +336,7 @@ impl AlgorithmTransformation {
         self.operator.clone()
     }
 
-    pub fn get_input_type(&self) -> Type {
+    pub fn get_input_type(&self) -> GeneratedType {
         self.input_type.clone()
     }
 
@@ -350,13 +350,7 @@ impl AlgorithmTransformation {
         statement: &SymbolNode,
     ) -> Result<SymbolNode, TransformationError> {
         if !statement.has_children() {
-            if hierarchy
-                .is_subtype_of(
-                    &statement.get_symbol()?.get_evaluates_to_type(),
-                    &self.input_type,
-                )
-                .map_err(|e| Into::<TransformationError>::into(e))?
-            {
+            if self.input_type.satisfies_condition(statement.get_symbol()?) {
                 return Ok(statement.clone());
             } else {
                 return Err(TransformationError::NoValidTransformations);
