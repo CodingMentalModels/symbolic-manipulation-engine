@@ -898,7 +898,7 @@ impl WorkspaceTransactionStore {
         for generated_type in workspace.get_generated_types().clone() {
             println!("generated_type: {:?}", generated_type);
             for (t, parents) in generated_type.generate(statement) {
-                if !already_added.contains(&t) {
+                if !already_added.contains(&t) && !workspace.get_types().contains_type(&t) {
                     println!("Adding {:?} to {:?}", t, parents);
                     items.extend(self.get_add_type_to_parents_items(t.clone(), &parents));
                     already_added.insert(t);
@@ -1914,7 +1914,10 @@ mod test_workspace {
 
     #[test]
     fn test_workspace_adds_and_executes_algorithms() {
-        let types = TypeHierarchy::chain(vec!["Real".into(), "+".into()]).unwrap();
+        let mut types = TypeHierarchy::chain(vec!["Real".into(), "+".into()]).unwrap();
+        types
+            .add_child_to_parent("/".into(), "Real".into())
+            .unwrap();
         let plus_interpretation = Interpretation::infix_operator("+".into(), 1, "+".into());
         let divides_interpretation = Interpretation::infix_operator("/".into(), 2, "/".into());
         let real_interpretation = Interpretation::generated_type(GeneratedTypeCondition::IsNumeric);
@@ -1950,19 +1953,20 @@ mod test_workspace {
 
         let _transformed = workspace_store.try_transform_into_parsed("4").unwrap();
         assert_eq!(workspace_store.compile().statements.len(), 2);
+        let four = SymbolNode::leaf(Symbol::new("4".to_string(), "4".into()));
+        assert_eq!(workspace_store.compile().statements[1], four);
 
-        let hypothesis_result = workspace_store.add_parsed_hypothesis("8/2");
+        let hypothesis_result = workspace_store.add_parsed_hypothesis("8/4");
         assert!(hypothesis_result.is_ok(), "{:?}", hypothesis_result);
         assert_eq!(workspace_store.compile().statements.len(), 3);
-        let four = SymbolNode::leaf(Symbol::new("4".to_string(), "4".into()));
         workspace_store
-            .add_algorithm(&AlgorithmType::Addition, "/", "Real")
+            .add_algorithm(&AlgorithmType::Division, "/", "Real")
             .unwrap();
         assert_eq!(workspace_store.compile().transformations.len(), 2);
 
-        let _transformed = workspace_store.try_transform_into_parsed("4").unwrap();
+        let _transformed = workspace_store.try_transform_into_parsed("2").unwrap();
         assert_eq!(workspace_store.compile().statements.len(), 4);
-        assert_eq!(workspace_store.compile().statements[3], four);
+        assert_eq!(workspace_store.compile().statements[3], two);
     }
 
     #[test]
