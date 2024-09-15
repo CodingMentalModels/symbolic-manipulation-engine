@@ -349,11 +349,28 @@ impl AlgorithmTransformation {
         hierarchy: &mut TypeHierarchy,
         statement: &SymbolNode,
     ) -> Result<SymbolNode, TransformationError> {
+        println!(
+            "transform() called on:\n{}\nUsing Type Hierarchy:\n{:?}",
+            statement.to_symbol_string(),
+            hierarchy
+        );
         if !statement.has_children() {
             if self.input_type.satisfies_condition(statement.get_symbol()?) {
+                println!("Satisfied condition.  {}", statement.to_symbol_string());
                 return Ok(statement.clone());
             } else {
-                return Err(TransformationError::NoValidTransformations);
+                println!(
+                    "Failed to satisfy condition.  {}",
+                    statement.to_symbol_string()
+                );
+                return Err(
+                    TransformationError::GeneratedTypeConditionFailedDuringAlgorithm(
+                        statement
+                            .get_symbol()
+                            .expect("We already checked it above.")
+                            .clone(),
+                    ),
+                );
             }
         }
 
@@ -840,6 +857,7 @@ pub enum TransformationError {
     ApplyToBothSidesCalledOnNChildren(usize),
     StatementTypesDoNotMatch,
     NoValidTransformations,
+    GeneratedTypeConditionFailedDuringAlgorithm(Symbol),
     TransformCalledOnArbitrary,
     UnableToParse(SymbolName),
     ArbitraryNodeHasNonOneChildren,
@@ -1101,7 +1119,12 @@ mod test_transformation {
         let mut hierarchy = TypeHierarchy::chain(vec!["Real".into()]).unwrap();
         assert_eq!(
             algorithm.transform(&mut hierarchy, &from),
-            Err(TransformationError::UnableToParse("a".to_string()))
+            Err(
+                TransformationError::GeneratedTypeConditionFailedDuringAlgorithm(Symbol::new(
+                    "a".to_string(),
+                    "Real".into()
+                ))
+            )
         );
 
         let from = parser
