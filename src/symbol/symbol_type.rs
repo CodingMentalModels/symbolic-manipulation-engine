@@ -417,6 +417,13 @@ impl TypeHierarchy {
             .collect()
     }
 
+    pub fn get_missing_types(&self, other: &Self) -> HashSet<(Type, Type)> {
+        self.get_parent_child_pairs()
+            .difference(&other.get_parent_child_pairs())
+            .cloned()
+            .collect()
+    }
+
     pub fn union(&self, other: &TypeHierarchy) -> Result<Self, TypeError> {
         Self::are_compatible_or_error(self, other)?;
 

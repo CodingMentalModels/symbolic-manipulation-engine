@@ -837,12 +837,22 @@ impl WorkspaceTransactionStore {
                 workspace.get_statements().clone()
             };
             for (statement_idx, statement) in statements.iter().enumerate() {
+                let old_types = workspace.get_types().clone();
                 match transform.try_transform_into(workspace.get_types_mut(), &statement, &desired)
                 {
                     Ok(output) => {
                         // TODO Derive the appropriate transform addresses
                         let provenance =
                             Provenance::Derived((statement_idx, transform_idx, vec![]));
+
+                        // Handle the case where a new type was added to the TypeHierarchy in
+                        // try_transform_into but needs to be reflected as a transaction
+                        let new_types = workspace.get_types().clone();
+                        let missing_types = new_types.get_missing_types(&old_types);
+                        for missing_type in missing_types {
+                            transaction.add(WorkspaceTransactionItem::AddType(missing_type));
+                        }
+
                         transaction
                             .add(WorkspaceTransactionItem::Derive(output.clone(), provenance));
                         self.add(transaction)?;
