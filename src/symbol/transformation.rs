@@ -1132,10 +1132,7 @@ mod test_transformation {
             .unwrap();
         assert_eq!(
             algorithm.transform(&mut hierarchy, &from),
-            Ok(SymbolNode::leaf(Symbol::new(
-                "3".to_string(),
-                "Real".into()
-            )))
+            Ok(SymbolNode::leaf(Symbol::new("3".to_string(), "3".into())))
         );
     }
 
