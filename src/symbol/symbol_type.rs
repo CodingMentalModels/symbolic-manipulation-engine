@@ -1,5 +1,6 @@
 use std::collections::{HashMap, HashSet};
 use std::fmt;
+use std::hash::{Hash, Hasher};
 use std::str::FromStr;
 
 use serde::{
@@ -344,11 +345,22 @@ impl TypeHierarchy {
                 self.binds_statement_or_error(t.get_to())
             }
             Transformation::AlgorithmTransformation(a) => {
-                if self.contains_type(&a.get_input_type()) {
+                if a.get_input_type()
+                    .get_parents()
+                    .iter()
+                    .all(|parent| self.contains_type(&parent))
+                {
                     Ok(())
                 } else {
+                    let missing_types = a
+                        .get_input_type()
+                        .get_parents()
+                        .clone()
+                        .into_iter()
+                        .filter(|parent| !self.contains_type(&parent))
+                        .collect();
                     Err(TypeError::StatementIncludesTypesNotInHierarchy(
-                        vec![a.get_input_type()].into_iter().collect(),
+                        missing_types,
                     ))
                 }
             }
@@ -540,9 +552,35 @@ pub struct GeneratedType {
     parents: HashSet<Type>,
 }
 
+impl Hash for GeneratedType {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        self.condition.hash(state);
+
+        for parent in &self.parents {
+            parent.hash(state);
+        }
+    }
+}
+
 impl GeneratedType {
     pub fn new(condition: GeneratedTypeCondition, parents: HashSet<Type>) -> Self {
         Self { condition, parents }
+    }
+
+    pub fn new_with_one_parent(condition: GeneratedTypeCondition, parent: Type) -> Self {
+        Self::new(condition, vec![parent].into_iter().collect())
+    }
+
+    pub fn new_numeric(parent: Type) -> Self {
+        Self::new_with_one_parent(GeneratedTypeCondition::IsNumeric, parent)
+    }
+
+    pub fn new_integer(parent: Type) -> Self {
+        Self::new_with_one_parent(GeneratedTypeCondition::IsInteger, parent)
+    }
+
+    pub fn get_parents(&self) -> &HashSet<Type> {
+        &self.parents
     }
 
     pub fn generate(&self, statement: &SymbolNode) -> Vec<(Type, HashSet<Type>)> {

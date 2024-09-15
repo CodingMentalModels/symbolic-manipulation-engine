@@ -102,6 +102,10 @@ impl Workspace {
         &self.types
     }
 
+    pub fn get_types_mut(&self) -> &mut TypeHierarchy {
+        &mut self.types
+    }
+
     pub fn get_type_from_name(&self, name: &str) -> Result<Type, WorkspaceError> {
         let types = self
             .get_types()
@@ -311,7 +315,7 @@ impl Workspace {
             };
             for statement in statements {
                 let valid_transformations =
-                    transformation.get_valid_transformations(self.get_types(), &statement);
+                    transformation.get_valid_transformations(self.get_types_mut(), &statement);
                 if valid_transformations.contains(&desired)
                     && !self.get_statements().contains(&desired)
                 {
@@ -338,7 +342,7 @@ impl Workspace {
             };
             for statement in statements {
                 let valid_transformations =
-                    transformation.get_valid_transformations(self.get_types(), &statement);
+                    transformation.get_valid_transformations(self.get_types_mut(), &statement);
                 to_return.extend(valid_transformations);
             }
         }

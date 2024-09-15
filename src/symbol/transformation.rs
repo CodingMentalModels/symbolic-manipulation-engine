@@ -46,7 +46,7 @@ impl Transformation {
 
     pub fn transform(
         &self,
-        hierarchy: &TypeHierarchy,
+        hierarchy: &mut TypeHierarchy,
         statement: &SymbolNode,
     ) -> Result<SymbolNode, TransformationError> {
         match self {
@@ -66,7 +66,7 @@ impl Transformation {
 
     pub fn joint_transform(
         &self,
-        hierarchy: &TypeHierarchy,
+        hierarchy: &mut TypeHierarchy,
         left: &SymbolNode,
         right: &SymbolNode,
     ) -> Result<SymbolNode, TransformationError> {
@@ -82,7 +82,7 @@ impl Transformation {
 
     pub fn try_transform_into(
         &self,
-        hierarchy: &TypeHierarchy,
+        hierarchy: &mut TypeHierarchy,
         from: &SymbolNode,
         to: &SymbolNode,
     ) -> Result<SymbolNode, TransformationError> {
@@ -107,7 +107,7 @@ impl Transformation {
 
     pub fn get_valid_transformations(
         &self,
-        hierarchy: &TypeHierarchy,
+        hierarchy: &mut TypeHierarchy,
         statement: &SymbolNode,
     ) -> HashSet<SymbolNode> {
         // Getting valid transformations can recurse indefinitely, so we use
@@ -247,7 +247,7 @@ impl Transformation {
 
     pub fn transform_at(
         &self,
-        hierarchy: &TypeHierarchy,
+        hierarchy: &mut TypeHierarchy,
         statement: &SymbolNode,
         address: SymbolNodeAddress,
     ) -> Result<SymbolNode, TransformationError> {
@@ -346,7 +346,7 @@ impl AlgorithmTransformation {
 
     pub fn transform(
         &self,
-        hierarchy: &TypeHierarchy,
+        hierarchy: &mut TypeHierarchy,
         statement: &SymbolNode,
     ) -> Result<SymbolNode, TransformationError> {
         if !statement.has_children() {
@@ -368,18 +368,18 @@ impl AlgorithmTransformation {
         let final_value = self
             .algorithm_type
             .transform(&left.get_root_as_string(), &right.get_root_as_string())?;
-        Ok(SymbolNode::leaf(Symbol::new(
-            final_value,
-            self.input_type.clone(),
-        )))
+        let to_return = SymbolNode::leaf(Symbol::new_with_same_type_as_value(&final_value));
+        for (t, parents) in self.input_type.generate(&to_return) {
+            hierarchy.add_child_to_parents(t, &parents);
+        }
+        Ok(to_return)
     }
 
     pub fn to_string(&self) -> String {
         format!(
-            "{} {} {}",
-            self.input_type.to_string(),
+            "{}({})",
+            self.algorithm_type.to_string(),
             self.operator.get_name(),
-            self.input_type.to_string()
         )
         .to_string()
     }
@@ -870,7 +870,7 @@ impl From<TypeError> for TransformationError {
 mod test_transformation {
     use crate::{
         parsing::{interpretation::Interpretation, parser::Parser, tokenizer::Token},
-        symbol::symbol_node::SymbolNodeRoot,
+        symbol::{symbol_node::SymbolNodeRoot, symbol_type::GeneratedTypeCondition},
     };
 
     use super::*;
@@ -1012,7 +1012,7 @@ mod test_transformation {
 
     #[test]
     fn test_transformation_joint_transforms() {
-        let hierarchy = TypeHierarchy::chain(vec!["Proposition".into()]).unwrap();
+        let mut hierarchy = TypeHierarchy::chain(vec!["Proposition".into()]).unwrap();
         let parser = Parser::new(vec![
             Interpretation::singleton("p", "Proposition".into()),
             Interpretation::singleton("q", "Proposition".into()),
@@ -1034,12 +1034,12 @@ mod test_transformation {
             .unwrap();
         let transform: Transformation = ExplicitTransformation::new(from, p_and_q.clone()).into();
         let actual = transform
-            .joint_transform(&hierarchy, &as_proposition("p"), &as_proposition("q"))
+            .joint_transform(&mut hierarchy, &as_proposition("p"), &as_proposition("q"))
             .unwrap();
         assert_eq!(actual, p_and_q);
 
         let actual = transform
-            .joint_transform(&hierarchy, &as_proposition("a"), &as_proposition("b"))
+            .joint_transform(&mut hierarchy, &as_proposition("a"), &as_proposition("b"))
             .unwrap();
         let expected = parser
             .parse_from_string(vec!["^".to_string()], "a^b")
@@ -1047,7 +1047,7 @@ mod test_transformation {
         assert_eq!(actual, expected);
 
         let actual = transform
-            .joint_transform(&hierarchy, &p_and_q, &as_proposition("b"))
+            .joint_transform(&mut hierarchy, &p_and_q, &as_proposition("b"))
             .unwrap();
         let expected = parser
             .parse_from_string(vec!["^".to_string()], "(p^q)^b")
@@ -1067,14 +1067,14 @@ mod test_transformation {
         let expected = as_proposition("q");
         assert_eq!(
             transform
-                .joint_transform(&hierarchy, &as_proposition("p"), &p_implies_q)
+                .joint_transform(&mut hierarchy, &as_proposition("p"), &p_implies_q)
                 .unwrap(),
             expected
         );
         // Order shouldn't matter
         assert_eq!(
             transform
-                .joint_transform(&hierarchy, &p_implies_q, &as_proposition("p"))
+                .joint_transform(&mut hierarchy, &p_implies_q, &as_proposition("p"))
                 .unwrap(),
             expected
         );
@@ -1085,7 +1085,7 @@ mod test_transformation {
         let algorithm = AlgorithmTransformation::new(
             AlgorithmType::Addition,
             Symbol::new("+".to_string(), "Real".into()),
-            "Real".into(),
+            GeneratedType::new_numeric("Real".into()),
         );
         let parser = Parser::new(vec![
             Interpretation::singleton("a", "Real".into()),
@@ -1098,9 +1098,9 @@ mod test_transformation {
         let from = parser
             .parse_from_string(vec!["+".to_string()], "a+b+c")
             .unwrap();
-        let hierarchy = TypeHierarchy::chain(vec!["Real".into()]).unwrap();
+        let mut hierarchy = TypeHierarchy::chain(vec!["Real".into()]).unwrap();
         assert_eq!(
-            algorithm.transform(&hierarchy, &from),
+            algorithm.transform(&mut hierarchy, &from),
             Err(TransformationError::UnableToParse("a".to_string()))
         );
 
@@ -1108,7 +1108,7 @@ mod test_transformation {
             .parse_from_string(vec!["+".to_string()], "1+2")
             .unwrap();
         assert_eq!(
-            algorithm.transform(&hierarchy, &from),
+            algorithm.transform(&mut hierarchy, &from),
             Ok(SymbolNode::leaf(Symbol::new(
                 "3".to_string(),
                 "Real".into()
@@ -1145,7 +1145,7 @@ mod test_transformation {
             .unwrap();
 
         assert_eq!(
-            irrelevant_transform.get_valid_transformations(&hierarchy, &x_equals_y),
+            irrelevant_transform.get_valid_transformations(&mut hierarchy, &x_equals_y),
             vec![x_equals_y.clone()].into_iter().collect()
         );
         let transformation: Transformation = ExplicitTransformation::commutivity(
@@ -1159,11 +1159,11 @@ mod test_transformation {
             .parse_from_string(custom_tokens.clone(), "y = x")
             .unwrap();
         assert_eq!(
-            transformation.transform(&hierarchy, &x_equals_y),
+            transformation.transform(&mut hierarchy, &x_equals_y),
             Ok(y_equals_x.clone())
         );
         assert_eq!(
-            transformation.get_valid_transformations(&hierarchy, &x_equals_y),
+            transformation.get_valid_transformations(&mut hierarchy, &x_equals_y),
             vec![x_equals_y.clone(), y_equals_x.clone()]
                 .into_iter()
                 .collect()
@@ -1210,7 +1210,7 @@ mod test_transformation {
                 .unwrap(),
         ];
         assert_eq!(
-            transformation.get_valid_transformations(&hierarchy, &x_equals_y_equals_z),
+            transformation.get_valid_transformations(&mut hierarchy, &x_equals_y_equals_z),
             expected.into_iter().collect()
         );
 
@@ -1234,7 +1234,7 @@ mod test_transformation {
                 .unwrap(),
         ];
 
-        let actual = transformation.get_valid_transformations(&hierarchy, &x_equals_y);
+        let actual = transformation.get_valid_transformations(&mut hierarchy, &x_equals_y);
 
         assert_eq!(actual, expected.into_iter().collect());
 
@@ -1255,7 +1255,7 @@ mod test_transformation {
                 .unwrap(),
         ];
 
-        let actual = transformation.get_valid_transformations(&hierarchy, &x_equals_y_equals_z);
+        let actual = transformation.get_valid_transformations(&mut hierarchy, &x_equals_y_equals_z);
 
         assert_eq!(actual, expected.into_iter().collect());
 
@@ -1266,7 +1266,7 @@ mod test_transformation {
             ExplicitTransformation::new(x_equals_y.clone(), arbitrary_x_equals_arbitrary_y.clone())
                 .into();
         assert_eq!(
-            transformation.transform(&hierarchy, &x_equals_y),
+            transformation.transform(&mut hierarchy, &x_equals_y),
             Err(TransformationError::TransformCalledOnArbitrary)
         );
     }
@@ -1484,7 +1484,7 @@ mod test_transformation {
 
     #[test]
     fn test_transformation_typed_transforms_at() {
-        let hierarchy =
+        let mut hierarchy =
             TypeHierarchy::chain(vec!["Real".into(), "Integer".into(), "=".into()]).unwrap();
         let transformation: Transformation =
             ExplicitTransformation::new(SymbolNode::leaf_object("c"), SymbolNode::leaf_object("d"))
@@ -1500,7 +1500,7 @@ mod test_transformation {
             vec![SymbolNode::leaf_object("d"), SymbolNode::leaf_object("b")],
         );
 
-        let transformed = transformation.transform_at(&hierarchy, &a_equals_b, vec![0]);
+        let transformed = transformation.transform_at(&mut hierarchy, &a_equals_b, vec![0]);
 
         assert_eq!(transformed, Ok(d_equals_b));
 
@@ -1525,7 +1525,8 @@ mod test_transformation {
                 SymbolNode::leaf_object("c"),
             ],
         );
-        let transformed = transformation.transform_at(&hierarchy, &a_equals_b_equals_c, vec![0, 1]);
+        let transformed =
+            transformation.transform_at(&mut hierarchy, &a_equals_b_equals_c, vec![0, 1]);
 
         assert_eq!(transformed, Ok(a_equals_d_equals_c));
 
@@ -1556,7 +1557,7 @@ mod test_transformation {
             .unwrap();
 
         assert_eq!(
-            transformation.transform_at(&hierarchy, &x_equals_y_equals_z, vec![]),
+            transformation.transform_at(&mut hierarchy, &x_equals_y_equals_z, vec![]),
             Ok(z_equals_x_equals_y.clone())
         );
 
@@ -1565,7 +1566,7 @@ mod test_transformation {
             .unwrap();
 
         assert_eq!(
-            transformation.transform_at(&hierarchy, &x_equals_y_equals_z, vec![0]),
+            transformation.transform_at(&mut hierarchy, &x_equals_y_equals_z, vec![0]),
             Ok(y_equals_x_equals_z)
         );
 
@@ -1578,7 +1579,7 @@ mod test_transformation {
         .into();
 
         assert_eq!(
-            transformation.transform_at(&hierarchy, &x_equals_y_equals_z, vec![]),
+            transformation.transform_at(&mut hierarchy, &x_equals_y_equals_z, vec![]),
             Ok(z_equals_x_equals_y)
         );
 
