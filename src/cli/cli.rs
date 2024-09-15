@@ -243,7 +243,7 @@ impl Cli {
         match sub_matches.get_one::<String>("partial-statement") {
             None => Err("No partial statement provided.".to_string()),
             Some(partial_statement) => {
-                let workspace = workspace_store.compile();
+                let mut workspace = workspace_store.compile();
                 let serialized_result = to_string(
                     &workspace
                         .get_valid_transformations(partial_statement)
@@ -266,7 +266,7 @@ impl Cli {
             None => Err("No statement index provided.".to_string()),
             Some(index_string) => match index_string.parse::<usize>() {
                 Ok(statement_index) => {
-                    let workspace = workspace_store.compile();
+                    let mut workspace = workspace_store.compile();
                     let mut result = workspace
                         .get_valid_transformations_from(statement_index)
                         .map_err(|e| format!("Error getting valid transformations: {:?}", e))?
@@ -327,8 +327,14 @@ impl Cli {
             None => return Err("No operator provided.".to_string()),
             Some(operator) => operator,
         };
+        // TODO Update this to use a flag to determine whether to use Numeric or Integer
         workspace_store
-            .add_algorithm(&algorithm_type, &input_type, &operator)
+            .add_algorithm(
+                &algorithm_type,
+                &input_type,
+                &operator,
+                GeneratedTypeCondition::IsNumeric,
+            )
             .map_err(|e| format!("Workspace Error: {:?}", e).to_string())?;
         self.update_workspace_store(workspace_store)?;
         return Ok("Algorithm added.".to_string());

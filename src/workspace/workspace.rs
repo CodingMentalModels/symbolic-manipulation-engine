@@ -14,8 +14,8 @@ use crate::{
         algorithm::AlgorithmType,
         symbol_node::{Symbol, SymbolName, SymbolNode, SymbolNodeAddress, SymbolNodeError},
         symbol_type::{
-            DisplayGeneratedType, DisplayTypeHierarchyNode, GeneratedType, Type, TypeError,
-            TypeHierarchy, TypeName,
+            DisplayGeneratedType, DisplayTypeHierarchyNode, GeneratedType, GeneratedTypeCondition,
+            Type, TypeError, TypeHierarchy, TypeName,
         },
         transformation::{
             AlgorithmTransformation, ExplicitTransformation, Transformation, TransformationError,
@@ -102,7 +102,7 @@ impl Workspace {
         &self.types
     }
 
-    pub fn get_types_mut(&self) -> &mut TypeHierarchy {
+    pub fn get_types_mut(&mut self) -> &mut TypeHierarchy {
         &mut self.types
     }
 
@@ -295,7 +295,7 @@ impl Workspace {
     }
 
     pub fn get_valid_transformations(
-        &self,
+        &mut self,
         partial_statement: &str,
     ) -> Result<Vec<SymbolNode>, WorkspaceError> {
         // TODO Try to complete partial statements
@@ -327,7 +327,7 @@ impl Workspace {
     }
 
     pub fn get_valid_transformations_from(
-        &self,
+        &mut self,
         statement_index: StatementIndex,
     ) -> Result<Vec<SymbolNode>, WorkspaceError> {
         let from_statement = self.get_statement(statement_index)?;
@@ -793,10 +793,13 @@ impl WorkspaceTransactionStore {
         algorithm_type: &AlgorithmType,
         operator_name: &str,
         input_type_name: &str,
+        input_type_condition: GeneratedTypeCondition,
     ) -> Result<Transformation, WorkspaceError> {
-        let input_type = self.compile().get_type_from_name(input_type_name)?;
         let operator_type = self.compile().get_type_from_name(operator_name)?;
         let operator = Symbol::new(operator_name.to_string(), operator_type);
+        let input_type_parent = self.compile().get_type_from_name(input_type_name)?;
+        let input_type =
+            GeneratedType::new_with_one_parent(input_type_condition, input_type_parent);
         let transformation: Transformation =
             AlgorithmTransformation::new(algorithm_type.clone(), operator, input_type).into();
         let transaction =
@@ -818,7 +821,7 @@ impl WorkspaceTransactionStore {
         desired: SymbolNode,
     ) -> Result<SymbolNode, WorkspaceError> {
         let mut transaction = self.get_generated_types_transaction(&desired)?;
-        let workspace = self.compile();
+        let mut workspace = self.compile();
         if workspace.statements.contains(&desired) {
             return Err(WorkspaceError::StatementsAlreadyInclude(desired.clone()));
         }
@@ -834,7 +837,8 @@ impl WorkspaceTransactionStore {
                 workspace.get_statements().clone()
             };
             for (statement_idx, statement) in statements.iter().enumerate() {
-                match transform.try_transform_into(workspace.get_types(), &statement, &desired) {
+                match transform.try_transform_into(workspace.get_types_mut(), &statement, &desired)
+                {
                     Ok(output) => {
                         // TODO Derive the appropriate transform addresses
                         let provenance =
@@ -1902,7 +1906,12 @@ mod test_workspace {
         );
 
         workspace_store
-            .add_algorithm(&AlgorithmType::Addition, "+", "Real")
+            .add_algorithm(
+                &AlgorithmType::Addition,
+                "+",
+                "Real",
+                GeneratedTypeCondition::IsNumeric,
+            )
             .unwrap();
         assert_eq!(workspace_store.compile().transformations.len(), 1);
 
