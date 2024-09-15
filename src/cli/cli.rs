@@ -243,7 +243,7 @@ impl Cli {
         match sub_matches.get_one::<String>("partial-statement") {
             None => Err("No partial statement provided.".to_string()),
             Some(partial_statement) => {
-                let mut workspace = workspace_store.compile();
+                let workspace = workspace_store.compile();
                 let serialized_result = to_string(
                     &workspace
                         .get_valid_transformations(partial_statement)

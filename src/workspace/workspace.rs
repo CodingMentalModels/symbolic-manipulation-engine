@@ -326,7 +326,7 @@ impl Workspace {
     }
 
     pub fn get_valid_transformations(
-        &mut self,
+        &self,
         partial_statement: &str,
     ) -> Result<Vec<SymbolNode>, WorkspaceError> {
         // TODO Try to complete partial statements
@@ -346,7 +346,7 @@ impl Workspace {
             };
             for statement in statements {
                 let valid_transformations =
-                    transformation.get_valid_transformations(self.get_types_mut(), &statement);
+                    transformation.get_valid_transformations(self.get_types(), &statement);
                 if valid_transformations.contains(&desired)
                     && !self.get_statements().contains(&desired)
                 {
@@ -373,7 +373,7 @@ impl Workspace {
             };
             for statement in statements {
                 let valid_transformations =
-                    transformation.get_valid_transformations(self.get_types_mut(), &statement);
+                    transformation.get_valid_transformations(self.get_types(), &statement);
                 to_return.extend(valid_transformations);
             }
         }
@@ -640,10 +640,10 @@ impl WorkspaceTransactionStore {
     }
 
     pub fn compile(&self) -> Workspace {
-        // Does not check for errors because they've been checked on adding them
         let mut workspace = Workspace::default();
         for transaction in self.get_live_transactions() {
-            Self::apply_transaction(&mut workspace, transaction);
+            // Does not check for errors because they've been checked on adding them
+            let _ = Self::apply_transaction(&mut workspace, transaction);
         }
 
         workspace
@@ -850,7 +850,7 @@ impl WorkspaceTransactionStore {
         desired: SymbolNode,
     ) -> Result<SymbolNode, WorkspaceError> {
         let mut transaction = self.get_generated_types_transaction(&desired)?;
-        let mut workspace = self.compile();
+        let workspace = self.compile();
         if workspace.statements.contains(&desired) {
             return Err(WorkspaceError::StatementsAlreadyInclude(desired.clone()));
         }
@@ -866,9 +866,7 @@ impl WorkspaceTransactionStore {
                 workspace.get_statements().clone()
             };
             for (statement_idx, statement) in statements.iter().enumerate() {
-                let old_types = workspace.get_types().clone();
-                match transform.try_transform_into(workspace.get_types_mut(), &statement, &desired)
-                {
+                match transform.try_transform_into(workspace.get_types(), &statement, &desired) {
                     Ok(output) => {
                         // TODO Derive the appropriate transform addresses
                         let provenance =

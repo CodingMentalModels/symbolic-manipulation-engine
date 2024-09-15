@@ -46,7 +46,7 @@ impl Transformation {
 
     pub fn transform(
         &self,
-        hierarchy: &mut TypeHierarchy,
+        hierarchy: &TypeHierarchy,
         statement: &SymbolNode,
     ) -> Result<SymbolNode, TransformationError> {
         match self {
@@ -66,7 +66,7 @@ impl Transformation {
 
     pub fn joint_transform(
         &self,
-        hierarchy: &mut TypeHierarchy,
+        hierarchy: &TypeHierarchy,
         left: &SymbolNode,
         right: &SymbolNode,
     ) -> Result<SymbolNode, TransformationError> {
@@ -82,7 +82,7 @@ impl Transformation {
 
     pub fn try_transform_into(
         &self,
-        hierarchy: &mut TypeHierarchy,
+        hierarchy: &TypeHierarchy,
         from: &SymbolNode,
         to: &SymbolNode,
     ) -> Result<SymbolNode, TransformationError> {
@@ -107,7 +107,7 @@ impl Transformation {
 
     pub fn get_valid_transformations(
         &self,
-        hierarchy: &mut TypeHierarchy,
+        hierarchy: &TypeHierarchy,
         statement: &SymbolNode,
     ) -> HashSet<SymbolNode> {
         // Getting valid transformations can recurse indefinitely, so we use
@@ -247,7 +247,7 @@ impl Transformation {
 
     pub fn transform_at(
         &self,
-        hierarchy: &mut TypeHierarchy,
+        hierarchy: &TypeHierarchy,
         statement: &SymbolNode,
         address: SymbolNodeAddress,
     ) -> Result<SymbolNode, TransformationError> {
@@ -346,7 +346,7 @@ impl AlgorithmTransformation {
 
     pub fn transform(
         &self,
-        hierarchy: &mut TypeHierarchy,
+        hierarchy: &TypeHierarchy,
         statement: &SymbolNode,
     ) -> Result<SymbolNode, TransformationError> {
         println!(
@@ -386,9 +386,6 @@ impl AlgorithmTransformation {
             .algorithm_type
             .transform(&left.get_root_as_string(), &right.get_root_as_string())?;
         let to_return = SymbolNode::leaf(Symbol::new_with_same_type_as_value(&final_value));
-        for (t, parents) in self.input_type.generate(&to_return) {
-            hierarchy.add_child_to_parents(t, &parents);
-        }
         Ok(to_return)
     }
 
