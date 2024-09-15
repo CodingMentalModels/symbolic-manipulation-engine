@@ -793,13 +793,11 @@ impl WorkspaceTransactionStore {
         algorithm_type: &AlgorithmType,
         operator_name: &str,
         input_type_name: &str,
-        input_type_condition: GeneratedTypeCondition,
     ) -> Result<Transformation, WorkspaceError> {
-        let operator_type = self.compile().get_type_from_name(operator_name)?;
+        let workspace = self.compile();
+        let operator_type = workspace.get_type_from_name(operator_name)?;
         let operator = Symbol::new(operator_name.to_string(), operator_type);
-        let input_type_parent = self.compile().get_type_from_name(input_type_name)?;
-        let input_type =
-            GeneratedType::new_with_one_parent(input_type_condition, input_type_parent);
+        let input_type = workspace.get_generated_type_by_parent_name(input_type_name)?;
         let transformation: Transformation =
             AlgorithmTransformation::new(algorithm_type.clone(), operator, input_type).into();
         let transaction =
