@@ -327,14 +327,8 @@ impl Cli {
             None => return Err("No operator provided.".to_string()),
             Some(operator) => operator,
         };
-        // TODO Update this to use a flag to determine whether to use Numeric or Integer
         workspace_store
-            .add_algorithm(
-                &algorithm_type,
-                &input_type,
-                &operator,
-                GeneratedTypeCondition::IsNumeric,
-            )
+            .add_algorithm(&algorithm_type, &input_type, &operator)
             .map_err(|e| format!("Workspace Error: {:?}", e).to_string())?;
         self.update_workspace_store(workspace_store)?;
         return Ok("Algorithm added.".to_string());

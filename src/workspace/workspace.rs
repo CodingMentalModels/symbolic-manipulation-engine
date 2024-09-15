@@ -126,6 +126,37 @@ impl Workspace {
         }
     }
 
+    pub fn get_generated_type_from_parent_name(
+        &self,
+        name: &str,
+    ) -> Result<GeneratedType, WorkspaceError> {
+        let matches = self
+            .get_generated_types()
+            .into_iter()
+            .filter(|t| {
+                t.get_parents()
+                    .into_iter()
+                    .map(|parent| parent.to_string())
+                    .collect::<HashSet<_>>()
+                    .contains(name)
+            })
+            .cloned()
+            .collect::<Vec<_>>();
+        if matches.len() == 0 {
+            Err(WorkspaceError::NoSuchGeneratedTypeParent(name.to_string()))
+        } else if matches.len() > 1 {
+            Err(WorkspaceError::AmbiguousGeneratedTypeParent(
+                name.to_string(),
+            ))
+        } else {
+            Ok(matches
+                .iter()
+                .next()
+                .expect("We just checked that there's at least one.")
+                .clone())
+        }
+    }
+
     pub fn get_interpretations(&self) -> &Vec<Interpretation> {
         &self.interpretations
     }
@@ -797,7 +828,7 @@ impl WorkspaceTransactionStore {
         let workspace = self.compile();
         let operator_type = workspace.get_type_from_name(operator_name)?;
         let operator = Symbol::new(operator_name.to_string(), operator_type);
-        let input_type = workspace.get_generated_type_by_parent_name(input_type_name)?;
+        let input_type = workspace.get_generated_type_from_parent_name(input_type_name)?;
         let transformation: Transformation =
             AlgorithmTransformation::new(algorithm_type.clone(), operator, input_type).into();
         let transaction =
@@ -842,14 +873,6 @@ impl WorkspaceTransactionStore {
                         // TODO Derive the appropriate transform addresses
                         let provenance =
                             Provenance::Derived((statement_idx, transform_idx, vec![]));
-
-                        // Handle the case where a new type was added to the TypeHierarchy in
-                        // try_transform_into but needs to be reflected as a transaction
-                        let new_types = workspace.get_types().clone();
-                        let missing_types = new_types.get_missing_types(&old_types);
-                        for missing_type in missing_types {
-                            transaction.add(WorkspaceTransactionItem::AddType(missing_type));
-                        }
 
                         transaction
                             .add(WorkspaceTransactionItem::Derive(output.clone(), provenance));
@@ -1060,7 +1083,9 @@ pub enum WorkspaceError {
     TypeHierarchyAlreadyIncludes(Type),
     InvalidType(Type),
     NoSuchType(String),
+    NoSuchGeneratedTypeParent(String),
     AmbiguousTypeName(String),
+    AmbiguousGeneratedTypeParent(String),
     ParentTypeNotFound(Type),
     UnsupportedOperation(String),
     ArbitraryNodeHasNonOneChildren,
@@ -1914,12 +1939,7 @@ mod test_workspace {
         );
 
         workspace_store
-            .add_algorithm(
-                &AlgorithmType::Addition,
-                "+",
-                "Real",
-                GeneratedTypeCondition::IsNumeric,
-            )
+            .add_algorithm(&AlgorithmType::Addition, "+", "Real")
             .unwrap();
         assert_eq!(workspace_store.compile().transformations.len(), 1);
 
