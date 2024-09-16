@@ -1,18 +1,8 @@
-mod cli;
-mod config;
-mod constants;
-mod context;
-mod parsing;
-mod symbol;
-mod workspace;
-
-use clap::{arg, Arg, ArgAction, Command, Subcommand};
-use cli::cli::Cli;
-use config::STATE_DIRECTORY_RELATIVE_PATH;
+use clap::{Arg, ArgAction, Command};
 use std::env::current_dir;
 
-use crate::cli::filesystem::FileSystem;
-use crate::workspace::workspace::Workspace;
+use symbolic_manipulation_engine::cli::cli::Cli;
+use symbolic_manipulation_engine::cli::filesystem::FileSystem;
 
 fn main() {
     let matches = Command::new("Symbolic Manipulation Engine")
