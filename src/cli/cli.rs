@@ -5,7 +5,10 @@ use serde_json::to_string;
 
 use crate::{
     cli::filesystem::FileSystem,
-    config::{CONTEXT_DIRECTORY_RELATIVE_PATH, STATE_DIRECTORY_RELATIVE_PATH},
+    config::{
+        CONTEXT_DIRECTORY_RELATIVE_PATH, STATE_DIRECTORY_RELATIVE_PATH_PRODUCTION,
+        STATE_DIRECTORY_RELATIVE_PATH_TESTING,
+    },
     constants::*,
     context::context::Context,
     parsing::{
@@ -27,27 +30,37 @@ use crate::{
 
 pub struct Cli {
     pub filesystem: FileSystem,
+    pub mode: CliMode,
 }
 
 impl Cli {
-    pub fn new(filesystem: FileSystem) -> Self {
-        Self { filesystem }
+    pub fn new(filesystem: FileSystem, mode: CliMode) -> Self {
+        Self { filesystem, mode }
     }
 
     pub fn init(&self) -> Result<String, String> {
-        if self.filesystem.path_exists(STATE_DIRECTORY_RELATIVE_PATH) {
+        if self.mode != CliMode::Production {
+            return Err("CLI isn't running in production mode.".to_string());
+        }
+        if self
+            .filesystem
+            .path_exists(STATE_DIRECTORY_RELATIVE_PATH_PRODUCTION)
+        {
             return Err("A workspace already exists in this directory".to_string());
         }
 
         match self
             .filesystem
-            .create_directory(STATE_DIRECTORY_RELATIVE_PATH)
+            .create_directory(STATE_DIRECTORY_RELATIVE_PATH_PRODUCTION)
         {
-            true => println!("Created directory {}", STATE_DIRECTORY_RELATIVE_PATH),
+            true => println!(
+                "Created directory {}",
+                STATE_DIRECTORY_RELATIVE_PATH_PRODUCTION
+            ),
             false => {
                 return Err(format!(
                     "Couldn't create directory {}",
-                    STATE_DIRECTORY_RELATIVE_PATH
+                    STATE_DIRECTORY_RELATIVE_PATH_PRODUCTION
                 ));
             }
         }
@@ -61,7 +74,10 @@ impl Cli {
     }
 
     pub fn rmws(&self, sub_matches: &ArgMatches) -> Result<String, String> {
-        if !self.filesystem.path_exists(STATE_DIRECTORY_RELATIVE_PATH) {
+        if !self
+            .filesystem
+            .path_exists(STATE_DIRECTORY_RELATIVE_PATH_PRODUCTION)
+        {
             return Err("No workspace exists in this directory".to_string());
         }
 
@@ -71,7 +87,7 @@ impl Cli {
 
         match self
             .filesystem
-            .remove_directory(STATE_DIRECTORY_RELATIVE_PATH)
+            .remove_directory(STATE_DIRECTORY_RELATIVE_PATH_PRODUCTION)
         {
             true => {
                 return Ok(format!(
@@ -82,7 +98,7 @@ impl Cli {
             false => {
                 return Err(format!(
                     "Couldn't remove directory {}",
-                    STATE_DIRECTORY_RELATIVE_PATH
+                    STATE_DIRECTORY_RELATIVE_PATH_PRODUCTION
                 ));
             }
         };
@@ -478,8 +494,13 @@ impl Cli {
         mut workspace_store: WorkspaceTransactionStore,
     ) -> Result<(), String> {
         workspace_store.truncate(N_TRANSACTIONS_TO_KEEP_IN_WORKSPACE_STORE);
+        let destination_path = if self.mode == CliMode::Production {
+            STATE_DIRECTORY_RELATIVE_PATH_PRODUCTION
+        } else {
+            STATE_DIRECTORY_RELATIVE_PATH_TESTING
+        };
         self.filesystem.write_file(
-            STATE_DIRECTORY_RELATIVE_PATH,
+            destination_path,
             "workspace.toml",
             workspace_store
                 .serialize()
@@ -488,14 +509,21 @@ impl Cli {
         )
     }
 
-    fn load_workspace_store(&self) -> Result<WorkspaceTransactionStore, String> {
-        if !self.filesystem.path_exists(STATE_DIRECTORY_RELATIVE_PATH) {
-            return Err("No workspace exists in this directory".to_string());
+    pub fn load_workspace_store(&self) -> Result<WorkspaceTransactionStore, String> {
+        if !self
+            .filesystem
+            .path_exists(STATE_DIRECTORY_RELATIVE_PATH_PRODUCTION)
+        {
+            return Err(format!(
+                "No workspace exists in this directory: {}",
+                STATE_DIRECTORY_RELATIVE_PATH_PRODUCTION
+            )
+            .to_string());
         }
 
         match self
             .filesystem
-            .read_file(STATE_DIRECTORY_RELATIVE_PATH, "workspace.toml")
+            .read_file(STATE_DIRECTORY_RELATIVE_PATH_PRODUCTION, "workspace.toml")
         {
             Ok(contents) => match WorkspaceTransactionStore::deserialize(&contents) {
                 Ok(workspace_store) => return Ok(workspace_store),
@@ -514,9 +542,8 @@ impl Cli {
     }
 }
 
-#[cfg(test)]
-mod test_cli {
-    use crate::symbol::symbol_type::TypeHierarchy;
-
-    use super::*;
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
+pub enum CliMode {
+    Production,
+    Testing,
 }
