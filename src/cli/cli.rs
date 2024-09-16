@@ -335,16 +335,16 @@ impl Cli {
                     )
                 })?,
         };
-        let input_type = match sub_matches.get_one::<String>("input-type") {
-            None => return Err("No input-type provided.".to_string()),
-            Some(input_type) => input_type,
-        };
         let operator = match sub_matches.get_one::<String>("operator") {
             None => return Err("No operator provided.".to_string()),
             Some(operator) => operator,
         };
+        let input_type = match sub_matches.get_one::<String>("input-type") {
+            None => return Err("No input-type provided.".to_string()),
+            Some(input_type) => input_type,
+        };
         workspace_store
-            .add_algorithm(&algorithm_type, &input_type, &operator)
+            .add_algorithm(&algorithm_type, &operator, &input_type)
             .map_err(|e| format!("Workspace Error: {:?}", e).to_string())?;
         self.update_workspace_store(workspace_store)?;
         return Ok("Algorithm added.".to_string());
