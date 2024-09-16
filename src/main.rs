@@ -73,6 +73,14 @@ fn main() {
         .subcommand(Command::new("hypothesize").about("Takes a statement and adds it to the Workspace as a new hypothesis").arg(
             Arg::new("statement").required(true)
             ))
+        .subcommand(Command::new("add-algorithm").about("Add an algorithm to be applied to an operator and input type.")
+            .arg(
+                Arg::new("algorithm-type").required(true).help("Type of algorithm to apply. Currently supported are Addition, Subtraction, Multiplication, and Division.")
+            ).arg(
+                Arg::new("operator").required(true).help("Operator to trigger the algorithm. Currently must be a binary operator.")
+            ).arg(
+                Arg::new("input-type").required(true).help("Type of input for the operator. Must correspond to a parent of a Generated Type.")
+            ))
         .subcommand(Command::new("add-transformation").about("Add a Transformation to the Workspace via a 'from' and a 'to' statement, parsed using the Workspace's Interpretations.")
             .arg(
                 Arg::new("from").required(true).help("Input to the Transformation.")
@@ -128,6 +136,7 @@ fn main() {
         Some(("add-interpretation", sub_matches)) => cli.add_interpretation(sub_matches),
         Some(("remove-interpretation", sub_matches)) => cli.remove_interpretation(sub_matches),
         Some(("add-type", sub_matches)) => cli.add_type(sub_matches),
+        Some(("add-algorithm", sub_matches)) => cli.add_algorithm(sub_matches),
         Some(("add-transformation", sub_matches)) => cli.add_transformation(sub_matches),
         Some(("add-joint-transformation", sub_matches)) => {
             cli.add_joint_transformation(sub_matches)
