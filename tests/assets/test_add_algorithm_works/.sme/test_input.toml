@@ -1,4 +1,4 @@
-next_index = 21
+next_index = 20
 
 [[transactions]]
 
@@ -1076,24 +1076,3 @@ name = "2"
 [transactions.items.AddHypothesis.children.children.root.Symbol.evaluates_to_type]
 kind = "namedType"
 value = "2"
-
-[[transactions]]
-
-[[transactions.items]]
-
-[transactions.items.AddTransformation.AlgorithmTransformation]
-algorithm_type = "Addition"
-
-[transactions.items.AddTransformation.AlgorithmTransformation.operator]
-name = "+"
-
-[transactions.items.AddTransformation.AlgorithmTransformation.operator.evaluates_to_type]
-kind = "namedType"
-value = "+"
-
-[transactions.items.AddTransformation.AlgorithmTransformation.input_type]
-condition = "IsNumeric"
-
-[[transactions.items.AddTransformation.AlgorithmTransformation.input_type.parents]]
-kind = "namedType"
-value = "Real"

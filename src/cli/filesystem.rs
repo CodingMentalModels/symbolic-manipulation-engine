@@ -37,6 +37,15 @@ impl FileSystem {
         fs::create_dir(path).is_ok()
     }
 
+    pub fn remove_file(&self, path: &str, filename: &str) -> bool {
+        let dir_path = self.root_directory.join(path);
+        let path = dir_path.join(filename);
+        if !path.exists() {
+            return false;
+        }
+        fs::remove_file(path).is_ok()
+    }
+
     pub fn remove_directory(&self, path: &str) -> bool {
         let path = self.root_directory.join(path);
         if !path.exists() {
@@ -66,6 +75,11 @@ impl FileSystem {
         }
 
         Ok(filenames)
+    }
+
+    pub fn copy_file(&mut self, path: &str, from_name: &str, to_name: &str) -> Result<(), String> {
+        let contents = self.read_file(path, from_name)?;
+        self.write_file(path, to_name, contents, false)
     }
 
     pub fn write_file(

@@ -24,5 +24,9 @@ fn test_add_algorithm() {
     ]);
     cli.add_algorithm(matches.subcommand_matches("add-algorithm").unwrap())
         .unwrap();
-    let workspace = cli.load_workspace_store().unwrap().compile();
+
+    let matches =
+        build_cli().get_matches_from(vec!["symbolic-manipulation-engine", "derive", "--", "4"]);
+    cli.derive(matches.subcommand_matches("derive").unwrap())
+        .unwrap();
 }

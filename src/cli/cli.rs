@@ -5,10 +5,7 @@ use serde_json::to_string;
 
 use crate::{
     cli::filesystem::FileSystem,
-    config::{
-        CONTEXT_DIRECTORY_RELATIVE_PATH, STATE_DIRECTORY_RELATIVE_PATH_PRODUCTION,
-        STATE_DIRECTORY_RELATIVE_PATH_TESTING,
-    },
+    config::{CONTEXT_DIRECTORY_RELATIVE_PATH, STATE_DIRECTORY_RELATIVE_PATH},
     constants::*,
     context::context::Context,
     parsing::{
@@ -34,33 +31,39 @@ pub struct Cli {
 }
 
 impl Cli {
-    pub fn new(filesystem: FileSystem, mode: CliMode) -> Self {
+    pub fn new(mut filesystem: FileSystem, mode: CliMode) -> Self {
+        if mode == CliMode::Testing {
+            Self::prepare_for_testing(&mut filesystem)
+                .expect("We should be able to prepare for testing.");
+        }
         Self { filesystem, mode }
     }
 
+    fn prepare_for_testing(filesystem: &mut FileSystem) -> Result<(), String> {
+        let _ = filesystem.remove_file(STATE_DIRECTORY_RELATIVE_PATH, "test_input.rs");
+        filesystem.copy_file(
+            STATE_DIRECTORY_RELATIVE_PATH,
+            "test_input.rs",
+            "workspace.rs",
+        )?;
+        Ok(())
+    }
+
+    fn get_relative_path(&self) -> &str {
+        STATE_DIRECTORY_RELATIVE_PATH
+    }
+
     pub fn init(&self) -> Result<String, String> {
-        if self.mode != CliMode::Production {
-            return Err("CLI isn't running in production mode.".to_string());
-        }
-        if self
-            .filesystem
-            .path_exists(STATE_DIRECTORY_RELATIVE_PATH_PRODUCTION)
-        {
+        if self.filesystem.path_exists(self.get_relative_path()) {
             return Err("A workspace already exists in this directory".to_string());
         }
 
-        match self
-            .filesystem
-            .create_directory(STATE_DIRECTORY_RELATIVE_PATH_PRODUCTION)
-        {
-            true => println!(
-                "Created directory {}",
-                STATE_DIRECTORY_RELATIVE_PATH_PRODUCTION
-            ),
+        match self.filesystem.create_directory(self.get_relative_path()) {
+            true => println!("Created directory {}", self.get_relative_path()),
             false => {
                 return Err(format!(
                     "Couldn't create directory {}",
-                    STATE_DIRECTORY_RELATIVE_PATH_PRODUCTION
+                    self.get_relative_path()
                 ));
             }
         }
@@ -74,10 +77,7 @@ impl Cli {
     }
 
     pub fn rmws(&self, sub_matches: &ArgMatches) -> Result<String, String> {
-        if !self
-            .filesystem
-            .path_exists(STATE_DIRECTORY_RELATIVE_PATH_PRODUCTION)
-        {
+        if !self.filesystem.path_exists(self.get_relative_path()) {
             return Err("No workspace exists in this directory".to_string());
         }
 
@@ -85,10 +85,7 @@ impl Cli {
             return Err("Use the --force flag to remove the workspace".to_string());
         }
 
-        match self
-            .filesystem
-            .remove_directory(STATE_DIRECTORY_RELATIVE_PATH_PRODUCTION)
-        {
+        match self.filesystem.remove_directory(self.get_relative_path()) {
             true => {
                 return Ok(format!(
                     "Removed workspace in {}",
@@ -98,7 +95,7 @@ impl Cli {
             false => {
                 return Err(format!(
                     "Couldn't remove directory {}",
-                    STATE_DIRECTORY_RELATIVE_PATH_PRODUCTION
+                    self.get_relative_path()
                 ));
             }
         };
@@ -494,13 +491,8 @@ impl Cli {
         mut workspace_store: WorkspaceTransactionStore,
     ) -> Result<(), String> {
         workspace_store.truncate(N_TRANSACTIONS_TO_KEEP_IN_WORKSPACE_STORE);
-        let destination_path = if self.mode == CliMode::Production {
-            STATE_DIRECTORY_RELATIVE_PATH_PRODUCTION
-        } else {
-            STATE_DIRECTORY_RELATIVE_PATH_TESTING
-        };
         self.filesystem.write_file(
-            destination_path,
+            self.get_relative_path(),
             "workspace.toml",
             workspace_store
                 .serialize()
@@ -510,20 +502,17 @@ impl Cli {
     }
 
     pub fn load_workspace_store(&self) -> Result<WorkspaceTransactionStore, String> {
-        if !self
-            .filesystem
-            .path_exists(STATE_DIRECTORY_RELATIVE_PATH_PRODUCTION)
-        {
+        if !self.filesystem.path_exists(self.get_relative_path()) {
             return Err(format!(
                 "No workspace exists in this directory: {}",
-                STATE_DIRECTORY_RELATIVE_PATH_PRODUCTION
+                self.get_relative_path()
             )
             .to_string());
         }
 
         match self
             .filesystem
-            .read_file(STATE_DIRECTORY_RELATIVE_PATH_PRODUCTION, "workspace.toml")
+            .read_file(self.get_relative_path(), "workspace.toml")
         {
             Ok(contents) => match WorkspaceTransactionStore::deserialize(&contents) {
                 Ok(workspace_store) => return Ok(workspace_store),
