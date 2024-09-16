@@ -22,6 +22,7 @@ fn test_add_algorithm() {
         "+",
         "Real",
     ]);
-    cli.add_algorithm(&matches).unwrap();
+    cli.add_algorithm(matches.subcommand_matches("add-algorithm").unwrap())
+        .unwrap();
     let workspace = cli.load_workspace_store().unwrap().compile();
 }
