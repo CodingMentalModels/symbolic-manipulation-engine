@@ -1913,9 +1913,13 @@ mod test_workspace {
     fn test_workspace_adds_and_executes_algorithms() {
         let mut types = TypeHierarchy::chain(vec!["Real".into(), "+".into()]).unwrap();
         types
+            .add_child_to_parent("*".into(), "Real".into())
+            .unwrap();
+        types
             .add_child_to_parent("/".into(), "Real".into())
             .unwrap();
         let plus_interpretation = Interpretation::infix_operator("+".into(), 1, "+".into());
+        let multiply_interpretation = Interpretation::infix_operator("*".into(), 2, "+".into());
         let divides_interpretation = Interpretation::infix_operator("/".into(), 2, "/".into());
         let real_interpretation = Interpretation::generated_type(GeneratedTypeCondition::IsNumeric);
         let real_generated_type = GeneratedType::new(
@@ -1925,6 +1929,7 @@ mod test_workspace {
         let generated_types = vec![real_generated_type];
         let interpretations = vec![
             plus_interpretation,
+            multiply_interpretation,
             divides_interpretation,
             real_interpretation,
         ];
@@ -1964,6 +1969,18 @@ mod test_workspace {
         let _transformed = workspace_store.try_transform_into_parsed("2").unwrap();
         assert_eq!(workspace_store.compile().statements.len(), 4);
         assert_eq!(workspace_store.compile().statements[3], two);
+
+        assert!(workspace_store.add_parsed_hypothesis("3*0").is_ok());
+        assert_eq!(workspace_store.compile().statements.len(), 5);
+        workspace_store
+            .add_algorithm(&AlgorithmType::Multiplication, "*", "Real")
+            .unwrap();
+        assert_eq!(workspace_store.compile().transformations.len(), 3);
+
+        let _transformed = workspace_store.try_transform_into_parsed("0").unwrap();
+        let zero = SymbolNode::leaf(Symbol::new("0".to_string(), "0".into()));
+        assert_eq!(workspace_store.compile().statements.len(), 6);
+        assert_eq!(workspace_store.compile().statements[5], zero);
     }
 
     #[test]
