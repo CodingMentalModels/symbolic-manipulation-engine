@@ -312,7 +312,7 @@ impl Cli {
         };
         let is_equivalence = sub_matches.get_flag("is-equivalence");
         workspace_store
-            .add_parsed_transformation(is_equivalence, &to_as_string, &from_as_string)
+            .add_parsed_transformation(is_equivalence, &from_as_string, &to_as_string)
             .map_err(|e| format!("Workspace Error: {:?}", e).to_string())?;
         self.update_workspace_store(workspace_store)?;
         return Ok("Transformation added.".to_string());
