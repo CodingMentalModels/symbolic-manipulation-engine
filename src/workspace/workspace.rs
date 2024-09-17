@@ -1,3 +1,4 @@
+use log::debug;
 use std::collections::{HashMap, HashSet};
 
 use serde::{Deserialize, Serialize};
@@ -338,6 +339,15 @@ impl Workspace {
         };
         let instantiated_transformations =
             self.get_instantiated_transformations_with_indices(Some(desired.clone()))?;
+        debug!(
+            "instantiated_transformations:\n{}",
+            instantiated_transformations
+                .clone()
+                .into_iter()
+                .map(|(t, _)| t.to_symbol_string())
+                .collect::<Vec<_>>()
+                .join("\n")
+        );
         for (transformation, _) in instantiated_transformations {
             let statements = if transformation.is_joint_transform() {
                 self.get_statement_pairs()
@@ -364,6 +374,15 @@ impl Workspace {
         let from_statement = self.get_statement(statement_index)?;
         let instantiated_transformations =
             self.get_instantiated_transformations_with_indices(None)?;
+        debug!(
+            "instantiated_transformations:\n{}",
+            instantiated_transformations
+                .clone()
+                .into_iter()
+                .map(|(t, _)| t.to_symbol_string())
+                .collect::<Vec<_>>()
+                .join("\n")
+        );
         let mut to_return = HashSet::new();
         for (transformation, _) in instantiated_transformations {
             let statements = if transformation.is_joint_transform() {
@@ -858,6 +877,15 @@ impl WorkspaceTransactionStore {
         }
         let instantiated_transformations =
             workspace.get_instantiated_transformations_with_indices(Some(desired.clone()))?;
+        debug!(
+            "instantiated_transformations:\n{}",
+            instantiated_transformations
+                .clone()
+                .into_iter()
+                .map(|(t, _)| t.to_symbol_string())
+                .collect::<Vec<_>>()
+                .join("\n")
+        );
         for (transform, transform_idx) in instantiated_transformations {
             let statements = if transform.is_joint_transform() {
                 workspace.get_statement_pairs()

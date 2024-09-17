@@ -1,3 +1,4 @@
+use log::{debug, trace};
 use std::collections::{HashMap, HashSet};
 
 use crate::constants::MAX_ADDITIONAL_VALID_TRANSFORMATION_DEPTH;
@@ -103,6 +104,10 @@ impl Transformation {
         // MAX_ADDITIONAL_VALID_TRANSFORMATION_DEPTH to limit.
         // We also implement our own call stack to avoid stack overflows and make it easier to
         // inspect the contents
+        debug!(
+            "get_valid_transformations({})",
+            statement.to_symbol_string()
+        );
         let mut call_stack = vec![(statement.clone(), true, false, 0)];
         let mut already_processed: HashSet<SymbolNode> = HashSet::new();
         let mut child_to_valid_transformations: HashMap<SymbolNode, HashSet<SymbolNode>> =
@@ -113,6 +118,13 @@ impl Transformation {
         while let Some((current_statement, should_return, are_children_processed, depth)) =
             call_stack.pop()
         {
+            trace!(
+                "({}, {}, {}, {})",
+                current_statement.to_symbol_string(),
+                should_return,
+                are_children_processed,
+                depth,
+            );
             if !are_children_processed {
                 // Push the statement back onto the stack with children marked as processed
                 // since we're about to process them
@@ -151,7 +163,11 @@ impl Transformation {
                             // Push the result onto the call stack for further processing
                             if !already_processed.contains(&result) {
                                 call_stack.push((result.clone(), should_return, false, depth));
+                            } else {
+                                debug!("Already processed!");
                             }
+                        } else {
+                            debug!("Max depth reached!");
                         }
                     }
                     _ => {}

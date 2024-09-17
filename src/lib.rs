@@ -14,8 +14,10 @@ use log::LevelFilter;
 #[ctor::ctor]
 fn initialize_logger() {
     env_logger::builder()
-        .is_test(true) // Only log during tests
-        .filter_level(LevelFilter::Debug) // Set log level to debug
+        .is_test(true)
+        //.filter_level(LevelFilter::Off)
+        //.filter_level(LevelFilter::Debug)
+        .filter_level(LevelFilter::Trace)
         .init();
 }
 

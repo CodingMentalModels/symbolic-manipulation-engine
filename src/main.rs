@@ -5,8 +5,6 @@ use symbolic_manipulation_engine::cli::cli::{Cli, CliMode};
 use symbolic_manipulation_engine::cli::filesystem::FileSystem;
 
 fn main() {
-    env_logger::init();
-
     let matches = build_cli().get_matches();
 
     let current_directory = match current_dir() {
