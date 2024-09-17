@@ -113,13 +113,6 @@ impl Transformation {
         while let Some((current_statement, should_return, are_children_processed, depth)) =
             call_stack.pop()
         {
-            println!(
-                "({}, {}, {}, {})",
-                current_statement.to_symbol_string(),
-                should_return,
-                are_children_processed,
-                depth
-            );
             if !are_children_processed {
                 // Push the statement back onto the stack with children marked as processed
                 // since we're about to process them
@@ -136,23 +129,15 @@ impl Transformation {
                 let mut valid_roots = vec![current_statement.clone()]
                     .into_iter()
                     .collect::<HashSet<_>>();
-                println!(
-                    "Transform: {}\ntransform_at: {}",
-                    self.to_symbol_string(),
-                    current_statement.to_symbol_string()
-                );
                 match self.transform_at(hierarchy, &current_statement, vec![]) {
                     Ok(result) => {
-                        println!("Result: {}", result.to_symbol_string());
                         let final_max_depth = max_depth.saturating_sub(depth);
 
                         // Also push the transformed statement on so that it gets processed
                         valid_roots.insert(result.clone());
-                        if (!already_processed.contains(&result))
-                            && (result.get_depth() <= final_max_depth)
-                        {
-                            call_stack.push((result.clone(), should_return, false, depth));
 
+                        // Bail out if we've gotten too deep
+                        if result.get_depth() <= final_max_depth {
                             // Log the transformation as a valid one
                             child_to_valid_transformations
                                 .entry(current_statement.clone())
@@ -162,6 +147,11 @@ impl Transformation {
                                 .or_insert_with(|| {
                                     vec![result.clone()].into_iter().collect::<HashSet<_>>()
                                 });
+
+                            // Push the result onto the call stack for further processing
+                            if !already_processed.contains(&result) {
+                                call_stack.push((result.clone(), should_return, false, depth));
+                            }
                         }
                     }
                     _ => {}
@@ -177,7 +167,7 @@ impl Transformation {
                         to_return.extend(result.clone());
                     }
 
-                    // Log the child transformations valid
+                    // Log the child transformations as valid
                     child_to_valid_transformations
                         .entry(to_apply.clone())
                         .and_modify(|value| {
@@ -351,7 +341,6 @@ impl AlgorithmTransformation {
         hierarchy: &TypeHierarchy,
         statement: &SymbolNode,
     ) -> Result<SymbolNode, TransformationError> {
-        println!("transform: {}", statement.to_symbol_string());
         if !statement.has_children() {
             if self.input_type.satisfies_condition(statement.get_symbol()?) {
                 return Ok(statement.clone());
@@ -368,7 +357,6 @@ impl AlgorithmTransformation {
         }
 
         if statement.get_n_children() != 2 || statement.get_symbol()? != &self.get_operator() {
-            println!("Operator doesn't match or nonbinary");
             return Err(TransformationError::NoValidTransformations);
         }
 

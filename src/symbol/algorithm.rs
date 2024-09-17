@@ -48,7 +48,6 @@ impl AlgorithmType {
     }
 
     pub fn transform(&self, left: &str, right: &str) -> Result<String, TransformationError> {
-        println!("{}.transform({}, {})", self.to_string(), left, right);
         let left_value = Rational::parse(left)?;
         let right_value = Rational::parse(right)?;
         let final_value = match self {
@@ -57,7 +56,6 @@ impl AlgorithmType {
             Self::Multiplication => left_value * right_value,
             Self::Division => left_value / right_value,
         };
-        println!("final_value: {}", final_value.to_string());
         Ok(final_value.to_string())
     }
 }
