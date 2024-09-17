@@ -1099,4 +1099,47 @@ kind = "namedType"
 value = "Real"
 
 [[transactions]]
-items = [{ AddType = [{ kind = "namedType", value = "4" }, { kind = "namedType", value = "Real" }] }, [{ root = { Symbol = { name = "=", evaluates_to_type = { kind = "namedType", value = "=" } } }, children = [{ root = { Symbol = { name = "x", evaluates_to_type = { kind = "namedType", value = "Real" } } }, children = [] }, { root = { Symbol = { name = "4", evaluates_to_type = { kind = "namedType", value = "4" } } }, children = [] }] }, { Derived = [0, 12, []] }]]
+
+[[transactions.items]]
+
+[[transactions.items.AddType]]
+kind = "namedType"
+value = "4"
+
+[[transactions.items.AddType]]
+kind = "namedType"
+value = "Real"
+
+[[transactions.items]]
+
+[[transactions.items.Derive]]
+
+[transactions.items.Derive.root.Symbol]
+name = "="
+
+[transactions.items.Derive.root.Symbol.evaluates_to_type]
+kind = "namedType"
+value = "="
+
+[[transactions.items.Derive.children]]
+children = []
+
+[transactions.items.Derive.children.root.Symbol]
+name = "x"
+
+[transactions.items.Derive.children.root.Symbol.evaluates_to_type]
+kind = "namedType"
+value = "Real"
+
+[[transactions.items.Derive.children]]
+children = []
+
+[transactions.items.Derive.children.root.Symbol]
+name = "4"
+
+[transactions.items.Derive.children.root.Symbol.evaluates_to_type]
+kind = "namedType"
+value = "4"
+
+[[transactions.items.Derive]]
+Derived = [0, 12, []]

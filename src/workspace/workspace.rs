@@ -685,7 +685,7 @@ impl WorkspaceTransactionStore {
             WorkspaceTransactionItem::AddTransformation(transformation) => {
                 workspace.add_transformation(transformation)?;
             }
-            WorkspaceTransactionItem::Derive(statement, provenance) => {
+            WorkspaceTransactionItem::Derive((statement, provenance)) => {
                 workspace.add_derived_statement(statement, provenance);
             }
         };
@@ -871,8 +871,10 @@ impl WorkspaceTransactionStore {
                         let provenance =
                             Provenance::Derived((statement_idx, transform_idx, vec![]));
 
-                        transaction
-                            .add(WorkspaceTransactionItem::Derive(output.clone(), provenance));
+                        transaction.add(WorkspaceTransactionItem::Derive((
+                            output.clone(),
+                            provenance,
+                        )));
                         self.add(transaction)?;
                         return Ok(output);
                     }
@@ -963,7 +965,7 @@ pub enum WorkspaceTransactionItem {
     RemoveInterpretation(usize),
     AddHypothesis(SymbolNode),
     AddTransformation(Transformation),
-    Derive(SymbolNode, Provenance),
+    Derive((SymbolNode, Provenance)),
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, TS)]
