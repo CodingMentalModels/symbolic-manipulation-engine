@@ -354,6 +354,7 @@ impl AlgorithmTransformation {
         }
 
         if statement.get_n_children() != 2 || statement.get_symbol()? != &self.get_operator() {
+            println!("Operator doesn't match or nonbinary");
             return Err(TransformationError::NoValidTransformations);
         }
 

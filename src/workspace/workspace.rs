@@ -1919,7 +1919,7 @@ mod test_workspace {
             .add_child_to_parent("/".into(), "Real".into())
             .unwrap();
         let plus_interpretation = Interpretation::infix_operator("+".into(), 1, "+".into());
-        let multiply_interpretation = Interpretation::infix_operator("*".into(), 2, "+".into());
+        let multiply_interpretation = Interpretation::infix_operator("*".into(), 2, "*".into());
         let divides_interpretation = Interpretation::infix_operator("/".into(), 2, "/".into());
         let real_interpretation = Interpretation::generated_type(GeneratedTypeCondition::IsNumeric);
         let real_generated_type = GeneratedType::new(
