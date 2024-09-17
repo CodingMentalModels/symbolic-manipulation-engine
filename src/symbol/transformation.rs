@@ -353,7 +353,7 @@ impl AlgorithmTransformation {
             }
         }
 
-        if statement.get_n_children() != 2 {
+        if statement.get_n_children() != 2 || statement.get_symbol()? != &self.get_operator() {
             return Err(TransformationError::NoValidTransformations);
         }
 
