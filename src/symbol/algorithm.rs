@@ -1,3 +1,4 @@
+use log::debug;
 use std::{
     collections::HashSet,
     ops::{Add, Div, Mul, Sub},
@@ -48,6 +49,7 @@ impl AlgorithmType {
     }
 
     pub fn transform(&self, left: &str, right: &str) -> Result<String, TransformationError> {
+        debug!("{}.transform({}, {})", self.to_string(), left, right);
         let left_value = Rational::parse(left)?;
         let right_value = Rational::parse(right)?;
         let final_value = match self {
@@ -56,6 +58,7 @@ impl AlgorithmType {
             Self::Multiplication => left_value * right_value,
             Self::Division => left_value / right_value,
         };
+        debug!("final_value: {:?}", final_value);
         Ok(final_value.to_string())
     }
 }

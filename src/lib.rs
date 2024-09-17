@@ -8,6 +8,16 @@ mod symbol;
 mod workspace;
 
 use clap::{Arg, ArgAction, Command};
+use env_logger;
+use log::LevelFilter;
+
+#[ctor::ctor]
+fn initialize_logger() {
+    env_logger::builder()
+        .is_test(true) // Only log during tests
+        .filter_level(LevelFilter::Debug) // Set log level to debug
+        .init();
+}
 
 pub fn build_cli() -> Command {
     Command::new("Symbolic Manipulation Engine")
