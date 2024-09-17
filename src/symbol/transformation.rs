@@ -113,6 +113,13 @@ impl Transformation {
         while let Some((current_statement, should_return, are_children_processed, depth)) =
             call_stack.pop()
         {
+            println!(
+                "({}, {}, {}, {})",
+                current_statement.to_symbol_string(),
+                should_return,
+                are_children_processed,
+                depth
+            );
             if !are_children_processed {
                 // Push the statement back onto the stack with children marked as processed
                 // since we're about to process them
@@ -129,11 +136,17 @@ impl Transformation {
                 let mut valid_roots = vec![current_statement.clone()]
                     .into_iter()
                     .collect::<HashSet<_>>();
+                println!(
+                    "Transform: {}\ntransform_at: {}",
+                    self.to_symbol_string(),
+                    current_statement.to_symbol_string()
+                );
                 match self.transform_at(hierarchy, &current_statement, vec![]) {
                     Ok(result) => {
-                        // Also push the transformed statement on so that it gets processed
+                        println!("Result: {}", result.to_symbol_string());
                         let final_max_depth = max_depth.saturating_sub(depth);
 
+                        // Also push the transformed statement on so that it gets processed
                         valid_roots.insert(result.clone());
                         if (!already_processed.contains(&result))
                             && (result.get_depth() <= final_max_depth)
@@ -338,6 +351,7 @@ impl AlgorithmTransformation {
         hierarchy: &TypeHierarchy,
         statement: &SymbolNode,
     ) -> Result<SymbolNode, TransformationError> {
+        println!("transform: {}", statement.to_symbol_string());
         if !statement.has_children() {
             if self.input_type.satisfies_condition(statement.get_symbol()?) {
                 return Ok(statement.clone());

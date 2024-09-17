@@ -30,3 +30,15 @@ fn test_add_algorithm() {
     cli.derive(matches.subcommand_matches("derive").unwrap())
         .unwrap();
 }
+
+#[test]
+fn test_algorithm_applies() {
+    let root_dir = current_dir().unwrap();
+    let dir = root_dir.join(Path::new("tests\\assets\\test_algorithm_applies\\"));
+    let filesystem = FileSystem::new(dir);
+    let mut cli = Cli::new(filesystem, CliMode::Testing);
+    let matches =
+        build_cli().get_matches_from(vec!["symbolic-manipulation-engine", "derive", "--", "y=0"]);
+    cli.derive(matches.subcommand_matches("derive").unwrap())
+        .unwrap();
+}
