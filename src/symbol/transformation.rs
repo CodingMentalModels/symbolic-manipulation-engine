@@ -87,18 +87,7 @@ impl Transformation {
         to: &SymbolNode,
     ) -> Result<SymbolNode, TransformationError> {
         let valid_transformations = self.get_valid_transformations(hierarchy, from);
-        println!("Desired: {}", to.to_string());
-        println!(
-            "Valid transformations: {}",
-            valid_transformations
-                .clone()
-                .into_iter()
-                .map(|t| t.to_string())
-                .collect::<Vec<_>>()
-                .join("\n")
-        );
         if valid_transformations.contains(to) {
-            println!("Found match!");
             Ok(to.clone())
         } else {
             Err(TransformationError::NoValidTransformations)
@@ -349,20 +338,10 @@ impl AlgorithmTransformation {
         hierarchy: &TypeHierarchy,
         statement: &SymbolNode,
     ) -> Result<SymbolNode, TransformationError> {
-        println!(
-            "transform() called on:\n{}\nUsing Type Hierarchy:\n{:?}",
-            statement.to_symbol_string(),
-            hierarchy
-        );
         if !statement.has_children() {
             if self.input_type.satisfies_condition(statement.get_symbol()?) {
-                println!("Satisfied condition.  {}", statement.to_symbol_string());
                 return Ok(statement.clone());
             } else {
-                println!(
-                    "Failed to satisfy condition.  {}",
-                    statement.to_symbol_string()
-                );
                 return Err(
                     TransformationError::GeneratedTypeConditionFailedDuringAlgorithm(
                         statement

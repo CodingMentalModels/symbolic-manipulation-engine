@@ -26,7 +26,7 @@ fn test_add_algorithm() {
         .unwrap();
 
     let matches =
-        build_cli().get_matches_from(vec!["symbolic-manipulation-engine", "derive", "--", "4"]);
+        build_cli().get_matches_from(vec!["symbolic-manipulation-engine", "derive", "--", "x=4"]);
     cli.derive(matches.subcommand_matches("derive").unwrap())
         .unwrap();
 }

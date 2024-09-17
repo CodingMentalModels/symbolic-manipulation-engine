@@ -5,7 +5,10 @@ use serde_json::to_string;
 
 use crate::{
     cli::filesystem::FileSystem,
-    config::{CONTEXT_DIRECTORY_RELATIVE_PATH, STATE_DIRECTORY_RELATIVE_PATH},
+    config::{
+        CONTEXT_DIRECTORY_RELATIVE_PATH, STATE_DIRECTORY_RELATIVE_PATH, WORKSPACE_STATE_FILE_NAME,
+        WORKSPACE_STATE_TEST_INPUT_FILE_NAME,
+    },
     constants::*,
     context::context::Context,
     parsing::{
@@ -33,18 +36,18 @@ pub struct Cli {
 impl Cli {
     pub fn new(mut filesystem: FileSystem, mode: CliMode) -> Self {
         if mode == CliMode::Testing {
-            Self::prepare_for_testing(&mut filesystem)
-                .expect("We should be able to prepare for testing.");
+            Self::prepare_for_testing(&mut filesystem).unwrap();
         }
         Self { filesystem, mode }
     }
 
     fn prepare_for_testing(filesystem: &mut FileSystem) -> Result<(), String> {
-        let _ = filesystem.remove_file(STATE_DIRECTORY_RELATIVE_PATH, "test_input.rs");
+        let removed =
+            filesystem.remove_file(STATE_DIRECTORY_RELATIVE_PATH, WORKSPACE_STATE_FILE_NAME);
         filesystem.copy_file(
             STATE_DIRECTORY_RELATIVE_PATH,
-            "test_input.rs",
-            "workspace.rs",
+            WORKSPACE_STATE_TEST_INPUT_FILE_NAME,
+            WORKSPACE_STATE_FILE_NAME,
         )?;
         Ok(())
     }
@@ -493,7 +496,7 @@ impl Cli {
         workspace_store.truncate(N_TRANSACTIONS_TO_KEEP_IN_WORKSPACE_STORE);
         self.filesystem.write_file(
             self.get_relative_path(),
-            "workspace.toml",
+            WORKSPACE_STATE_FILE_NAME,
             workspace_store
                 .serialize()
                 .map_err(|e| format!("{:?}", e))?,
@@ -512,16 +515,19 @@ impl Cli {
 
         match self
             .filesystem
-            .read_file(self.get_relative_path(), "workspace.toml")
+            .read_file(self.get_relative_path(), WORKSPACE_STATE_FILE_NAME)
         {
             Ok(contents) => match WorkspaceTransactionStore::deserialize(&contents) {
                 Ok(workspace_store) => return Ok(workspace_store),
                 Err(e) => {
-                    return Err(format!("Couldn't deserialize workspace.toml: {}", e));
+                    return Err(format!(
+                        "Couldn't deserialize {}: {}",
+                        WORKSPACE_STATE_FILE_NAME, e
+                    ));
                 }
             },
             Err(_) => {
-                return Err("Couldn't read workspace.toml".to_string());
+                return Err(format!("Couldn't read {}", WORKSPACE_STATE_FILE_NAME).to_string());
             }
         };
     }

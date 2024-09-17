@@ -759,7 +759,6 @@ impl WorkspaceTransactionStore {
     pub fn add_parsed_hypothesis(&mut self, s: &str) -> Result<SymbolNode, WorkspaceError> {
         let parsed = self.compile().parse_from_string(s)?;
         let mut transaction = self.get_generated_types_transaction(&parsed)?;
-        println!("Generated types transaction: {:?}", transaction);
         transaction.add(WorkspaceTransactionItem::AddHypothesis(parsed.clone()));
         self.add(transaction)?;
         Ok(parsed)
@@ -894,10 +893,8 @@ impl WorkspaceTransactionStore {
         let mut items = Vec::new();
         let mut already_added = HashSet::new();
         for generated_type in workspace.get_generated_types().clone() {
-            println!("generated_type: {:?}", generated_type);
             for (t, parents) in generated_type.generate(statement) {
                 if !already_added.contains(&t) && !workspace.get_types().contains_type(&t) {
-                    println!("Adding {:?} to {:?}", t, parents);
                     items.extend(self.get_add_type_to_parents_items(t.clone(), &parents));
                     already_added.insert(t);
                 }

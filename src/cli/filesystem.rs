@@ -106,7 +106,7 @@ impl FileSystem {
             return Err("Path doesn't exist".to_string());
         }
         let path = path.join(filename);
-        fs::read_to_string(path).map_err(|_| "Couldn't read file".to_string())
+        fs::read_to_string(path).map_err(|e| format!("Couldn't read file: {:?}", e).to_string())
     }
 }
 
