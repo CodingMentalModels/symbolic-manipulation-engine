@@ -74,6 +74,14 @@ impl Predicate {
     pub fn instantiate(&self, instantiation: SymbolNode) -> SymbolNode {
         self.node.replace_all(&self.arbitrary, &instantiation)
     }
+
+    pub fn to_symbol_string(&self) -> String {
+        format!(
+            "{} with arbitrary {}",
+            self.node.to_symbol_string(),
+            self.arbitrary.to_symbol_string()
+        )
+    }
 }
 
 #[derive(Clone, Hash, PartialEq, Eq, Serialize, Deserialize)]

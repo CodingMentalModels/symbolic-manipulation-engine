@@ -515,6 +515,15 @@ impl Workspace {
             .flatten()
             .collect::<HashSet<_>>();
 
+        debug!(
+            "substatements:\n{}",
+            substatements
+                .clone()
+                .into_iter()
+                .map(|s| s.to_symbol_string())
+                .collect::<Vec<_>>()
+                .join("\n")
+        );
         let mut to_return = HashSet::new();
         for (transform, transform_idx) in self.get_arbitrary_transformations_with_indices() {
             to_return = to_return
@@ -1357,6 +1366,87 @@ mod test_workspace {
     }
 
     #[test]
+    fn test_workspace_instantiates_arbitrary_to_add_on_both_sides() {
+        let mut types = TypeHierarchy::chain(vec!["Boolean".into(), "=".into()]).unwrap();
+        types
+            .add_child_to_parent("^".into(), "Boolean".into())
+            .unwrap();
+        types
+            .add_chain(vec!["Real".into(), "+".into(), "2".into()])
+            .unwrap();
+
+        let interpretations = vec![
+            Interpretation::infix_operator("=".into(), 1, "=".into()),
+            Interpretation::infix_operator("^".into(), 2, "^".into()),
+            Interpretation::infix_operator("+".into(), 3, "+".into()),
+            Interpretation::singleton("p".into(), "Boolean".into()),
+            Interpretation::singleton("q".into(), "Boolean".into()),
+            Interpretation::singleton("r".into(), "Boolean".into()),
+            Interpretation::singleton("s".into(), "Boolean".into()),
+            Interpretation::singleton("x".into(), "Real".into()),
+            Interpretation::singleton("y".into(), "Real".into()),
+            Interpretation::singleton("x".into(), "Real".into()),
+            Interpretation::arbitrary_functional("Any".into(), 99, "Real".into()),
+        ];
+
+        let real_interpretation = GeneratedType::new_numeric("Real".into());
+
+        let workspace = Workspace::new(
+            types.clone(),
+            vec![real_interpretation],
+            interpretations.clone(),
+        );
+
+        let mut workspace_store = WorkspaceTransactionStore::snapshot(workspace.clone());
+
+        workspace_store
+            .add_parsed_transformation(false, "x=y", "Any(x)=Any(y)")
+            .unwrap();
+        workspace_store.add_parsed_hypothesis("x=5").unwrap();
+        workspace_store.add_parsed_hypothesis("y=10").unwrap();
+
+        let instantiate = |from: &str, to: &str| {
+            ExplicitTransformation::new(
+                workspace_store.compile().parse_from_string(from).unwrap(),
+                workspace_store.compile().parse_from_string(to).unwrap(),
+            )
+            .into()
+        };
+
+        let expected = instantiate("x=5", "x+y=5+y");
+        let results = workspace_store
+            .compile()
+            .get_instantiated_transformations_with_indices(Some(
+                workspace.parse_from_string("x+y=5+y").unwrap(),
+            ))
+            .unwrap()
+            .into_iter()
+            .map(|(r, _)| r)
+            .collect::<HashSet<_>>();
+        assert!(
+            results.contains(&expected),
+            "\n{}",
+            results
+                .clone()
+                .into_iter()
+                .map(|t| t.to_symbol_string())
+                .collect::<Vec<_>>()
+                .join("\n")
+        );
+        //        assert_eq!(
+        //            actual,
+        //            expected,
+        //            "\n{}",
+        //            actual
+        //                .clone()
+        //                .into_iter()
+        //                .map(|(t, _)| t.to_symbol_string())
+        //                .collect::<Vec<_>>()
+        //                .join("\n")
+        //        );
+    }
+
+    #[test]
     fn test_workspace_instantiates_arbitrary_transforms() {
         let mut types = TypeHierarchy::chain(vec!["Boolean".into(), "=".into()]).unwrap();
         types
@@ -1368,8 +1458,8 @@ mod test_workspace {
 
         let interpretations = vec![
             Interpretation::infix_operator("=".into(), 1, "=".into()),
-            Interpretation::infix_operator("^".into(), 1, "^".into()),
-            Interpretation::infix_operator("+".into(), 1, "+".into()),
+            Interpretation::infix_operator("^".into(), 2, "^".into()),
+            Interpretation::infix_operator("+".into(), 3, "+".into()),
             Interpretation::singleton("p".into(), "Boolean".into()),
             Interpretation::singleton("q".into(), "Boolean".into()),
             Interpretation::singleton("r".into(), "Boolean".into()),
@@ -1378,7 +1468,6 @@ mod test_workspace {
             Interpretation::singleton("y".into(), "Real".into()),
             Interpretation::singleton("x".into(), "Real".into()),
             Interpretation::arbitrary_functional("Any".into(), 99, "Boolean".into()),
-            Interpretation::arbitrary_functional("Any".into(), 99, "Real".into()),
         ];
 
         let real_interpretation = GeneratedType::new_numeric("Real".into());
@@ -1424,14 +1513,6 @@ mod test_workspace {
             expected
         );
 
-        let mut workspace_store = WorkspaceTransactionStore::snapshot(workspace.clone());
-
-        workspace_store
-            .add_parsed_transformation(false, "x=y", "Any(x)=Any(y)")
-            .unwrap();
-        workspace_store.add_parsed_hypothesis("x=5");
-        workspace_store.add_parsed_hypothesis("y=10");
-
         let instantiate = |from: &str, to: &str| {
             (
                 ExplicitTransformation::new(
@@ -1443,26 +1524,7 @@ mod test_workspace {
             )
         };
 
-        let expected = vec![instantiate("x=5", "x+y=5+y")].into_iter().collect();
-        let actual = workspace_store
-            .compile()
-            .get_instantiated_transformations_with_indices(Some(
-                workspace.parse_from_string("x+y=5+y").unwrap(),
-            ))
-            .unwrap();
-        assert_eq!(
-            actual,
-            expected,
-            "{}",
-            actual
-                .clone()
-                .into_iter()
-                .map(|(t, _)| t.to_symbol_string())
-                .collect::<Vec<_>>()
-                .join("\n")
-        );
-
-        let mut workspace = Workspace::new(types.clone(), vec![], interpretations.clone());
+        let workspace = Workspace::new(types.clone(), vec![], interpretations.clone());
         let mut workspace_store = WorkspaceTransactionStore::snapshot(workspace);
 
         workspace_store

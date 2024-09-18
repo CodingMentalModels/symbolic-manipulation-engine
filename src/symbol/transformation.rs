@@ -624,10 +624,15 @@ impl ExplicitTransformation {
         hierarchy: &TypeHierarchy,
         substatements: &HashSet<SymbolNode>,
     ) -> Result<HashSet<Self>, TransformationError> {
+        debug!(
+            "instantiate_arbitrary_nodes for {}",
+            self.to_symbol_string()
+        );
         self.validate_arbitrary_nodes()?;
 
         let mut to_return = HashSet::new();
         for arbitrary_node in self.get_arbitrary_nodes() {
+            trace!("arbitrary_node: {:?}", arbitrary_node);
             let substatement_predicates = substatements
                 .iter()
                 .filter_map(|s| {
@@ -642,6 +647,7 @@ impl ExplicitTransformation {
                 .flatten()
                 .collect::<HashSet<_>>();
             for predicate in substatement_predicates {
+                trace!("predicate: {}", predicate.to_symbol_string());
                 let new_from = self
                     .from
                     .replace_arbitrary_using_predicate(arbitrary_node.get_symbol()?, &predicate)?;
@@ -650,6 +656,7 @@ impl ExplicitTransformation {
                     .replace_arbitrary_using_predicate(arbitrary_node.get_symbol()?, &predicate)?;
 
                 let transform = ExplicitTransformation::new(new_from, new_to);
+                trace!("transform: {}", transform.to_symbol_string());
                 to_return.insert(transform);
             }
         }
