@@ -1362,20 +1362,33 @@ mod test_workspace {
         types
             .add_child_to_parent("^".into(), "Boolean".into())
             .unwrap();
+        types
+            .add_chain(vec!["Real".into(), "+".into(), "2".into()])
+            .unwrap();
 
         let interpretations = vec![
             Interpretation::infix_operator("=".into(), 1, "=".into()),
             Interpretation::infix_operator("^".into(), 1, "^".into()),
+            Interpretation::infix_operator("+".into(), 1, "+".into()),
             Interpretation::singleton("p".into(), "Boolean".into()),
             Interpretation::singleton("q".into(), "Boolean".into()),
             Interpretation::singleton("r".into(), "Boolean".into()),
             Interpretation::singleton("s".into(), "Boolean".into()),
-            Interpretation::singleton("s".into(), "Boolean".into()),
+            Interpretation::singleton("x".into(), "Real".into()),
+            Interpretation::singleton("y".into(), "Real".into()),
+            Interpretation::singleton("x".into(), "Real".into()),
             Interpretation::arbitrary_functional("Any".into(), 99, "Boolean".into()),
+            Interpretation::arbitrary_functional("Any".into(), 99, "Real".into()),
         ];
 
-        let workspace = Workspace::new(types.clone(), vec![], interpretations.clone());
-        let mut workspace_store = WorkspaceTransactionStore::snapshot(workspace);
+        let real_interpretation = GeneratedType::new_numeric("Real".into());
+
+        let workspace = Workspace::new(
+            types.clone(),
+            vec![real_interpretation],
+            interpretations.clone(),
+        );
+        let mut workspace_store = WorkspaceTransactionStore::snapshot(workspace.clone());
 
         workspace_store
             .add_parsed_transformation(false, "p=q", "Any(p)=Any(q)")
@@ -1411,6 +1424,14 @@ mod test_workspace {
             expected
         );
 
+        let mut workspace_store = WorkspaceTransactionStore::snapshot(workspace.clone());
+
+        workspace_store
+            .add_parsed_transformation(false, "x=y", "Any(x)=Any(y)")
+            .unwrap();
+        workspace_store.add_parsed_hypothesis("x=5");
+        workspace_store.add_parsed_hypothesis("y=10");
+
         let instantiate = |from: &str, to: &str| {
             (
                 ExplicitTransformation::new(
@@ -1421,6 +1442,26 @@ mod test_workspace {
                 0,
             )
         };
+
+        let expected = vec![instantiate("x=5", "x+y=5+y")].into_iter().collect();
+        let actual = workspace_store
+            .compile()
+            .get_instantiated_transformations_with_indices(Some(
+                workspace.parse_from_string("x+y=5+y").unwrap(),
+            ))
+            .unwrap();
+        assert_eq!(
+            actual,
+            expected,
+            "{}",
+            actual
+                .clone()
+                .into_iter()
+                .map(|(t, _)| t.to_symbol_string())
+                .collect::<Vec<_>>()
+                .join("\n")
+        );
+
         let mut workspace = Workspace::new(types.clone(), vec![], interpretations.clone());
         let mut workspace_store = WorkspaceTransactionStore::snapshot(workspace);
 
