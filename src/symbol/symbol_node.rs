@@ -71,6 +71,14 @@ impl Predicate {
         self.node.get_evaluates_to_type()
     }
 
+    pub fn get_symbols(&self) -> HashSet<Symbol> {
+        self.node.get_symbols()
+    }
+
+    pub fn get_symbol_names(&self) -> HashSet<String> {
+        self.node.get_symbol_names()
+    }
+
     pub fn instantiate(&self, instantiation: SymbolNode) -> SymbolNode {
         self.node.replace_all(&self.arbitrary, &instantiation)
     }
@@ -533,6 +541,10 @@ impl SymbolNode {
         self.find_where(&|node| node.root.get_name() == symbol_name)
     }
 
+    pub fn contains_symbol_name(&self, symbol_name: &str) -> bool {
+        self.find_symbol_name(symbol_name).len() > 0
+    }
+
     pub fn to_interpreted_string_and_type_map(
         &self,
         interpretations: &Vec<Interpretation>,
@@ -611,6 +623,13 @@ impl SymbolNode {
         // TODO The deduplication in get_symbols_in_order isn't needed here since the hashset will
         // do it
         self.get_symbols_in_order().into_iter().collect()
+    }
+
+    pub fn get_symbol_names(&self) -> HashSet<String> {
+        self.get_symbols()
+            .into_iter()
+            .map(|s| s.get_name())
+            .collect()
     }
 
     pub fn get_symbols_in_order(&self) -> Vec<Symbol> {
@@ -708,6 +727,21 @@ impl SymbolNode {
                 children_addresses,
             )
         }
+    }
+
+    pub fn relabel_to_avoid(&self, symbol_names_to_avoid: &HashSet<String>) -> Self {
+        let mut relabelling = HashSet::new();
+        for symbol_name in symbol_names_to_avoid {
+            let mut subscript = 0;
+            while self.contains_symbol_name(&format!("{}_{}", symbol_name, subscript)) {
+                subscript += 1;
+            }
+            relabelling.insert((
+                symbol_name.to_string(),
+                format!("{}_{}", symbol_name, subscript),
+            ));
+        }
+        self.relabel_all(&relabelling)
     }
 
     pub fn relabel_all(&self, relabelling: &HashSet<(String, String)>) -> Self {
@@ -1715,6 +1749,82 @@ mod test_statement {
                 .with_child_replaced(1, x_equals_y)
                 .unwrap(),
             a_equals_x_equals_y,
+        );
+    }
+
+    #[test]
+    fn test_symbol_node_relabels_to_avoid() {
+        let instantiate = |x_1: &str, x_2: &str, x_3: &str| {
+            SymbolNode::new(
+                "=".into(),
+                vec![
+                    SymbolNode::leaf_object(x_1),
+                    SymbolNode::new(
+                        "+".into(),
+                        vec![SymbolNode::leaf_object(x_2), SymbolNode::leaf_object(x_3)],
+                    ),
+                ],
+            )
+        };
+        let a_equals_b_plus_c = instantiate("a", "b", "c");
+        assert_eq!(
+            a_equals_b_plus_c.relabel_to_avoid(&HashSet::new()),
+            a_equals_b_plus_c
+        );
+        assert_eq!(
+            a_equals_b_plus_c.relabel_to_avoid(&vec!["d".to_string()].into_iter().collect()),
+            a_equals_b_plus_c
+        );
+        assert_eq!(
+            a_equals_b_plus_c.relabel_to_avoid(&vec!["c".to_string()].into_iter().collect()),
+            instantiate("a", "b", "c_0")
+        );
+        assert_eq!(
+            a_equals_b_plus_c
+                .relabel_to_avoid(&vec!["a".to_string(), "c".to_string()].into_iter().collect()),
+            instantiate("a_0", "b", "c_0")
+        );
+        assert_eq!(
+            a_equals_b_plus_c.relabel_to_avoid(
+                &vec!["a".to_string(), "c".to_string(), "d".to_string()]
+                    .into_iter()
+                    .collect()
+            ),
+            instantiate("a_0", "b", "c_0")
+        );
+
+        let x_equals_y_plus_x = instantiate("x", "y", "x");
+        assert_eq!(
+            x_equals_y_plus_x.relabel_to_avoid(&vec!["a".to_string()].into_iter().collect()),
+            x_equals_y_plus_x
+        );
+        assert_eq!(
+            x_equals_y_plus_x.relabel_to_avoid(&vec!["y".to_string()].into_iter().collect()),
+            instantiate("x", "y_0", "x")
+        );
+        assert_eq!(
+            x_equals_y_plus_x.relabel_to_avoid(&vec!["x".to_string()].into_iter().collect()),
+            instantiate("x_0", "y", "x_0")
+        );
+        assert_eq!(
+            x_equals_y_plus_x
+                .relabel_to_avoid(&vec!["y".to_string(), "x".to_string()].into_iter().collect()),
+            instantiate("x_0", "y_0", "x_0")
+        );
+
+        let x_0_equals_x_plus_x_0 = instantiate("x_0", "x", "x_0");
+        assert_eq!(
+            x_0_equals_x_plus_x_0
+                .relabel_to_avoid(&vec!["y".to_string(), "x".to_string()].into_iter().collect()),
+            instantiate("x_0", "x_1", "x_0")
+        );
+        assert_eq!(
+            x_0_equals_x_plus_x_0.relabel_to_avoid(
+                &vec!["x_0".to_string(), "x".to_string()]
+                    .into_iter()
+                    .collect()
+            ),
+            instantiate("x_0_0", "x_1", "x_0_0")
         );
     }
 

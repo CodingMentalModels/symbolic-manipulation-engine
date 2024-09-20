@@ -648,11 +648,12 @@ impl ExplicitTransformation {
                 .collect::<HashSet<_>>();
             for predicate in substatement_predicates {
                 trace!("predicate: {}", predicate.to_symbol_string());
-                let new_from = self
-                    .from
+                let predicate_symbol_names = predicate.get_symbol_names();
+                let disambiguated_from = self.from.relabel_to_avoid(&predicate_symbol_names);
+                let disambiguated_to = self.to.relabel_to_avoid(&predicate_symbol_names);
+                let new_from = disambiguated_from
                     .replace_arbitrary_using_predicate(arbitrary_node.get_symbol()?, &predicate)?;
-                let new_to = self
-                    .to
+                let new_to = disambiguated_to
                     .replace_arbitrary_using_predicate(arbitrary_node.get_symbol()?, &predicate)?;
 
                 let transform = ExplicitTransformation::new(new_from, new_to);

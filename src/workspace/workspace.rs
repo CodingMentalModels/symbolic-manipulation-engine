@@ -1384,6 +1384,7 @@ mod test_workspace {
             Interpretation::singleton("r".into(), "Boolean".into()),
             Interpretation::singleton("s".into(), "Boolean".into()),
             Interpretation::singleton("x".into(), "Real".into()),
+            Interpretation::singleton("y_0".into(), "Real".into()), //  For disambiguation
             Interpretation::singleton("y".into(), "Real".into()),
             Interpretation::singleton("x".into(), "Real".into()),
             Interpretation::arbitrary_functional("Any".into(), 99, "Real".into()),
@@ -1413,7 +1414,10 @@ mod test_workspace {
             .into()
         };
 
-        let expected = instantiate("x=5", "x+y=5+y");
+        // Looking for x+y=5+y but that'll appear as the more general x=y -> ...
+        // except that y will be replaced with y_0 to disambiguate the transform y
+        // from the predicate y
+        let expected = instantiate("x=y_0", "x+y=y_0+y");
         let results = workspace_store
             .compile()
             .get_instantiated_transformations_with_indices(Some(
