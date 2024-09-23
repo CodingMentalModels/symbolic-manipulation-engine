@@ -279,6 +279,50 @@ mod test_parser {
     }
 
     #[test]
+    fn test_parser_prefers_earlier_interpretations() {
+        let interpretations = vec![
+            Interpretation::infix_operator("=_0".into(), 1, "Boolean".into()), // Disambiguation
+            Interpretation::infix_operator("=".into(), 1, "Boolean".into()),
+            Interpretation::infix_operator("&".into(), 2, "Boolean".into()),
+            Interpretation::outfix_operator(("|".into(), "|".into()), 2, "Integer".into()),
+            Interpretation::postfix_operator("!".into(), 3, "Integer".into()),
+            Interpretation::prefix_operator("-".into(), 4, "Integer".into()),
+            Interpretation::singleton("p_0", "Boolean".into()), // Disambiguation
+            Interpretation::singleton("p", "Boolean".into()),
+            Interpretation::singleton("q_0", "Boolean".into()), // Disambiguation
+            Interpretation::singleton("q", "Boolean".into()),
+            Interpretation::singleton("x", "Integer".into()),
+            Interpretation::singleton("y", "Integer".into()),
+            Interpretation::singleton("z", "Integer".into()),
+            Interpretation::arbitrary_functional("F".into(), 99, "Boolean".into()),
+            Interpretation::arbitrary_functional("G".into(), 99, "Boolean".into()),
+        ];
+
+        let parser = Parser::new(interpretations.clone());
+
+        let custom_tokens = vec![
+            "=_0".to_string(),
+            "=".to_string(),
+            "&".to_string(),
+            "|".to_string(),
+            "!".to_string(),
+            "-".to_string(),
+        ];
+
+        let parse = |s: &str| parser.parse_from_string(custom_tokens.clone(), s).unwrap();
+
+        let p_0 = parse("p_0");
+        let p = parse("p");
+        assert_eq!(p_0, Symbol::new("p_0".into(), "Boolean".into()).into());
+        assert_eq!(p, Symbol::new("p".into(), "Boolean".into()).into());
+
+        let p_equals_q = parse("p=q");
+        let p_equals_0_q = parse("p=_0q");
+        let expected = p_equals_q.relabel("p", "p_0");
+        assert_eq!(p_equals_0_q, expected);
+    }
+
+    #[test]
     fn test_parser_continues_on_infix() {
         let tokens = vec!["&".to_string(), "|".to_string()];
 
