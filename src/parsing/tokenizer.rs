@@ -1,3 +1,4 @@
+use log::trace;
 use std::collections::VecDeque;
 
 use serde::{Deserialize, Serialize};
@@ -23,6 +24,7 @@ impl Tokenizer {
     }
 
     pub fn tokenize(&mut self, s: &str) -> TokenStack {
+        trace!("tokenizing \"{}\"", s);
         self.token_in_progress = Vec::new();
         self.tokens = VecDeque::new();
         let mut queue = CharQueue::from_string(s.to_string());
@@ -61,6 +63,7 @@ impl Tokenizer {
             }
         }
         self.consume_token_in_progress();
+        trace!("Tokens: {:?}", self.tokens);
         TokenStack::new(self.tokens.clone())
     }
 

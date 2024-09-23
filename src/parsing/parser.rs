@@ -1,8 +1,10 @@
+use log::trace;
+
 use crate::parsing::interpretation::{ExpressionType, Interpretation};
 use crate::parsing::tokenizer::{Token, Tokenizer};
 use crate::symbol::symbol_node::SymbolNode;
 
-use super::interpretation::{ExpressionPrecedence, InterpretationCondition, InterpretedType};
+use super::interpretation::{ExpressionPrecedence, InterpretationCondition};
 use super::tokenizer::TokenStack;
 
 #[derive(Debug, PartialEq, Eq)]
@@ -57,6 +59,11 @@ impl Parser {
         token_stack: &mut TokenStack,
         min_precedence: ExpressionPrecedence,
     ) -> Result<SymbolNode, ParserError> {
+        trace!(
+            "parse_expression with min_precedence {}.  token_stack:\n{:?}",
+            min_precedence,
+            token_stack
+        );
         let mut left_expression = if let Some(token) = token_stack.pop() {
             match self.get_interpretation(&None, &token) {
                 Some(interpretation) => match interpretation.get_expression_type() {
@@ -281,21 +288,15 @@ mod test_parser {
     #[test]
     fn test_parser_prefers_earlier_interpretations() {
         let interpretations = vec![
-            Interpretation::infix_operator("=_0".into(), 1, "Boolean".into()), // Disambiguation
+            Interpretation::infix_operator("=_0".into(), 1, "Boolean".into()),
             Interpretation::infix_operator("=".into(), 1, "Boolean".into()),
             Interpretation::infix_operator("&".into(), 2, "Boolean".into()),
             Interpretation::outfix_operator(("|".into(), "|".into()), 2, "Integer".into()),
             Interpretation::postfix_operator("!".into(), 3, "Integer".into()),
             Interpretation::prefix_operator("-".into(), 4, "Integer".into()),
-            Interpretation::singleton("p_0", "Boolean".into()), // Disambiguation
+            Interpretation::singleton("p_0", "Boolean".into()),
             Interpretation::singleton("p", "Boolean".into()),
-            Interpretation::singleton("q_0", "Boolean".into()), // Disambiguation
             Interpretation::singleton("q", "Boolean".into()),
-            Interpretation::singleton("x", "Integer".into()),
-            Interpretation::singleton("y", "Integer".into()),
-            Interpretation::singleton("z", "Integer".into()),
-            Interpretation::arbitrary_functional("F".into(), 99, "Boolean".into()),
-            Interpretation::arbitrary_functional("G".into(), 99, "Boolean".into()),
         ];
 
         let parser = Parser::new(interpretations.clone());
@@ -318,7 +319,7 @@ mod test_parser {
 
         let p_equals_q = parse("p=q");
         let p_equals_0_q = parse("p=_0q");
-        let expected = p_equals_q.relabel("p", "p_0");
+        let expected = p_equals_q.relabel("=", "=_0");
         assert_eq!(p_equals_0_q, expected);
     }
 
