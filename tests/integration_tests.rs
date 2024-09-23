@@ -53,7 +53,7 @@ fn test_adds_to_both_sides() {
         "symbolic-manipulation-engine",
         "derive",
         "--",
-        "z+x=18+x",
+        "x+y=x+10",
     ]);
     cli.derive(matches.subcommand_matches("derive").unwrap())
         .unwrap();

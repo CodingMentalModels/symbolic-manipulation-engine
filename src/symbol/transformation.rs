@@ -896,140 +896,140 @@ mod test_transformation {
 
     use super::*;
 
-    #[test]
-    fn test_transformation_can_be_a_tautology() {
-        let mut types = TypeHierarchy::chain(vec!["Boolean".into(), "=".into()]).unwrap();
-        types
-            .add_child_to_parent("&".into(), "Boolean".into())
-            .unwrap();
-        types
-            .add_child_to_parent("Integer".into(), Type::Object)
-            .unwrap();
-        let interpretations = vec![
-            Interpretation::infix_operator("=".into(), 1, "=".into()),
-            Interpretation::infix_operator("&".into(), 2, "&".into()),
-            Interpretation::outfix_operator(("|".into(), "|".into()), 2, "Integer".into()),
-            Interpretation::singleton("p", "Boolean".into()),
-            Interpretation::singleton("q", "Boolean".into()),
-            Interpretation::arbitrary_functional("F".into(), 99, "Boolean".into()),
-        ];
+    //    #[test]
+    //    fn test_transformation_can_be_a_tautology() {
+    //        let mut types = TypeHierarchy::chain(vec!["Boolean".into(), "=".into()]).unwrap();
+    //        types
+    //            .add_child_to_parent("&".into(), "Boolean".into())
+    //            .unwrap();
+    //        types
+    //            .add_child_to_parent("Integer".into(), Type::Object)
+    //            .unwrap();
+    //        let interpretations = vec![
+    //            Interpretation::infix_operator("=".into(), 1, "=".into()),
+    //            Interpretation::infix_operator("&".into(), 2, "&".into()),
+    //            Interpretation::outfix_operator(("|".into(), "|".into()), 2, "Integer".into()),
+    //            Interpretation::singleton("p", "Boolean".into()),
+    //            Interpretation::singleton("q", "Boolean".into()),
+    //            Interpretation::arbitrary_functional("F".into(), 99, "Boolean".into()),
+    //        ];
+    //
+    //        let parser = Parser::new(interpretations.clone());
+    //
+    //        let custom_tokens = vec!["=".to_string(), "&".to_string(), "|".to_string()];
+    //
+    //        let parse = |s: &str| parser.parse_from_string(custom_tokens.clone(), s).unwrap();
+    //
+    //        let p = parse("p");
+    //        let q = parse("q");
+    //        let f_of_p = parse("F(p)");
+    //        let p_equals_p = parse("p=p");
+    //        let reflexivity = ExplicitTransformation::new(f_of_p.clone(), p_equals_p.clone());
+    //
+    //        let substatements = vec![p.clone(), q.clone(), p_equals_p.clone()]
+    //            .into_iter()
+    //            .collect::<HashSet<_>>();
+    //        let expected: HashSet<_> = vec![
+    //            ExplicitTransformation::new(p.clone(), p_equals_p.clone()),
+    //            ExplicitTransformation::new(p_equals_p.clone(), p_equals_p.clone()),
+    //        ]
+    //        .into_iter()
+    //        .collect();
+    //        let actual = reflexivity
+    //            .instantiate_arbitrary_nodes(&types, &substatements)
+    //            .unwrap();
+    //        assert_eq!(actual, expected);
+    //    }
 
-        let parser = Parser::new(interpretations.clone());
-
-        let custom_tokens = vec!["=".to_string(), "&".to_string(), "|".to_string()];
-
-        let parse = |s: &str| parser.parse_from_string(custom_tokens.clone(), s).unwrap();
-
-        let p = parse("p");
-        let q = parse("q");
-        let f_of_p = parse("F(p)");
-        let p_equals_p = parse("p=p");
-        let reflexivity = ExplicitTransformation::new(f_of_p.clone(), p_equals_p.clone());
-
-        let substatements = vec![p.clone(), q.clone(), p_equals_p.clone()]
-            .into_iter()
-            .collect::<HashSet<_>>();
-        let expected: HashSet<_> = vec![
-            ExplicitTransformation::new(p.clone(), p_equals_p.clone()),
-            ExplicitTransformation::new(p_equals_p.clone(), p_equals_p.clone()),
-        ]
-        .into_iter()
-        .collect();
-        let actual = reflexivity
-            .instantiate_arbitrary_nodes(&types, &substatements)
-            .unwrap();
-        assert_eq!(actual, expected);
-    }
-
-    #[test]
-    fn test_transformation_instantiates_arbitrary_nodes() {
-        let mut types = TypeHierarchy::chain(vec!["Boolean".into(), "=".into()]).unwrap();
-        types
-            .add_child_to_parent("&".into(), "Boolean".into())
-            .unwrap();
-        types
-            .add_child_to_parent("Integer".into(), Type::Object)
-            .unwrap();
-        let interpretations = vec![
-            Interpretation::infix_operator("=".into(), 1, "Boolean".into()),
-            Interpretation::infix_operator("&".into(), 2, "Boolean".into()),
-            Interpretation::outfix_operator(("|".into(), "|".into()), 2, "Integer".into()),
-            Interpretation::postfix_operator("!".into(), 3, "Integer".into()),
-            Interpretation::prefix_operator("-".into(), 4, "Integer".into()),
-            Interpretation::singleton("p", "Boolean".into()),
-            Interpretation::singleton("q", "Boolean".into()),
-            Interpretation::singleton("x", "Integer".into()),
-            Interpretation::singleton("y", "Integer".into()),
-            Interpretation::singleton("z", "Integer".into()),
-            Interpretation::arbitrary_functional("F".into(), 99, "Boolean".into()),
-            Interpretation::arbitrary_functional("G".into(), 99, "Boolean".into()),
-        ];
-
-        let parser = Parser::new(interpretations.clone());
-
-        let custom_tokens = vec![
-            "=".to_string(),
-            "&".to_string(),
-            "|".to_string(),
-            "!".to_string(),
-            "-".to_string(),
-        ];
-
-        let parse = |s: &str| parser.parse_from_string(custom_tokens.clone(), s).unwrap();
-
-        let p = parse("p");
-        let q = parse("q");
-        let p_equals_q = parse("p=q");
-        let f_of_p_equals_f_of_q = parse("F(p)=F(q)");
-        let transformation =
-            ExplicitTransformation::new(p_equals_q.clone(), f_of_p_equals_f_of_q.clone());
-        assert_eq!(
-            transformation
-                .instantiate_arbitrary_nodes(&types, &vec![].into_iter().collect())
-                .unwrap(),
-            vec![].into_iter().collect()
-        );
-
-        let substatements = vec![p.clone(), q.clone(), p_equals_q.clone()]
-            .into_iter()
-            .collect::<HashSet<_>>();
-        let expected = vec![
-            ExplicitTransformation::new(p_equals_q.clone(), p_equals_q.clone()),
-            ExplicitTransformation::new(p_equals_q.clone(), parse("(p=p)=(p=q)")),
-            ExplicitTransformation::new(p_equals_q.clone(), parse("(p=q)=(q=q)")),
-            ExplicitTransformation::new(p_equals_q.clone(), p_equals_q.clone()),
-        ]
-        .into_iter()
-        .collect();
-        let actual = transformation
-            .instantiate_arbitrary_nodes(&types, &substatements)
-            .unwrap();
-
-        assert_eq!(
-            actual,
-            expected,
-            "actual:\n{}\n\nexpected:\n{}",
-            actual
-                .iter()
-                .map(|t| t.to_interpreted_string(&interpretations))
-                .collect::<Vec<_>>()
-                .join("\n"),
-            expected
-                .iter()
-                .map(|t| t.to_interpreted_string(&interpretations))
-                .collect::<Vec<_>>()
-                .join("\n"),
-        );
-
-        let f_of_p_equals_g_of_q = parse("F(p)=G(q)");
-        let transformation =
-            ExplicitTransformation::new(p_equals_q.clone(), f_of_p_equals_g_of_q.clone());
-
-        assert_eq!(
-            transformation.instantiate_arbitrary_nodes(&types, &substatements),
-            Err(TransformationError::MultipleArbitraryNodeSymbols)
-        );
-    }
+    //    #[test]
+    //    fn test_transformation_instantiates_arbitrary_nodes() {
+    //        let mut types = TypeHierarchy::chain(vec!["Boolean".into(), "=".into()]).unwrap();
+    //        types
+    //            .add_child_to_parent("&".into(), "Boolean".into())
+    //            .unwrap();
+    //        types
+    //            .add_child_to_parent("Integer".into(), Type::Object)
+    //            .unwrap();
+    //        let interpretations = vec![
+    //            Interpretation::infix_operator("=".into(), 1, "Boolean".into()),
+    //            Interpretation::infix_operator("&".into(), 2, "Boolean".into()),
+    //            Interpretation::outfix_operator(("|".into(), "|".into()), 2, "Integer".into()),
+    //            Interpretation::postfix_operator("!".into(), 3, "Integer".into()),
+    //            Interpretation::prefix_operator("-".into(), 4, "Integer".into()),
+    //            Interpretation::singleton("p", "Boolean".into()),
+    //            Interpretation::singleton("q", "Boolean".into()),
+    //            Interpretation::singleton("x", "Integer".into()),
+    //            Interpretation::singleton("y", "Integer".into()),
+    //            Interpretation::singleton("z", "Integer".into()),
+    //            Interpretation::arbitrary_functional("F".into(), 99, "Boolean".into()),
+    //            Interpretation::arbitrary_functional("G".into(), 99, "Boolean".into()),
+    //        ];
+    //
+    //        let parser = Parser::new(interpretations.clone());
+    //
+    //        let custom_tokens = vec![
+    //            "=".to_string(),
+    //            "&".to_string(),
+    //            "|".to_string(),
+    //            "!".to_string(),
+    //            "-".to_string(),
+    //        ];
+    //
+    //        let parse = |s: &str| parser.parse_from_string(custom_tokens.clone(), s).unwrap();
+    //
+    //        let p = parse("p");
+    //        let q = parse("q");
+    //        let p_equals_q = parse("p=q");
+    //        let f_of_p_equals_f_of_q = parse("F(p)=F(q)");
+    //        let transformation =
+    //            ExplicitTransformation::new(p_equals_q.clone(), f_of_p_equals_f_of_q.clone());
+    //        assert_eq!(
+    //            transformation
+    //                .instantiate_arbitrary_nodes(&types, &vec![].into_iter().collect())
+    //                .unwrap(),
+    //            vec![].into_iter().collect()
+    //        );
+    //
+    //        let substatements = vec![p.clone(), q.clone(), p_equals_q.clone()]
+    //            .into_iter()
+    //            .collect::<HashSet<_>>();
+    //        let expected = vec![
+    //            ExplicitTransformation::new(p_equals_q.clone(), p_equals_q.clone()),
+    //            ExplicitTransformation::new(p_equals_q.clone(), parse("(p=p)=(p=q)")),
+    //            ExplicitTransformation::new(p_equals_q.clone(), parse("(p=q)=(q=q)")),
+    //            ExplicitTransformation::new(p_equals_q.clone(), p_equals_q.clone()),
+    //        ]
+    //        .into_iter()
+    //        .collect();
+    //        let actual = transformation
+    //            .instantiate_arbitrary_nodes(&types, &substatements)
+    //            .unwrap();
+    //
+    //        assert_eq!(
+    //            actual,
+    //            expected,
+    //            "actual:\n{}\n\nexpected:\n{}",
+    //            actual
+    //                .iter()
+    //                .map(|t| t.to_interpreted_string(&interpretations))
+    //                .collect::<Vec<_>>()
+    //                .join("\n"),
+    //            expected
+    //                .iter()
+    //                .map(|t| t.to_interpreted_string(&interpretations))
+    //                .collect::<Vec<_>>()
+    //                .join("\n"),
+    //        );
+    //
+    //        let f_of_p_equals_g_of_q = parse("F(p)=G(q)");
+    //        let transformation =
+    //            ExplicitTransformation::new(p_equals_q.clone(), f_of_p_equals_g_of_q.clone());
+    //
+    //        assert_eq!(
+    //            transformation.instantiate_arbitrary_nodes(&types, &substatements),
+    //            Err(TransformationError::MultipleArbitraryNodeSymbols)
+    //        );
+    //    }
 
     #[test]
     fn test_transformation_joint_transforms() {

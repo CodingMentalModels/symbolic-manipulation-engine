@@ -1,21 +1,17 @@
 use std::collections::{HashMap, HashSet};
 use std::fmt;
 use std::hash::{Hash, Hasher};
-use std::str::FromStr;
 
 use serde::{
-    de::{self, MapAccess, Visitor},
+    de::{MapAccess, Visitor},
     ser::{SerializeMap, Serializer},
     Deserialize, Deserializer, Serialize,
 };
 use ts_rs::TS;
 
 use super::symbol_node::SymbolNodeRoot;
+use super::symbol_node::{Symbol, SymbolNode};
 use super::transformation::Transformation;
-use super::{
-    symbol_node::{Symbol, SymbolNode},
-    transformation::ExplicitTransformation,
-};
 use crate::constants::*;
 
 pub type TypeName = String;
@@ -727,7 +723,7 @@ pub enum TypeError {
 mod test_type {
     use crate::{
         parsing::{interpretation::Interpretation, parser::Parser},
-        symbol::symbol_node::Symbol,
+        symbol::{symbol_node::Symbol, transformation::ExplicitTransformation},
     };
 
     use super::*;

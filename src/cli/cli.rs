@@ -1,3 +1,4 @@
+use log::debug;
 use std::path::PathBuf;
 
 use clap::ArgMatches;
@@ -518,7 +519,16 @@ impl Cli {
             .read_file(self.get_relative_path(), WORKSPACE_STATE_FILE_NAME)
         {
             Ok(contents) => match WorkspaceTransactionStore::deserialize(&contents) {
-                Ok(workspace_store) => return Ok(workspace_store),
+                Ok(workspace_store) => {
+                    return {
+                        debug!(
+                            "Loaded workspace store:\n{:?}\nWorkspace:\n{:?}",
+                            workspace_store,
+                            workspace_store.compile()
+                        );
+                        Ok(workspace_store)
+                    }
+                }
                 Err(e) => {
                     return Err(format!(
                         "Couldn't deserialize {}: {}",

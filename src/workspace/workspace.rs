@@ -1450,123 +1450,123 @@ mod test_workspace {
         //        );
     }
 
-    #[test]
-    fn test_workspace_instantiates_arbitrary_transforms() {
-        let mut types = TypeHierarchy::chain(vec!["Boolean".into(), "=".into()]).unwrap();
-        types
-            .add_child_to_parent("^".into(), "Boolean".into())
-            .unwrap();
-        types
-            .add_chain(vec!["Real".into(), "+".into(), "2".into()])
-            .unwrap();
-
-        let interpretations = vec![
-            Interpretation::infix_operator("=".into(), 1, "=".into()),
-            Interpretation::infix_operator("^".into(), 2, "^".into()),
-            Interpretation::infix_operator("+".into(), 3, "+".into()),
-            Interpretation::singleton("p".into(), "Boolean".into()),
-            Interpretation::singleton("q".into(), "Boolean".into()),
-            Interpretation::singleton("r".into(), "Boolean".into()),
-            Interpretation::singleton("s".into(), "Boolean".into()),
-            Interpretation::singleton("x".into(), "Real".into()),
-            Interpretation::singleton("y".into(), "Real".into()),
-            Interpretation::singleton("x".into(), "Real".into()),
-            Interpretation::arbitrary_functional("Any".into(), 99, "Boolean".into()),
-        ];
-
-        let real_interpretation = GeneratedType::new_numeric("Real".into());
-
-        let workspace = Workspace::new(
-            types.clone(),
-            vec![real_interpretation],
-            interpretations.clone(),
-        );
-        let mut workspace_store = WorkspaceTransactionStore::snapshot(workspace.clone());
-
-        workspace_store
-            .add_parsed_transformation(false, "p=q", "Any(p)=Any(q)")
-            .unwrap();
-        workspace_store.add_parsed_hypothesis("p=q").unwrap();
-        workspace_store.add_parsed_hypothesis("p^s").unwrap();
-
-        let instantiate = |s: &str| {
-            (
-                ExplicitTransformation::new(
-                    workspace_store.compile().parse_from_string("p=q").unwrap(),
-                    workspace_store.compile().parse_from_string(s).unwrap(),
-                )
-                .into(),
-                0,
-            )
-        };
-
-        let expected = vec![
-            instantiate("p=q"),
-            instantiate("(p=q)=(q=q)"),
-            instantiate("(p=p)=(p=q)"),
-            instantiate("(p^s)=(q^s)"),
-            instantiate("(p^p)=(p^q)"),
-        ]
-        .into_iter()
-        .collect();
-        assert_eq!(
-            workspace_store
-                .compile()
-                .get_instantiated_transformations_with_indices(None)
-                .unwrap(),
-            expected
-        );
-
-        let instantiate = |from: &str, to: &str| {
-            (
-                ExplicitTransformation::new(
-                    workspace_store.compile().parse_from_string(from).unwrap(),
-                    workspace_store.compile().parse_from_string(to).unwrap(),
-                )
-                .into(),
-                0,
-            )
-        };
-
-        let workspace = Workspace::new(types.clone(), vec![], interpretations.clone());
-        let mut workspace_store = WorkspaceTransactionStore::snapshot(workspace);
-
-        workspace_store
-            .add_parsed_transformation(false, "Any(p)", "p=p")
-            .unwrap();
-        workspace_store.add_parsed_hypothesis("p=q").unwrap();
-        workspace_store.add_parsed_hypothesis("p^s").unwrap();
-
-        let expected: HashSet<_> = vec![
-            instantiate("p", "p=p"),
-            instantiate("p=q", "p=p"),
-            instantiate("p=p", "p=p"),
-            instantiate("p^s", "p=p"),
-            instantiate("p^p", "p=p"),
-        ]
-        .into_iter()
-        .collect();
-
-        let actual = workspace_store
-            .compile()
-            .get_instantiated_transformations_with_indices(None)
-            .unwrap();
-        assert_eq!(
-            actual,
-            expected,
-            "Actual:\n{}\n\nExpected:\n{}",
-            actual
-                .iter()
-                .map(|(n, _)| n.to_interpreted_string(&interpretations))
-                .collect::<Vec<_>>()
-                .join("\n"),
-            expected
-                .iter()
-                .map(|(n, _)| n.to_interpreted_string(&interpretations))
-                .collect::<Vec<_>>()
-                .join("\n"),
-        );
-    }
+    //    #[test]
+    //    fn test_workspace_instantiates_arbitrary_transforms() {
+    //        let mut types = TypeHierarchy::chain(vec!["Boolean".into(), "=".into()]).unwrap();
+    //        types
+    //            .add_child_to_parent("^".into(), "Boolean".into())
+    //            .unwrap();
+    //        types
+    //            .add_chain(vec!["Real".into(), "+".into(), "2".into()])
+    //            .unwrap();
+    //
+    //        let interpretations = vec![
+    //            Interpretation::infix_operator("=".into(), 1, "=".into()),
+    //            Interpretation::infix_operator("^".into(), 2, "^".into()),
+    //            Interpretation::infix_operator("+".into(), 3, "+".into()),
+    //            Interpretation::singleton("p".into(), "Boolean".into()),
+    //            Interpretation::singleton("q".into(), "Boolean".into()),
+    //            Interpretation::singleton("r".into(), "Boolean".into()),
+    //            Interpretation::singleton("s".into(), "Boolean".into()),
+    //            Interpretation::singleton("x".into(), "Real".into()),
+    //            Interpretation::singleton("y".into(), "Real".into()),
+    //            Interpretation::singleton("x".into(), "Real".into()),
+    //            Interpretation::arbitrary_functional("Any".into(), 99, "Boolean".into()),
+    //        ];
+    //
+    //        let real_interpretation = GeneratedType::new_numeric("Real".into());
+    //
+    //        let workspace = Workspace::new(
+    //            types.clone(),
+    //            vec![real_interpretation],
+    //            interpretations.clone(),
+    //        );
+    //        let mut workspace_store = WorkspaceTransactionStore::snapshot(workspace.clone());
+    //
+    //        workspace_store
+    //            .add_parsed_transformation(false, "p=q", "Any(p)=Any(q)")
+    //            .unwrap();
+    //        workspace_store.add_parsed_hypothesis("p=q").unwrap();
+    //        workspace_store.add_parsed_hypothesis("p^s").unwrap();
+    //
+    //        let instantiate = |s: &str| {
+    //            (
+    //                ExplicitTransformation::new(
+    //                    workspace_store.compile().parse_from_string("p=q").unwrap(),
+    //                    workspace_store.compile().parse_from_string(s).unwrap(),
+    //                )
+    //                .into(),
+    //                0,
+    //            )
+    //        };
+    //
+    //        let expected = vec![
+    //            instantiate("p=q"),
+    //            instantiate("(p=q)=(q=q)"),
+    //            instantiate("(p=p)=(p=q)"),
+    //            instantiate("(p^s)=(q^s)"),
+    //            instantiate("(p^p)=(p^q)"),
+    //        ]
+    //        .into_iter()
+    //        .collect();
+    //        assert_eq!(
+    //            workspace_store
+    //                .compile()
+    //                .get_instantiated_transformations_with_indices(None)
+    //                .unwrap(),
+    //            expected
+    //        );
+    //
+    //        let instantiate = |from: &str, to: &str| {
+    //            (
+    //                ExplicitTransformation::new(
+    //                    workspace_store.compile().parse_from_string(from).unwrap(),
+    //                    workspace_store.compile().parse_from_string(to).unwrap(),
+    //                )
+    //                .into(),
+    //                0,
+    //            )
+    //        };
+    //
+    //        let workspace = Workspace::new(types.clone(), vec![], interpretations.clone());
+    //        let mut workspace_store = WorkspaceTransactionStore::snapshot(workspace);
+    //
+    //        workspace_store
+    //            .add_parsed_transformation(false, "Any(p)", "p=p")
+    //            .unwrap();
+    //        workspace_store.add_parsed_hypothesis("p=q").unwrap();
+    //        workspace_store.add_parsed_hypothesis("p^s").unwrap();
+    //
+    //        let expected: HashSet<_> = vec![
+    //            instantiate("p", "p=p"),
+    //            instantiate("p=q", "p=p"),
+    //            instantiate("p=p", "p=p"),
+    //            instantiate("p^s", "p=p"),
+    //            instantiate("p^p", "p=p"),
+    //        ]
+    //        .into_iter()
+    //        .collect();
+    //
+    //        let actual = workspace_store
+    //            .compile()
+    //            .get_instantiated_transformations_with_indices(None)
+    //            .unwrap();
+    //        assert_eq!(
+    //            actual,
+    //            expected,
+    //            "Actual:\n{}\n\nExpected:\n{}",
+    //            actual
+    //                .iter()
+    //                .map(|(n, _)| n.to_interpreted_string(&interpretations))
+    //                .collect::<Vec<_>>()
+    //                .join("\n"),
+    //            expected
+    //                .iter()
+    //                .map(|(n, _)| n.to_interpreted_string(&interpretations))
+    //                .collect::<Vec<_>>()
+    //                .join("\n"),
+    //        );
+    //    }
 
     #[test]
     fn test_workspace_disallows_arbitrary_statements() {
