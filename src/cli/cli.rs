@@ -515,14 +515,12 @@ impl Cli {
         {
             Ok(contents) => match WorkspaceTransactionStore::deserialize(&contents) {
                 Ok(workspace_store) => {
-                    return {
-                        debug!(
-                            "Loaded workspace store:\n{:?}\nWorkspace:\n{:?}",
-                            workspace_store,
-                            workspace_store.compile()
-                        );
-                        Ok(workspace_store)
-                    }
+                    debug!(
+                        "Loaded workspace store:\n{:?}\nWorkspace:\n{:?}",
+                        workspace_store,
+                        workspace_store.compile()
+                    );
+                    return Ok(workspace_store);
                 }
                 Err(e) => {
                     return Err(format!(
