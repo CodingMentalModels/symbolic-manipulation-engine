@@ -29,6 +29,7 @@ type ProvenanceString = String;
 type DisplayTransformation = String;
 type StatementIndex = usize;
 type TransformationIndex = usize;
+type InterpretationIndex = usize;
 
 #[derive(Clone, Debug, Serialize, Deserialize, TS)]
 #[serde(rename_all = "camelCase")]
@@ -241,7 +242,7 @@ impl Workspace {
 
     pub fn get_statement(&self, index: StatementIndex) -> Result<SymbolNode, WorkspaceError> {
         if self.statement_index_is_invalid(index) {
-            Err(WorkspaceError::InvalidStatementIndex)
+            Err(WorkspaceError::InvalidStatementIndex(index))
         } else {
             Ok(self.statements[index].clone())
         }
@@ -265,10 +266,12 @@ impl Workspace {
 
     pub fn remove_interpretation(
         &mut self,
-        interpretation_index: usize,
+        interpretation_index: InterpretationIndex,
     ) -> Result<Interpretation, WorkspaceError> {
         if interpretation_index >= self.interpretations.len() {
-            return Err(WorkspaceError::InvalidInterpretationIndex);
+            return Err(WorkspaceError::InvalidInterpretationIndex(
+                interpretation_index,
+            ));
         }
         Ok(self.interpretations.remove(interpretation_index))
     }
@@ -314,7 +317,7 @@ impl Workspace {
         index: TransformationIndex,
     ) -> Result<Transformation, WorkspaceError> {
         if self.transformation_index_is_invalid(index) {
-            Err(WorkspaceError::InvalidTransformationIndex)
+            Err(WorkspaceError::InvalidTransformationIndex(index))
         } else {
             Ok(self.transformations[index].clone())
         }
@@ -421,7 +424,7 @@ impl Workspace {
 
     pub fn get_provenance(&self, index: StatementIndex) -> Result<Provenance, WorkspaceError> {
         if self.statement_index_is_invalid(index) {
-            return Err(WorkspaceError::InvalidStatementIndex);
+            return Err(WorkspaceError::InvalidStatementIndex(index));
         }
 
         Ok(self.provenance[index].clone())
@@ -1102,9 +1105,9 @@ impl DisplaySymbolNode {
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum WorkspaceError {
-    InvalidStatementIndex,
-    InvalidTransformationIndex,
-    InvalidInterpretationIndex,
+    InvalidStatementIndex(StatementIndex),
+    InvalidTransformationIndex(TransformationIndex),
+    InvalidInterpretationIndex(InterpretationIndex),
     InvalidTransformationAddress,
     ContainsArbitraryNode,
     ParserError(ParserError),
