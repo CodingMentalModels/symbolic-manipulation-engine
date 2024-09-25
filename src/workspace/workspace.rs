@@ -325,6 +325,11 @@ impl Workspace {
 
     fn add_transformation(&mut self, transformation: Transformation) -> Result<(), WorkspaceError> {
         self.types.binds_transformation_or_error(&transformation)?;
+        if self.transformations.contains(&transformation) {
+            return Err(WorkspaceError::TransformationsAlreadyInclude(
+                transformation,
+            ));
+        }
         self.transformations.push(transformation);
         Ok(())
     }
@@ -1117,6 +1122,7 @@ pub enum WorkspaceError {
     IncompatibleTypeRelationships(HashSet<Type>),
     ConflictingTypes(String, Type, Type),
     StatementsAlreadyInclude(SymbolNode),
+    TransformationsAlreadyInclude(Transformation),
     TypeHierarchyAlreadyIncludes(Type),
     InvalidType(Type),
     NoSuchType(String),
