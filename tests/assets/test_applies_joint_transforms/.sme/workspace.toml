@@ -8,24 +8,6 @@ next_index = 7
 statements = []
 provenance = []
 
-[transactions.items.Snapshot.types.Proposition.inner]
-kind = "namedType"
-value = "Proposition"
-
-[[transactions.items.Snapshot.types.Proposition.parents]]
-kind = "object"
-
-[[transactions.items.Snapshot.types.Proposition.children]]
-kind = "namedType"
-value = "="
-
-[transactions.items.Snapshot.types.__join_type_do_not_overload]
-parents = []
-children = []
-
-[transactions.items.Snapshot.types.__join_type_do_not_overload.inner]
-kind = "join"
-
 [transactions.items.Snapshot.types."="]
 children = []
 
@@ -37,16 +19,69 @@ value = "="
 kind = "namedType"
 value = "Proposition"
 
-[transactions.items.Snapshot.types.5]
+[transactions.items.Snapshot.types.0]
 children = []
 
-[transactions.items.Snapshot.types.5.inner]
+[transactions.items.Snapshot.types.0.inner]
+kind = "namedType"
+value = "0"
+
+[[transactions.items.Snapshot.types.0.parents]]
+kind = "namedType"
+value = "Real"
+
+[transactions.items.Snapshot.types.__join_type_do_not_overload]
+parents = []
+children = []
+
+[transactions.items.Snapshot.types.__join_type_do_not_overload.inner]
+kind = "join"
+
+[transactions.items.Snapshot.types.Real.inner]
+kind = "namedType"
+value = "Real"
+
+[[transactions.items.Snapshot.types.Real.parents]]
+kind = "object"
+
+[[transactions.items.Snapshot.types.Real.children]]
+kind = "namedType"
+value = "*"
+
+[[transactions.items.Snapshot.types.Real.children]]
+kind = "namedType"
+value = "15"
+
+[[transactions.items.Snapshot.types.Real.children]]
+kind = "namedType"
+value = "1"
+
+[[transactions.items.Snapshot.types.Real.children]]
+kind = "namedType"
+value = "+"
+
+[[transactions.items.Snapshot.types.Real.children]]
+kind = "namedType"
+value = "0"
+
+[[transactions.items.Snapshot.types.Real.children]]
+kind = "namedType"
+value = "10"
+
+[[transactions.items.Snapshot.types.Real.children]]
 kind = "namedType"
 value = "5"
 
-[[transactions.items.Snapshot.types.5.parents]]
+[transactions.items.Snapshot.types.Proposition.inner]
 kind = "namedType"
-value = "Real"
+value = "Proposition"
+
+[[transactions.items.Snapshot.types.Proposition.parents]]
+kind = "object"
+
+[[transactions.items.Snapshot.types.Proposition.children]]
+kind = "namedType"
+value = "="
 
 [transactions.items.Snapshot.types."+"]
 children = []
@@ -81,52 +116,6 @@ value = "*"
 kind = "namedType"
 value = "Real"
 
-[transactions.items.Snapshot.types.Real.inner]
-kind = "namedType"
-value = "Real"
-
-[[transactions.items.Snapshot.types.Real.parents]]
-kind = "object"
-
-[[transactions.items.Snapshot.types.Real.children]]
-kind = "namedType"
-value = "0"
-
-[[transactions.items.Snapshot.types.Real.children]]
-kind = "namedType"
-value = "5"
-
-[[transactions.items.Snapshot.types.Real.children]]
-kind = "namedType"
-value = "10"
-
-[[transactions.items.Snapshot.types.Real.children]]
-kind = "namedType"
-value = "15"
-
-[[transactions.items.Snapshot.types.Real.children]]
-kind = "namedType"
-value = "1"
-
-[[transactions.items.Snapshot.types.Real.children]]
-kind = "namedType"
-value = "+"
-
-[[transactions.items.Snapshot.types.Real.children]]
-kind = "namedType"
-value = "*"
-
-[transactions.items.Snapshot.types.0]
-children = []
-
-[transactions.items.Snapshot.types.0.inner]
-kind = "namedType"
-value = "0"
-
-[[transactions.items.Snapshot.types.0.parents]]
-kind = "namedType"
-value = "Real"
-
 [transactions.items.Snapshot.types.10]
 children = []
 
@@ -135,6 +124,17 @@ kind = "namedType"
 value = "10"
 
 [[transactions.items.Snapshot.types.10.parents]]
+kind = "namedType"
+value = "Real"
+
+[transactions.items.Snapshot.types.5]
+children = []
+
+[transactions.items.Snapshot.types.5.inner]
+kind = "namedType"
+value = "5"
+
+[[transactions.items.Snapshot.types.5.parents]]
 kind = "namedType"
 value = "Real"
 

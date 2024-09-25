@@ -43,13 +43,8 @@ impl Cli {
     }
 
     fn prepare_for_testing(filesystem: &mut FileSystem) -> Result<(), String> {
-        let removed =
-            filesystem.remove_file(STATE_DIRECTORY_RELATIVE_PATH, WORKSPACE_STATE_FILE_NAME);
-        filesystem.copy_file(
-            STATE_DIRECTORY_RELATIVE_PATH,
-            WORKSPACE_STATE_TEST_INPUT_FILE_NAME,
-            WORKSPACE_STATE_FILE_NAME,
-        )?;
+        remove_workspace_state_file(filesystem);
+        copy_test_input_to_workspace_state(filesystem)?;
         Ok(())
     }
 
@@ -545,6 +540,18 @@ impl Cli {
     fn get_context_filename(name: &str) -> String {
         format!("{}.toml", name).to_string()
     }
+}
+
+fn copy_test_input_to_workspace_state(filesystem: &mut FileSystem) -> Result<(), String> {
+    filesystem.copy_file(
+        STATE_DIRECTORY_RELATIVE_PATH,
+        WORKSPACE_STATE_TEST_INPUT_FILE_NAME,
+        WORKSPACE_STATE_FILE_NAME,
+    )
+}
+
+fn remove_workspace_state_file(filesystem: &mut FileSystem) {
+    let _removed = filesystem.remove_file(STATE_DIRECTORY_RELATIVE_PATH, WORKSPACE_STATE_FILE_NAME);
 }
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
