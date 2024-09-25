@@ -1461,10 +1461,13 @@ mod test_workspace {
             .unwrap();
 
         let interpretations = vec![
+            Interpretation::infix_operator("=_0".into(), 1, "=".into()),
             Interpretation::infix_operator("=".into(), 1, "=".into()),
             Interpretation::infix_operator("^".into(), 2, "^".into()),
             Interpretation::infix_operator("+".into(), 3, "+".into()),
+            Interpretation::singleton("p_0".into(), "Boolean".into()),
             Interpretation::singleton("p".into(), "Boolean".into()),
+            Interpretation::singleton("q_0".into(), "Boolean".into()),
             Interpretation::singleton("q".into(), "Boolean".into()),
             Interpretation::singleton("r".into(), "Boolean".into()),
             Interpretation::singleton("s".into(), "Boolean".into()),
@@ -1489,11 +1492,11 @@ mod test_workspace {
         workspace_store.add_parsed_hypothesis("p=q").unwrap();
         workspace_store.add_parsed_hypothesis("p^s").unwrap();
 
-        let instantiate = |s: &str| {
+        let instantiate = |from: &str, to: &str| {
             (
                 ExplicitTransformation::new(
-                    workspace_store.compile().parse_from_string("p=q").unwrap(),
-                    workspace_store.compile().parse_from_string(s).unwrap(),
+                    workspace_store.compile().parse_from_string(from).unwrap(),
+                    workspace_store.compile().parse_from_string(to).unwrap(),
                 )
                 .into(),
                 0,
@@ -1501,11 +1504,11 @@ mod test_workspace {
         };
 
         let expected = vec![
-            instantiate("p=q"),
-            instantiate("(p=q)=(q=q)"),
-            instantiate("(p=p)=(p=q)"),
-            instantiate("(p^s)=(q^s)"),
-            instantiate("(p^p)=(p^q)"),
+            instantiate("p=q", "p=q"),
+            instantiate("p=_0q_0", "(p=q)=_0(q_0=q)"),
+            instantiate("p_0=_0q", "(p=p_0)=_0(p=q)"),
+            instantiate("p=q", "(p^s)=(q^s)"),
+            instantiate("p_0=q", "(p^p_0)=(p^q)"),
         ]
         .into_iter()
         .collect();
@@ -1529,17 +1532,6 @@ mod test_workspace {
                 .join("\n"),
         );
 
-        let instantiate = |from: &str, to: &str| {
-            (
-                ExplicitTransformation::new(
-                    workspace_store.compile().parse_from_string(from).unwrap(),
-                    workspace_store.compile().parse_from_string(to).unwrap(),
-                )
-                .into(),
-                0,
-            )
-        };
-
         let workspace = Workspace::new(types.clone(), vec![], interpretations.clone());
         let mut workspace_store = WorkspaceTransactionStore::snapshot(workspace);
 
@@ -1551,10 +1543,10 @@ mod test_workspace {
 
         let expected: HashSet<_> = vec![
             instantiate("p", "p=p"),
-            instantiate("p=q", "p=p"),
-            instantiate("p=p", "p=p"),
+            instantiate("p=q", "p=_0p"),
+            instantiate("p=p_0", "p_0=_0p_0"),
             instantiate("p^s", "p=p"),
-            instantiate("p^p", "p=p"),
+            instantiate("p^p_0", "p_0=p_0"),
         ]
         .into_iter()
         .collect();
