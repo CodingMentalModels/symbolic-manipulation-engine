@@ -1142,4 +1142,4 @@ kind = "namedType"
 value = "4"
 
 [[transactions.items.Derive]]
-Derived = [0, 12, []]
+Derived = [12, { Single = 0 }, []]

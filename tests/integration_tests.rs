@@ -72,7 +72,7 @@ fn test_applies_joint_transforms() {
         "symbolic-manipulation-engine",
         "derive",
         "--",
-        "x+10=5+y",
+        "5+y=x+10",
     ]);
     cli.derive(matches.subcommand_matches("derive").unwrap())
         .unwrap();

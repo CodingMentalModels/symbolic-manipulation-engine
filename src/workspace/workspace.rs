@@ -217,11 +217,37 @@ impl Workspace {
         &self.statements
     }
 
+    pub fn get_statements_and_provenance(&self) -> Vec<(SymbolNode, StatementProvenance)> {
+        self.statements
+            .iter()
+            .cloned()
+            .enumerate()
+            .map(|(i, s)| (s, StatementProvenance::Single(i)))
+            .collect()
+    }
+
     pub fn get_statement_pairs(&self) -> Vec<SymbolNode> {
-        self.get_statement_pairs_including(None)
+        self.get_statement_pairs_and_provenance_including(None)
+            .into_iter()
+            .map(|(s, _)| s)
+            .collect()
+    }
+
+    pub fn get_statement_pairs_and_provenance(&self) -> Vec<(SymbolNode, StatementProvenance)> {
+        self.get_statement_pairs_and_provenance_including(None)
     }
 
     pub fn get_statement_pairs_including(&self, statement: Option<&SymbolNode>) -> Vec<SymbolNode> {
+        self.get_statement_pairs_and_provenance_including(statement)
+            .into_iter()
+            .map(|(s, _)| s)
+            .collect()
+    }
+
+    pub fn get_statement_pairs_and_provenance_including(
+        &self,
+        statement: Option<&SymbolNode>,
+    ) -> Vec<(SymbolNode, StatementProvenance)> {
         // Returns pairs of statements for use in joint transforms
         // Returns both orders as well as duplicates since those are valid joint transform args
         let left = self.get_statements();
@@ -233,7 +259,10 @@ impl Workspace {
                     || (Some(&left[i]) == statement)
                     || (Some(&right[i]) == statement)
                 {
-                    to_return.push(left[i].clone().join(right[j].clone()));
+                    to_return.push((
+                        left[i].clone().join(right[j].clone()),
+                        StatementProvenance::Joint((i, j)),
+                    ));
                 }
             }
         }
@@ -454,16 +483,34 @@ impl Workspace {
         let provenance = self.get_provenance(index)?;
         match provenance {
             Provenance::Hypothesis => Ok(DisplayProvenance::Hypothesis),
-            Provenance::Derived((s, t, indices)) => {
-                let statement = self.get_statement(s)?;
-                let transformation = self.get_transformation(t)?;
+            Provenance::Derived((transformation_idx, statement_provenance, addresses)) => {
+                let transformation = self.get_transformation(transformation_idx)?;
                 Ok(DisplayProvenance::Derived(DerivedDisplayProvenance::new(
-                    statement.to_interpreted_string(&self.interpretations),
                     transformation.to_interpreted_string(&self.interpretations),
-                    indices,
+                    self.get_display_statement_provenance(&statement_provenance)?,
+                    addresses,
                 )))
             }
         }
+    }
+
+    pub fn get_display_statement_provenance(
+        &self,
+        provenance: &StatementProvenance,
+    ) -> Result<String, WorkspaceError> {
+        let to_return = match provenance {
+            StatementProvenance::Single(i) => self
+                .get_statement(*i)?
+                .to_interpreted_string(&self.interpretations),
+            StatementProvenance::Joint((i, j)) => format!(
+                "{}, {}",
+                self.get_statement(*i)?
+                    .to_interpreted_string(&self.interpretations),
+                self.get_statement(*j)?
+                    .to_interpreted_string(&self.interpretations)
+            ),
+        };
+        Ok(to_return)
     }
 
     pub fn get_display_symbol_nodes(&self) -> Result<Vec<DisplaySymbolNode>, WorkspaceError> {
@@ -905,16 +952,16 @@ impl WorkspaceTransactionStore {
         );
         for (transform, transform_idx) in instantiated_transformations {
             let statements = if transform.is_joint_transform() {
-                workspace.get_statement_pairs()
+                workspace.get_statement_pairs_and_provenance()
             } else {
-                workspace.get_statements().clone()
+                workspace.get_statements_and_provenance().clone()
             };
-            for (statement_idx, statement) in statements.iter().enumerate() {
+            for (statement, statement_provenance) in statements.into_iter() {
                 match transform.try_transform_into(workspace.get_types(), &statement, &desired) {
                     Ok(output) => {
                         // TODO Derive the appropriate transform addresses
                         let provenance =
-                            Provenance::Derived((statement_idx, transform_idx, vec![]));
+                            Provenance::Derived((transform_idx, statement_provenance, vec![]));
 
                         transaction.add(WorkspaceTransactionItem::Derive((
                             output.clone(),
@@ -1075,7 +1122,19 @@ impl DerivedDisplayProvenance {
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub enum Provenance {
     Hypothesis,
-    Derived((TransformationIndex, StatementIndex, Vec<SymbolNodeAddress>)),
+    Derived(
+        (
+            TransformationIndex,
+            StatementProvenance,
+            Vec<SymbolNodeAddress>,
+        ),
+    ),
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+pub enum StatementProvenance {
+    Single(StatementIndex),
+    Joint((StatementIndex, StatementIndex)),
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize, TS)]
@@ -2159,7 +2218,11 @@ mod test_workspace {
         // fail
         assert_eq!(
             workspace_store.compile().get_provenance(1),
-            Ok(Provenance::Derived((0, 0, vec![])))
+            Ok(Provenance::Derived((
+                0,
+                StatementProvenance::Single(0),
+                vec![]
+            )))
         );
 
         assert_eq!(

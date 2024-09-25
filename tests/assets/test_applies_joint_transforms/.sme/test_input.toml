@@ -1,4 +1,4 @@
-next_index = 7
+next_index = 6
 
 [[transactions]]
 
@@ -7,85 +7,6 @@ next_index = 7
 [transactions.items.Snapshot]
 statements = []
 provenance = []
-
-[transactions.items.Snapshot.types."+"]
-children = []
-
-[transactions.items.Snapshot.types."+".inner]
-kind = "namedType"
-value = "+"
-
-[[transactions.items.Snapshot.types."+".parents]]
-kind = "namedType"
-value = "Real"
-
-[transactions.items.Snapshot.types.0]
-children = []
-
-[transactions.items.Snapshot.types.0.inner]
-kind = "namedType"
-value = "0"
-
-[[transactions.items.Snapshot.types.0.parents]]
-kind = "namedType"
-value = "Real"
-
-[transactions.items.Snapshot.types.Real.inner]
-kind = "namedType"
-value = "Real"
-
-[[transactions.items.Snapshot.types.Real.parents]]
-kind = "object"
-
-[[transactions.items.Snapshot.types.Real.children]]
-kind = "namedType"
-value = "+"
-
-[[transactions.items.Snapshot.types.Real.children]]
-kind = "namedType"
-value = "15"
-
-[[transactions.items.Snapshot.types.Real.children]]
-kind = "namedType"
-value = "10"
-
-[[transactions.items.Snapshot.types.Real.children]]
-kind = "namedType"
-value = "5"
-
-[[transactions.items.Snapshot.types.Real.children]]
-kind = "namedType"
-value = "1"
-
-[[transactions.items.Snapshot.types.Real.children]]
-kind = "namedType"
-value = "0"
-
-[[transactions.items.Snapshot.types.Real.children]]
-kind = "namedType"
-value = "*"
-
-[transactions.items.Snapshot.types.Proposition.inner]
-kind = "namedType"
-value = "Proposition"
-
-[[transactions.items.Snapshot.types.Proposition.parents]]
-kind = "object"
-
-[[transactions.items.Snapshot.types.Proposition.children]]
-kind = "namedType"
-value = "="
-
-[transactions.items.Snapshot.types."*"]
-children = []
-
-[transactions.items.Snapshot.types."*".inner]
-kind = "namedType"
-value = "*"
-
-[[transactions.items.Snapshot.types."*".parents]]
-kind = "namedType"
-value = "Real"
 
 [transactions.items.Snapshot.types.1]
 children = []
@@ -98,28 +19,36 @@ value = "1"
 kind = "namedType"
 value = "Real"
 
-[transactions.items.Snapshot.types."="]
-children = []
+[transactions.items.Snapshot.types.Proposition.inner]
+kind = "namedType"
+value = "Proposition"
 
-[transactions.items.Snapshot.types."=".inner]
+[[transactions.items.Snapshot.types.Proposition.parents]]
+kind = "object"
+
+[[transactions.items.Snapshot.types.Proposition.children]]
 kind = "namedType"
 value = "="
 
-[[transactions.items.Snapshot.types."=".parents]]
+[transactions.items.Snapshot.types.10]
+children = []
+
+[transactions.items.Snapshot.types.10.inner]
 kind = "namedType"
-value = "Proposition"
+value = "10"
 
-[transactions.items.Snapshot.types.__object_type_do_not_overload]
-parents = []
-
-[transactions.items.Snapshot.types.__object_type_do_not_overload.inner]
-kind = "object"
-
-[[transactions.items.Snapshot.types.__object_type_do_not_overload.children]]
+[[transactions.items.Snapshot.types.10.parents]]
 kind = "namedType"
-value = "Proposition"
+value = "Real"
 
-[[transactions.items.Snapshot.types.__object_type_do_not_overload.children]]
+[transactions.items.Snapshot.types."*"]
+children = []
+
+[transactions.items.Snapshot.types."*".inner]
+kind = "namedType"
+value = "*"
+
+[[transactions.items.Snapshot.types."*".parents]]
 kind = "namedType"
 value = "Real"
 
@@ -145,23 +74,94 @@ value = "15"
 kind = "namedType"
 value = "Real"
 
+[transactions.items.Snapshot.types."+"]
+children = []
+
+[transactions.items.Snapshot.types."+".inner]
+kind = "namedType"
+value = "+"
+
+[[transactions.items.Snapshot.types."+".parents]]
+kind = "namedType"
+value = "Real"
+
+[transactions.items.Snapshot.types.Real.inner]
+kind = "namedType"
+value = "Real"
+
+[[transactions.items.Snapshot.types.Real.parents]]
+kind = "object"
+
+[[transactions.items.Snapshot.types.Real.children]]
+kind = "namedType"
+value = "+"
+
+[[transactions.items.Snapshot.types.Real.children]]
+kind = "namedType"
+value = "1"
+
+[[transactions.items.Snapshot.types.Real.children]]
+kind = "namedType"
+value = "*"
+
+[[transactions.items.Snapshot.types.Real.children]]
+kind = "namedType"
+value = "0"
+
+[[transactions.items.Snapshot.types.Real.children]]
+kind = "namedType"
+value = "5"
+
+[[transactions.items.Snapshot.types.Real.children]]
+kind = "namedType"
+value = "15"
+
+[[transactions.items.Snapshot.types.Real.children]]
+kind = "namedType"
+value = "10"
+
+[transactions.items.Snapshot.types.__object_type_do_not_overload]
+parents = []
+
+[transactions.items.Snapshot.types.__object_type_do_not_overload.inner]
+kind = "object"
+
+[[transactions.items.Snapshot.types.__object_type_do_not_overload.children]]
+kind = "namedType"
+value = "Real"
+
+[[transactions.items.Snapshot.types.__object_type_do_not_overload.children]]
+kind = "namedType"
+value = "Proposition"
+
+[transactions.items.Snapshot.types."="]
+children = []
+
+[transactions.items.Snapshot.types."=".inner]
+kind = "namedType"
+value = "="
+
+[[transactions.items.Snapshot.types."=".parents]]
+kind = "namedType"
+value = "Proposition"
+
+[transactions.items.Snapshot.types.0]
+children = []
+
+[transactions.items.Snapshot.types.0.inner]
+kind = "namedType"
+value = "0"
+
+[[transactions.items.Snapshot.types.0.parents]]
+kind = "namedType"
+value = "Real"
+
 [transactions.items.Snapshot.types.__join_type_do_not_overload]
 parents = []
 children = []
 
 [transactions.items.Snapshot.types.__join_type_do_not_overload.inner]
 kind = "join"
-
-[transactions.items.Snapshot.types.10]
-children = []
-
-[transactions.items.Snapshot.types.10.inner]
-kind = "namedType"
-value = "10"
-
-[[transactions.items.Snapshot.types.10.parents]]
-kind = "namedType"
-value = "Real"
 
 [[transactions.items.Snapshot.generated_types]]
 condition = "IsNumeric"
@@ -1394,117 +1394,59 @@ name = "z"
 kind = "namedType"
 value = "Real"
 
-[[transactions]]
+[[transactions.items.Snapshot.transformations]]
 
-[[transactions.items]]
-
-[transactions.items.AddTransformation.ExplicitTransformation.from.root.Symbol]
+[transactions.items.Snapshot.transformations.ExplicitTransformation.from.root.Symbol]
 name = "="
 
-[transactions.items.AddTransformation.ExplicitTransformation.from.root.Symbol.evaluates_to_type]
+[transactions.items.Snapshot.transformations.ExplicitTransformation.from.root.Symbol.evaluates_to_type]
 kind = "namedType"
 value = "="
 
-[[transactions.items.AddTransformation.ExplicitTransformation.from.children]]
+[[transactions.items.Snapshot.transformations.ExplicitTransformation.from.children]]
 children = []
 
-[transactions.items.AddTransformation.ExplicitTransformation.from.children.root.Symbol]
+[transactions.items.Snapshot.transformations.ExplicitTransformation.from.children.root.Symbol]
 name = "x"
 
-[transactions.items.AddTransformation.ExplicitTransformation.from.children.root.Symbol.evaluates_to_type]
+[transactions.items.Snapshot.transformations.ExplicitTransformation.from.children.root.Symbol.evaluates_to_type]
 kind = "namedType"
 value = "Real"
 
-[[transactions.items.AddTransformation.ExplicitTransformation.from.children]]
+[[transactions.items.Snapshot.transformations.ExplicitTransformation.from.children]]
 children = []
 
-[transactions.items.AddTransformation.ExplicitTransformation.from.children.root.Symbol]
+[transactions.items.Snapshot.transformations.ExplicitTransformation.from.children.root.Symbol]
 name = "y"
 
-[transactions.items.AddTransformation.ExplicitTransformation.from.children.root.Symbol.evaluates_to_type]
+[transactions.items.Snapshot.transformations.ExplicitTransformation.from.children.root.Symbol.evaluates_to_type]
 kind = "namedType"
 value = "Real"
 
-[transactions.items.AddTransformation.ExplicitTransformation.to.root.Symbol]
+[transactions.items.Snapshot.transformations.ExplicitTransformation.to.root.Symbol]
 name = "="
 
-[transactions.items.AddTransformation.ExplicitTransformation.to.root.Symbol.evaluates_to_type]
+[transactions.items.Snapshot.transformations.ExplicitTransformation.to.root.Symbol.evaluates_to_type]
 kind = "namedType"
 value = "="
 
-[[transactions.items.AddTransformation.ExplicitTransformation.to.children]]
+[[transactions.items.Snapshot.transformations.ExplicitTransformation.to.children]]
 children = []
 
-[transactions.items.AddTransformation.ExplicitTransformation.to.children.root.Symbol]
+[transactions.items.Snapshot.transformations.ExplicitTransformation.to.children.root.Symbol]
 name = "y"
 
-[transactions.items.AddTransformation.ExplicitTransformation.to.children.root.Symbol.evaluates_to_type]
+[transactions.items.Snapshot.transformations.ExplicitTransformation.to.children.root.Symbol.evaluates_to_type]
 kind = "namedType"
 value = "Real"
 
-[[transactions.items.AddTransformation.ExplicitTransformation.to.children]]
+[[transactions.items.Snapshot.transformations.ExplicitTransformation.to.children]]
 children = []
 
-[transactions.items.AddTransformation.ExplicitTransformation.to.children.root.Symbol]
+[transactions.items.Snapshot.transformations.ExplicitTransformation.to.children.root.Symbol]
 name = "x"
 
-[transactions.items.AddTransformation.ExplicitTransformation.to.children.root.Symbol.evaluates_to_type]
-kind = "namedType"
-value = "Real"
-
-[[transactions.items]]
-
-[transactions.items.AddTransformation.ExplicitTransformation.from.root.Symbol]
-name = "="
-
-[transactions.items.AddTransformation.ExplicitTransformation.from.root.Symbol.evaluates_to_type]
-kind = "namedType"
-value = "="
-
-[[transactions.items.AddTransformation.ExplicitTransformation.from.children]]
-children = []
-
-[transactions.items.AddTransformation.ExplicitTransformation.from.children.root.Symbol]
-name = "y"
-
-[transactions.items.AddTransformation.ExplicitTransformation.from.children.root.Symbol.evaluates_to_type]
-kind = "namedType"
-value = "Real"
-
-[[transactions.items.AddTransformation.ExplicitTransformation.from.children]]
-children = []
-
-[transactions.items.AddTransformation.ExplicitTransformation.from.children.root.Symbol]
-name = "x"
-
-[transactions.items.AddTransformation.ExplicitTransformation.from.children.root.Symbol.evaluates_to_type]
-kind = "namedType"
-value = "Real"
-
-[transactions.items.AddTransformation.ExplicitTransformation.to.root.Symbol]
-name = "="
-
-[transactions.items.AddTransformation.ExplicitTransformation.to.root.Symbol.evaluates_to_type]
-kind = "namedType"
-value = "="
-
-[[transactions.items.AddTransformation.ExplicitTransformation.to.children]]
-children = []
-
-[transactions.items.AddTransformation.ExplicitTransformation.to.children.root.Symbol]
-name = "x"
-
-[transactions.items.AddTransformation.ExplicitTransformation.to.children.root.Symbol.evaluates_to_type]
-kind = "namedType"
-value = "Real"
-
-[[transactions.items.AddTransformation.ExplicitTransformation.to.children]]
-children = []
-
-[transactions.items.AddTransformation.ExplicitTransformation.to.children.root.Symbol]
-name = "y"
-
-[transactions.items.AddTransformation.ExplicitTransformation.to.children.root.Symbol.evaluates_to_type]
+[transactions.items.Snapshot.transformations.ExplicitTransformation.to.children.root.Symbol.evaluates_to_type]
 kind = "namedType"
 value = "Real"
 
@@ -1642,7 +1584,7 @@ kind = "namedType"
 value = "10"
 
 [[transactions.items.Derive]]
-Derived = [1, 15, []]
+Derived = [15, { Single = 1 }, []]
 
 [[transactions]]
 
@@ -1716,7 +1658,7 @@ kind = "namedType"
 value = "Real"
 
 [[transactions.items.Derive]]
-Derived = [0, 15, []]
+Derived = [15, { Single = 0 }, []]
 
 [[transactions]]
 
@@ -1730,109 +1672,6 @@ name = "="
 [transactions.items.Derive.root.Symbol.evaluates_to_type]
 kind = "namedType"
 value = "="
-
-[[transactions.items.Derive.children]]
-
-[transactions.items.Derive.children.root.Symbol]
-name = "+"
-
-[transactions.items.Derive.children.root.Symbol.evaluates_to_type]
-kind = "namedType"
-value = "+"
-
-[[transactions.items.Derive.children.children]]
-children = []
-
-[transactions.items.Derive.children.children.root.Symbol]
-name = "x"
-
-[transactions.items.Derive.children.children.root.Symbol.evaluates_to_type]
-kind = "namedType"
-value = "Real"
-
-[[transactions.items.Derive.children.children]]
-children = []
-
-[transactions.items.Derive.children.children.root.Symbol]
-name = "10"
-
-[transactions.items.Derive.children.children.root.Symbol.evaluates_to_type]
-kind = "namedType"
-value = "10"
-
-[[transactions.items.Derive.children]]
-
-[transactions.items.Derive.children.root.Symbol]
-name = "+"
-
-[transactions.items.Derive.children.root.Symbol.evaluates_to_type]
-kind = "namedType"
-value = "+"
-
-[[transactions.items.Derive.children.children]]
-children = []
-
-[transactions.items.Derive.children.children.root.Symbol]
-name = "x"
-
-[transactions.items.Derive.children.children.root.Symbol.evaluates_to_type]
-kind = "namedType"
-value = "Real"
-
-[[transactions.items.Derive.children.children]]
-children = []
-
-[transactions.items.Derive.children.children.root.Symbol]
-name = "y"
-
-[transactions.items.Derive.children.children.root.Symbol.evaluates_to_type]
-kind = "namedType"
-value = "Real"
-
-[[transactions.items.Derive]]
-Derived = [2, 18, []]
-
-[[transactions]]
-
-[[transactions.items]]
-
-[[transactions.items.Derive]]
-
-[transactions.items.Derive.root.Symbol]
-name = "="
-
-[transactions.items.Derive.root.Symbol.evaluates_to_type]
-kind = "namedType"
-value = "="
-
-[[transactions.items.Derive.children]]
-
-[transactions.items.Derive.children.root.Symbol]
-name = "+"
-
-[transactions.items.Derive.children.root.Symbol.evaluates_to_type]
-kind = "namedType"
-value = "+"
-
-[[transactions.items.Derive.children.children]]
-children = []
-
-[transactions.items.Derive.children.children.root.Symbol]
-name = "x"
-
-[transactions.items.Derive.children.children.root.Symbol.evaluates_to_type]
-kind = "namedType"
-value = "Real"
-
-[[transactions.items.Derive.children.children]]
-children = []
-
-[transactions.items.Derive.children.children.root.Symbol]
-name = "10"
-
-[transactions.items.Derive.children.children.root.Symbol.evaluates_to_type]
-kind = "namedType"
-value = "10"
 
 [[transactions.items.Derive.children]]
 
@@ -1863,5 +1702,108 @@ name = "y"
 kind = "namedType"
 value = "Real"
 
+[[transactions.items.Derive.children]]
+
+[transactions.items.Derive.children.root.Symbol]
+name = "+"
+
+[transactions.items.Derive.children.root.Symbol.evaluates_to_type]
+kind = "namedType"
+value = "+"
+
+[[transactions.items.Derive.children.children]]
+children = []
+
+[transactions.items.Derive.children.children.root.Symbol]
+name = "x"
+
+[transactions.items.Derive.children.children.root.Symbol.evaluates_to_type]
+kind = "namedType"
+value = "Real"
+
+[[transactions.items.Derive.children.children]]
+children = []
+
+[transactions.items.Derive.children.children.root.Symbol]
+name = "y"
+
+[transactions.items.Derive.children.children.root.Symbol.evaluates_to_type]
+kind = "namedType"
+value = "Real"
+
 [[transactions.items.Derive]]
-Derived = [23, 16, []]
+Derived = [17, { Single = 3 }, []]
+
+[[transactions]]
+
+[[transactions.items]]
+
+[[transactions.items.Derive]]
+
+[transactions.items.Derive.root.Symbol]
+name = "="
+
+[transactions.items.Derive.root.Symbol.evaluates_to_type]
+kind = "namedType"
+value = "="
+
+[[transactions.items.Derive.children]]
+
+[transactions.items.Derive.children.root.Symbol]
+name = "+"
+
+[transactions.items.Derive.children.root.Symbol.evaluates_to_type]
+kind = "namedType"
+value = "+"
+
+[[transactions.items.Derive.children.children]]
+children = []
+
+[transactions.items.Derive.children.children.root.Symbol]
+name = "5"
+
+[transactions.items.Derive.children.children.root.Symbol.evaluates_to_type]
+kind = "namedType"
+value = "5"
+
+[[transactions.items.Derive.children.children]]
+children = []
+
+[transactions.items.Derive.children.children.root.Symbol]
+name = "y"
+
+[transactions.items.Derive.children.children.root.Symbol.evaluates_to_type]
+kind = "namedType"
+value = "Real"
+
+[[transactions.items.Derive.children]]
+
+[transactions.items.Derive.children.root.Symbol]
+name = "+"
+
+[transactions.items.Derive.children.root.Symbol.evaluates_to_type]
+kind = "namedType"
+value = "+"
+
+[[transactions.items.Derive.children.children]]
+children = []
+
+[transactions.items.Derive.children.children.root.Symbol]
+name = "x"
+
+[transactions.items.Derive.children.children.root.Symbol.evaluates_to_type]
+kind = "namedType"
+value = "Real"
+
+[[transactions.items.Derive.children.children]]
+children = []
+
+[transactions.items.Derive.children.children.root.Symbol]
+name = "10"
+
+[transactions.items.Derive.children.children.root.Symbol.evaluates_to_type]
+kind = "namedType"
+value = "10"
+
+[[transactions.items.Derive]]
+Derived = [16, { Joint = [4, 2] }, []]
