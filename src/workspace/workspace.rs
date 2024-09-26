@@ -1,3 +1,4 @@
+use log::debug;
 use std::collections::{HashMap, HashSet};
 
 use serde::{Deserialize, Serialize};
@@ -11,12 +12,15 @@ use crate::{
         parser::{Parser, ParserError},
     },
     symbol::{
-        symbol_node::{SymbolName, SymbolNode, SymbolNodeAddress, SymbolNodeError},
+        algorithm::AlgorithmType,
+        symbol_node::{Symbol, SymbolName, SymbolNode, SymbolNodeAddress, SymbolNodeError},
         symbol_type::{
-            DisplayGeneratedType, DisplayTypeHierarchyNode, GeneratedType, Type, TypeError,
-            TypeHierarchy, TypeName,
+            DisplayGeneratedType, DisplayTypeHierarchyNode, GeneratedType, GeneratedTypeCondition,
+            Type, TypeError, TypeHierarchy, TypeName,
         },
-        transformation::{ExplicitTransformation, Transformation, TransformationError},
+        transformation::{
+            AlgorithmTransformation, ExplicitTransformation, Transformation, TransformationError,
+        },
     },
 };
 
@@ -25,6 +29,7 @@ type ProvenanceString = String;
 type DisplayTransformation = String;
 type StatementIndex = usize;
 type TransformationIndex = usize;
+type InterpretationIndex = usize;
 
 #[derive(Clone, Debug, Serialize, Deserialize, TS)]
 #[serde(rename_all = "camelCase")]
@@ -99,6 +104,61 @@ impl Workspace {
         &self.types
     }
 
+    pub fn get_types_mut(&mut self) -> &mut TypeHierarchy {
+        &mut self.types
+    }
+
+    pub fn get_type_from_name(&self, name: &str) -> Result<Type, WorkspaceError> {
+        let types = self
+            .get_types()
+            .get_types()
+            .into_iter()
+            .filter(|t| t.to_string() == name)
+            .collect::<HashSet<_>>();
+        if types.len() == 0 {
+            Err(WorkspaceError::NoSuchType(name.to_string()))
+        } else if types.len() > 1 {
+            Err(WorkspaceError::AmbiguousTypeName(name.to_string()))
+        } else {
+            Ok(types
+                .iter()
+                .next()
+                .expect("We just checked that there's at least one.")
+                .clone())
+        }
+    }
+
+    pub fn get_generated_type_from_parent_name(
+        &self,
+        name: &str,
+    ) -> Result<GeneratedType, WorkspaceError> {
+        let matches = self
+            .get_generated_types()
+            .into_iter()
+            .filter(|t| {
+                t.get_parents()
+                    .into_iter()
+                    .map(|parent| parent.to_string())
+                    .collect::<HashSet<_>>()
+                    .contains(name)
+            })
+            .cloned()
+            .collect::<Vec<_>>();
+        if matches.len() == 0 {
+            Err(WorkspaceError::NoSuchGeneratedTypeParent(name.to_string()))
+        } else if matches.len() > 1 {
+            Err(WorkspaceError::AmbiguousGeneratedTypeParent(
+                name.to_string(),
+            ))
+        } else {
+            Ok(matches
+                .iter()
+                .next()
+                .expect("We just checked that there's at least one.")
+                .clone())
+        }
+    }
+
     pub fn get_interpretations(&self) -> &Vec<Interpretation> {
         &self.interpretations
     }
@@ -157,11 +217,37 @@ impl Workspace {
         &self.statements
     }
 
+    pub fn get_statements_and_provenance(&self) -> Vec<(SymbolNode, StatementProvenance)> {
+        self.statements
+            .iter()
+            .cloned()
+            .enumerate()
+            .map(|(i, s)| (s, StatementProvenance::Single(i)))
+            .collect()
+    }
+
     pub fn get_statement_pairs(&self) -> Vec<SymbolNode> {
-        self.get_statement_pairs_including(None)
+        self.get_statement_pairs_and_provenance_including(None)
+            .into_iter()
+            .map(|(s, _)| s)
+            .collect()
+    }
+
+    pub fn get_statement_pairs_and_provenance(&self) -> Vec<(SymbolNode, StatementProvenance)> {
+        self.get_statement_pairs_and_provenance_including(None)
     }
 
     pub fn get_statement_pairs_including(&self, statement: Option<&SymbolNode>) -> Vec<SymbolNode> {
+        self.get_statement_pairs_and_provenance_including(statement)
+            .into_iter()
+            .map(|(s, _)| s)
+            .collect()
+    }
+
+    pub fn get_statement_pairs_and_provenance_including(
+        &self,
+        statement: Option<&SymbolNode>,
+    ) -> Vec<(SymbolNode, StatementProvenance)> {
         // Returns pairs of statements for use in joint transforms
         // Returns both orders as well as duplicates since those are valid joint transform args
         let left = self.get_statements();
@@ -173,7 +259,10 @@ impl Workspace {
                     || (Some(&left[i]) == statement)
                     || (Some(&right[i]) == statement)
                 {
-                    to_return.push(left[i].clone().join(right[j].clone()));
+                    to_return.push((
+                        left[i].clone().join(right[j].clone()),
+                        StatementProvenance::Joint((i, j)),
+                    ));
                 }
             }
         }
@@ -182,7 +271,7 @@ impl Workspace {
 
     pub fn get_statement(&self, index: StatementIndex) -> Result<SymbolNode, WorkspaceError> {
         if self.statement_index_is_invalid(index) {
-            Err(WorkspaceError::InvalidStatementIndex)
+            Err(WorkspaceError::InvalidStatementIndex(index))
         } else {
             Ok(self.statements[index].clone())
         }
@@ -206,10 +295,12 @@ impl Workspace {
 
     pub fn remove_interpretation(
         &mut self,
-        interpretation_index: usize,
+        interpretation_index: InterpretationIndex,
     ) -> Result<Interpretation, WorkspaceError> {
         if interpretation_index >= self.interpretations.len() {
-            return Err(WorkspaceError::InvalidInterpretationIndex);
+            return Err(WorkspaceError::InvalidInterpretationIndex(
+                interpretation_index,
+            ));
         }
         Ok(self.interpretations.remove(interpretation_index))
     }
@@ -255,7 +346,7 @@ impl Workspace {
         index: TransformationIndex,
     ) -> Result<Transformation, WorkspaceError> {
         if self.transformation_index_is_invalid(index) {
-            Err(WorkspaceError::InvalidTransformationIndex)
+            Err(WorkspaceError::InvalidTransformationIndex(index))
         } else {
             Ok(self.transformations[index].clone())
         }
@@ -263,6 +354,11 @@ impl Workspace {
 
     fn add_transformation(&mut self, transformation: Transformation) -> Result<(), WorkspaceError> {
         self.types.binds_transformation_or_error(&transformation)?;
+        if self.transformations.contains(&transformation) {
+            return Err(WorkspaceError::TransformationsAlreadyInclude(
+                transformation,
+            ));
+        }
         self.transformations.push(transformation);
         Ok(())
     }
@@ -280,6 +376,15 @@ impl Workspace {
         };
         let instantiated_transformations =
             self.get_instantiated_transformations_with_indices(Some(desired.clone()))?;
+        debug!(
+            "instantiated_transformations:\n{}",
+            instantiated_transformations
+                .clone()
+                .into_iter()
+                .map(|(t, _)| t.to_symbol_string())
+                .collect::<Vec<_>>()
+                .join("\n")
+        );
         for (transformation, _) in instantiated_transformations {
             let statements = if transformation.is_joint_transform() {
                 self.get_statement_pairs()
@@ -306,6 +411,15 @@ impl Workspace {
         let from_statement = self.get_statement(statement_index)?;
         let instantiated_transformations =
             self.get_instantiated_transformations_with_indices(None)?;
+        debug!(
+            "instantiated_transformations:\n{}",
+            instantiated_transformations
+                .clone()
+                .into_iter()
+                .map(|(t, _)| t.to_symbol_string())
+                .collect::<Vec<_>>()
+                .join("\n")
+        );
         let mut to_return = HashSet::new();
         for (transformation, _) in instantiated_transformations {
             let statements = if transformation.is_joint_transform() {
@@ -344,7 +458,7 @@ impl Workspace {
 
     pub fn get_provenance(&self, index: StatementIndex) -> Result<Provenance, WorkspaceError> {
         if self.statement_index_is_invalid(index) {
-            return Err(WorkspaceError::InvalidStatementIndex);
+            return Err(WorkspaceError::InvalidStatementIndex(index));
         }
 
         Ok(self.provenance[index].clone())
@@ -369,16 +483,34 @@ impl Workspace {
         let provenance = self.get_provenance(index)?;
         match provenance {
             Provenance::Hypothesis => Ok(DisplayProvenance::Hypothesis),
-            Provenance::Derived((s, t, indices)) => {
-                let statement = self.get_statement(s)?;
-                let transformation = self.get_transformation(t)?;
+            Provenance::Derived((transformation_idx, statement_provenance, addresses)) => {
+                let transformation = self.get_transformation(transformation_idx)?;
                 Ok(DisplayProvenance::Derived(DerivedDisplayProvenance::new(
-                    statement.to_interpreted_string(&self.interpretations),
                     transformation.to_interpreted_string(&self.interpretations),
-                    indices,
+                    self.get_display_statement_provenance(&statement_provenance)?,
+                    addresses,
                 )))
             }
         }
+    }
+
+    pub fn get_display_statement_provenance(
+        &self,
+        provenance: &StatementProvenance,
+    ) -> Result<String, WorkspaceError> {
+        let to_return = match provenance {
+            StatementProvenance::Single(i) => self
+                .get_statement(*i)?
+                .to_interpreted_string(&self.interpretations),
+            StatementProvenance::Joint((i, j)) => format!(
+                "{}, {}",
+                self.get_statement(*i)?
+                    .to_interpreted_string(&self.interpretations),
+                self.get_statement(*j)?
+                    .to_interpreted_string(&self.interpretations)
+            ),
+        };
+        Ok(to_return)
     }
 
     pub fn get_display_symbol_nodes(&self) -> Result<Vec<DisplaySymbolNode>, WorkspaceError> {
@@ -438,6 +570,15 @@ impl Workspace {
             .flatten()
             .collect::<HashSet<_>>();
 
+        debug!(
+            "substatements:\n{}",
+            substatements
+                .clone()
+                .into_iter()
+                .map(|s| s.to_symbol_string())
+                .collect::<Vec<_>>()
+                .join("\n")
+        );
         let mut to_return = HashSet::new();
         for (transform, transform_idx) in self.get_arbitrary_transformations_with_indices() {
             to_return = to_return
@@ -582,10 +723,10 @@ impl WorkspaceTransactionStore {
     }
 
     pub fn compile(&self) -> Workspace {
-        // Does not check for errors because they've been checked on adding them
         let mut workspace = Workspace::default();
         for transaction in self.get_live_transactions() {
-            Self::apply_transaction(&mut workspace, transaction);
+            // Does not check for errors because they've been checked on adding them
+            let _ = Self::apply_transaction(&mut workspace, transaction);
         }
 
         workspace
@@ -627,7 +768,7 @@ impl WorkspaceTransactionStore {
             WorkspaceTransactionItem::AddTransformation(transformation) => {
                 workspace.add_transformation(transformation)?;
             }
-            WorkspaceTransactionItem::Derive(statement, provenance) => {
+            WorkspaceTransactionItem::Derive((statement, provenance)) => {
                 workspace.add_derived_statement(statement, provenance);
             }
         };
@@ -760,6 +901,24 @@ impl WorkspaceTransactionStore {
         Ok(transformation)
     }
 
+    pub fn add_algorithm(
+        &mut self,
+        algorithm_type: &AlgorithmType,
+        operator_name: &str,
+        input_type_name: &str,
+    ) -> Result<Transformation, WorkspaceError> {
+        let workspace = self.compile();
+        let operator_type = workspace.get_type_from_name(operator_name)?;
+        let operator = Symbol::new(operator_name.to_string(), operator_type);
+        let input_type = workspace.get_generated_type_from_parent_name(input_type_name)?;
+        let transformation: Transformation =
+            AlgorithmTransformation::new(algorithm_type.clone(), operator, input_type).into();
+        let transaction =
+            WorkspaceTransactionItem::AddTransformation(transformation.clone()).into();
+        self.add(transaction)?;
+        Ok(transformation)
+    }
+
     pub fn try_transform_into_parsed(
         &mut self,
         desired: &str,
@@ -782,21 +941,33 @@ impl WorkspaceTransactionStore {
         }
         let instantiated_transformations =
             workspace.get_instantiated_transformations_with_indices(Some(desired.clone()))?;
+        debug!(
+            "instantiated_transformations:\n{}",
+            instantiated_transformations
+                .clone()
+                .into_iter()
+                .map(|(t, _)| t.to_symbol_string())
+                .collect::<Vec<_>>()
+                .join("\n")
+        );
         for (transform, transform_idx) in instantiated_transformations {
             let statements = if transform.is_joint_transform() {
-                workspace.get_statement_pairs()
+                workspace.get_statement_pairs_and_provenance()
             } else {
-                workspace.get_statements().clone()
+                workspace.get_statements_and_provenance().clone()
             };
-            for (statement_idx, statement) in statements.iter().enumerate() {
+            for (statement, statement_provenance) in statements.into_iter() {
                 match transform.try_transform_into(workspace.get_types(), &statement, &desired) {
                     Ok(output) => {
                         // TODO Derive the appropriate transform addresses
                         let provenance =
-                            Provenance::Derived((statement_idx, transform_idx, vec![]));
-                        transaction
-                            .add(WorkspaceTransactionItem::Derive(output.clone(), provenance));
-                        self.add(transaction);
+                            Provenance::Derived((transform_idx, statement_provenance, vec![]));
+
+                        transaction.add(WorkspaceTransactionItem::Derive((
+                            output.clone(),
+                            provenance,
+                        )));
+                        self.add(transaction)?;
                         return Ok(output);
                     }
                     Err(_) => {
@@ -817,7 +988,7 @@ impl WorkspaceTransactionStore {
         let mut already_added = HashSet::new();
         for generated_type in workspace.get_generated_types().clone() {
             for (t, parents) in generated_type.generate(statement) {
-                if !already_added.contains(&t) {
+                if !already_added.contains(&t) && !workspace.get_types().contains_type(&t) {
                     items.extend(self.get_add_type_to_parents_items(t.clone(), &parents));
                     already_added.insert(t);
                 }
@@ -886,7 +1057,7 @@ pub enum WorkspaceTransactionItem {
     RemoveInterpretation(usize),
     AddHypothesis(SymbolNode),
     AddTransformation(Transformation),
-    Derive(SymbolNode, Provenance),
+    Derive((SymbolNode, Provenance)),
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, TS)]
@@ -951,7 +1122,19 @@ impl DerivedDisplayProvenance {
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub enum Provenance {
     Hypothesis,
-    Derived((TransformationIndex, StatementIndex, Vec<SymbolNodeAddress>)),
+    Derived(
+        (
+            TransformationIndex,
+            StatementProvenance,
+            Vec<SymbolNodeAddress>,
+        ),
+    ),
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+pub enum StatementProvenance {
+    Single(StatementIndex),
+    Joint((StatementIndex, StatementIndex)),
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize, TS)]
@@ -986,9 +1169,9 @@ impl DisplaySymbolNode {
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum WorkspaceError {
-    InvalidStatementIndex,
-    InvalidTransformationIndex,
-    InvalidInterpretationIndex,
+    InvalidStatementIndex(StatementIndex),
+    InvalidTransformationIndex(TransformationIndex),
+    InvalidInterpretationIndex(InterpretationIndex),
     InvalidTransformationAddress,
     ContainsArbitraryNode,
     ParserError(ParserError),
@@ -998,8 +1181,13 @@ pub enum WorkspaceError {
     IncompatibleTypeRelationships(HashSet<Type>),
     ConflictingTypes(String, Type, Type),
     StatementsAlreadyInclude(SymbolNode),
+    TransformationsAlreadyInclude(Transformation),
     TypeHierarchyAlreadyIncludes(Type),
     InvalidType(Type),
+    NoSuchType(String),
+    NoSuchGeneratedTypeParent(String),
+    AmbiguousTypeName(String),
+    AmbiguousGeneratedTypeParent(String),
     ParentTypeNotFound(Type),
     UnsupportedOperation(String),
     ArbitraryNodeHasNonOneChildren,
@@ -1246,59 +1434,120 @@ mod test_workspace {
     }
 
     #[test]
+    fn test_workspace_instantiates_arbitrary_to_add_on_both_sides() {
+        let mut types = TypeHierarchy::chain(vec!["Boolean".into(), "=".into()]).unwrap();
+        types
+            .add_child_to_parent("^".into(), "Boolean".into())
+            .unwrap();
+        types
+            .add_chain(vec!["Real".into(), "+".into(), "2".into()])
+            .unwrap();
+
+        let interpretations = vec![
+            Interpretation::infix_operator("=".into(), 1, "=".into()),
+            Interpretation::infix_operator("^".into(), 2, "^".into()),
+            Interpretation::infix_operator("+".into(), 3, "+".into()),
+            Interpretation::singleton("p".into(), "Boolean".into()),
+            Interpretation::singleton("q".into(), "Boolean".into()),
+            Interpretation::singleton("r".into(), "Boolean".into()),
+            Interpretation::singleton("s".into(), "Boolean".into()),
+            Interpretation::singleton("x".into(), "Real".into()),
+            Interpretation::singleton("y_0".into(), "Real".into()), //  For disambiguation
+            Interpretation::singleton("y".into(), "Real".into()),
+            Interpretation::singleton("x".into(), "Real".into()),
+            Interpretation::arbitrary_functional("Any".into(), 99, "Real".into()),
+        ];
+
+        let real_interpretation = GeneratedType::new_numeric("Real".into());
+
+        let workspace = Workspace::new(
+            types.clone(),
+            vec![real_interpretation],
+            interpretations.clone(),
+        );
+
+        let mut workspace_store = WorkspaceTransactionStore::snapshot(workspace.clone());
+
+        workspace_store
+            .add_parsed_transformation(false, "x=y", "Any(x)=Any(y)")
+            .unwrap();
+        workspace_store.add_parsed_hypothesis("x=5").unwrap();
+        workspace_store.add_parsed_hypothesis("y=10").unwrap();
+
+        let instantiate = |from: &str, to: &str| {
+            ExplicitTransformation::new(
+                workspace_store.compile().parse_from_string(from).unwrap(),
+                workspace_store.compile().parse_from_string(to).unwrap(),
+            )
+            .into()
+        };
+
+        // Looking for x+y=5+y but that'll appear as the more general x=y -> ...
+        // except that y will be replaced with y_0 to disambiguate the transform y
+        // from the predicate y
+        let expected = instantiate("x=y_0", "x+y=y_0+y");
+        let results = workspace_store
+            .compile()
+            .get_instantiated_transformations_with_indices(Some(
+                workspace.parse_from_string("x+y=5+y").unwrap(),
+            ))
+            .unwrap()
+            .into_iter()
+            .map(|(r, _)| r)
+            .collect::<HashSet<_>>();
+        assert!(
+            results.contains(&expected),
+            "\n{}",
+            results
+                .clone()
+                .into_iter()
+                .map(|t| t.to_symbol_string())
+                .collect::<Vec<_>>()
+                .join("\n")
+        );
+    }
+
+    #[test]
     fn test_workspace_instantiates_arbitrary_transforms() {
         let mut types = TypeHierarchy::chain(vec!["Boolean".into(), "=".into()]).unwrap();
         types
             .add_child_to_parent("^".into(), "Boolean".into())
             .unwrap();
+        types
+            .add_chain(vec!["Real".into(), "+".into(), "2".into()])
+            .unwrap();
 
         let interpretations = vec![
+            Interpretation::infix_operator("=_0".into(), 1, "=".into()),
             Interpretation::infix_operator("=".into(), 1, "=".into()),
-            Interpretation::infix_operator("^".into(), 1, "^".into()),
+            Interpretation::infix_operator("^".into(), 2, "^".into()),
+            Interpretation::infix_operator("+".into(), 3, "+".into()),
+            Interpretation::singleton("p_0".into(), "Boolean".into()),
             Interpretation::singleton("p".into(), "Boolean".into()),
+            Interpretation::singleton("q_0".into(), "Boolean".into()),
             Interpretation::singleton("q".into(), "Boolean".into()),
             Interpretation::singleton("r".into(), "Boolean".into()),
             Interpretation::singleton("s".into(), "Boolean".into()),
-            Interpretation::singleton("s".into(), "Boolean".into()),
+            Interpretation::singleton("x".into(), "Real".into()),
+            Interpretation::singleton("y".into(), "Real".into()),
+            Interpretation::singleton("x".into(), "Real".into()),
             Interpretation::arbitrary_functional("Any".into(), 99, "Boolean".into()),
         ];
 
-        let workspace = Workspace::new(types.clone(), vec![], interpretations.clone());
-        let mut workspace_store = WorkspaceTransactionStore::snapshot(workspace);
+        let real_interpretation = GeneratedType::new_numeric("Real".into());
+
+        let workspace = Workspace::new(
+            types.clone(),
+            vec![real_interpretation],
+            interpretations.clone(),
+        );
+        let mut workspace_store = WorkspaceTransactionStore::snapshot(workspace.clone());
 
         workspace_store
             .add_parsed_transformation(false, "p=q", "Any(p)=Any(q)")
             .unwrap();
         workspace_store.add_parsed_hypothesis("p=q").unwrap();
         workspace_store.add_parsed_hypothesis("p^s").unwrap();
-
-        let instantiate = |s: &str| {
-            (
-                ExplicitTransformation::new(
-                    workspace_store.compile().parse_from_string("p=q").unwrap(),
-                    workspace_store.compile().parse_from_string(s).unwrap(),
-                )
-                .into(),
-                0,
-            )
-        };
-
-        let expected = vec![
-            instantiate("p=q"),
-            instantiate("(p=q)=(q=q)"),
-            instantiate("(p=p)=(p=q)"),
-            instantiate("(p^s)=(q^s)"),
-            instantiate("(p^p)=(p^q)"),
-        ]
-        .into_iter()
-        .collect();
-        assert_eq!(
-            workspace_store
-                .compile()
-                .get_instantiated_transformations_with_indices(None)
-                .unwrap(),
-            expected
-        );
 
         let instantiate = |from: &str, to: &str| {
             (
@@ -1310,7 +1559,37 @@ mod test_workspace {
                 0,
             )
         };
-        let mut workspace = Workspace::new(types.clone(), vec![], interpretations.clone());
+
+        let expected = vec![
+            instantiate("p=q", "p=q"),
+            instantiate("p=_0q_0", "(p=q)=_0(q_0=q)"),
+            instantiate("p_0=_0q", "(p=p_0)=_0(p=q)"),
+            instantiate("p=q", "(p^s)=(q^s)"),
+            instantiate("p_0=q", "(p^p_0)=(p^q)"),
+        ]
+        .into_iter()
+        .collect();
+        let actual = workspace_store
+            .compile()
+            .get_instantiated_transformations_with_indices(None)
+            .unwrap();
+        assert_eq!(
+            actual,
+            expected,
+            "actual:\n{}\n\nexpected:\n{}",
+            actual
+                .iter()
+                .map(|(t, _)| t.to_interpreted_string(&interpretations))
+                .collect::<Vec<_>>()
+                .join("\n"),
+            expected
+                .iter()
+                .map(|(t, _)| t.to_interpreted_string(&interpretations))
+                .collect::<Vec<_>>()
+                .join("\n"),
+        );
+
+        let workspace = Workspace::new(types.clone(), vec![], interpretations.clone());
         let mut workspace_store = WorkspaceTransactionStore::snapshot(workspace);
 
         workspace_store
@@ -1321,10 +1600,10 @@ mod test_workspace {
 
         let expected: HashSet<_> = vec![
             instantiate("p", "p=p"),
-            instantiate("p=q", "p=p"),
-            instantiate("p=p", "p=p"),
+            instantiate("p=q", "p=_0p"),
+            instantiate("p=p_0", "p_0=_0p_0"),
             instantiate("p^s", "p=p"),
-            instantiate("p^p", "p=p"),
+            instantiate("p^p_0", "p_0=p_0"),
         ]
         .into_iter()
         .collect();
@@ -1827,6 +2106,80 @@ mod test_workspace {
     }
 
     #[test]
+    fn test_workspace_adds_and_executes_algorithms() {
+        let mut types = TypeHierarchy::chain(vec!["Real".into(), "+".into()]).unwrap();
+        types
+            .add_child_to_parent("*".into(), "Real".into())
+            .unwrap();
+        types
+            .add_child_to_parent("/".into(), "Real".into())
+            .unwrap();
+        let plus_interpretation = Interpretation::infix_operator("+".into(), 1, "+".into());
+        let multiply_interpretation = Interpretation::infix_operator("*".into(), 2, "*".into());
+        let divides_interpretation = Interpretation::infix_operator("/".into(), 2, "/".into());
+        let real_interpretation = Interpretation::generated_type(GeneratedTypeCondition::IsNumeric);
+        let real_generated_type = GeneratedType::new(
+            GeneratedTypeCondition::IsNumeric,
+            vec!["Real".into()].into_iter().collect(),
+        );
+        let generated_types = vec![real_generated_type];
+        let interpretations = vec![
+            plus_interpretation,
+            multiply_interpretation,
+            divides_interpretation,
+            real_interpretation,
+        ];
+        let workspace = Workspace::new(types, generated_types, interpretations);
+
+        let mut workspace_store = WorkspaceTransactionStore::snapshot(workspace);
+
+        assert!(workspace_store.add_parsed_hypothesis("2+2").is_ok());
+        assert_eq!(workspace_store.compile().statements.len(), 1);
+        let two = SymbolNode::leaf(Symbol::new("2".to_string(), "2".into()));
+        assert_eq!(
+            workspace_store.compile().statements,
+            vec![SymbolNode::new(
+                Symbol::new_with_same_type_as_value("+").into(),
+                vec![two.clone(), two.clone()]
+            )]
+        );
+
+        workspace_store
+            .add_algorithm(&AlgorithmType::Addition, "+", "Real")
+            .unwrap();
+        assert_eq!(workspace_store.compile().transformations.len(), 1);
+
+        let _transformed = workspace_store.try_transform_into_parsed("4").unwrap();
+        assert_eq!(workspace_store.compile().statements.len(), 2);
+        let four = SymbolNode::leaf(Symbol::new("4".to_string(), "4".into()));
+        assert_eq!(workspace_store.compile().statements[1], four);
+
+        let hypothesis_result = workspace_store.add_parsed_hypothesis("8/4");
+        assert!(hypothesis_result.is_ok(), "{:?}", hypothesis_result);
+        assert_eq!(workspace_store.compile().statements.len(), 3);
+        workspace_store
+            .add_algorithm(&AlgorithmType::Division, "/", "Real")
+            .unwrap();
+        assert_eq!(workspace_store.compile().transformations.len(), 2);
+
+        let _transformed = workspace_store.try_transform_into_parsed("2").unwrap();
+        assert_eq!(workspace_store.compile().statements.len(), 4);
+        assert_eq!(workspace_store.compile().statements[3], two);
+
+        assert!(workspace_store.add_parsed_hypothesis("3*0").is_ok());
+        assert_eq!(workspace_store.compile().statements.len(), 5);
+        workspace_store
+            .add_algorithm(&AlgorithmType::Multiplication, "*", "Real")
+            .unwrap();
+        assert_eq!(workspace_store.compile().transformations.len(), 3);
+
+        let _transformed = workspace_store.try_transform_into_parsed("0").unwrap();
+        let zero = SymbolNode::leaf(Symbol::new("0".to_string(), "0".into()));
+        assert_eq!(workspace_store.compile().statements.len(), 6);
+        assert_eq!(workspace_store.compile().statements[5], zero);
+    }
+
+    #[test]
     fn test_workspace_transforms_statement_and_maintains_provenance() {
         let types = TypeHierarchy::new();
         let workspace = Workspace::new(types, vec![], vec![]);
@@ -1854,7 +2207,11 @@ mod test_workspace {
         // fail
         assert_eq!(
             workspace_store.compile().get_provenance(1),
-            Ok(Provenance::Derived((0, 0, vec![])))
+            Ok(Provenance::Derived((
+                0,
+                StatementProvenance::Single(0),
+                vec![]
+            )))
         );
 
         assert_eq!(

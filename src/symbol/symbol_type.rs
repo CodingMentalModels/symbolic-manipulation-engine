@@ -1,20 +1,17 @@
 use std::collections::{HashMap, HashSet};
 use std::fmt;
-use std::str::FromStr;
+use std::hash::{Hash, Hasher};
 
 use serde::{
-    de::{self, MapAccess, Visitor},
+    de::{MapAccess, Visitor},
     ser::{SerializeMap, Serializer},
     Deserialize, Deserializer, Serialize,
 };
 use ts_rs::TS;
 
 use super::symbol_node::SymbolNodeRoot;
+use super::symbol_node::{Symbol, SymbolNode};
 use super::transformation::Transformation;
-use super::{
-    symbol_node::{Symbol, SymbolNode},
-    transformation::ExplicitTransformation,
-};
 use crate::constants::*;
 
 pub type TypeName = String;
@@ -343,12 +340,23 @@ impl TypeHierarchy {
                 self.binds_statement_or_error(t.get_from())?;
                 self.binds_statement_or_error(t.get_to())
             }
-            Transformation::AdditionAlgorithm(a) => {
-                if self.contains_type(&a.get_input_type()) {
+            Transformation::AlgorithmTransformation(a) => {
+                if a.get_input_type()
+                    .get_parents()
+                    .iter()
+                    .all(|parent| self.contains_type(&parent))
+                {
                     Ok(())
                 } else {
+                    let missing_types = a
+                        .get_input_type()
+                        .get_parents()
+                        .clone()
+                        .into_iter()
+                        .filter(|parent| !self.contains_type(&parent))
+                        .collect();
                     Err(TypeError::StatementIncludesTypesNotInHierarchy(
-                        vec![a.get_input_type()].into_iter().collect(),
+                        missing_types,
                     ))
                 }
             }
@@ -401,6 +409,13 @@ impl TypeHierarchy {
     pub fn get_shared_types(&self, other: &Self) -> HashSet<Type> {
         self.get_types()
             .intersection(&other.get_types())
+            .cloned()
+            .collect()
+    }
+
+    pub fn get_missing_types(&self, other: &Self) -> HashSet<(Type, Type)> {
+        self.get_parent_child_pairs()
+            .difference(&other.get_parent_child_pairs())
             .cloned()
             .collect()
     }
@@ -540,9 +555,35 @@ pub struct GeneratedType {
     parents: HashSet<Type>,
 }
 
+impl Hash for GeneratedType {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        self.condition.hash(state);
+
+        for parent in &self.parents {
+            parent.hash(state);
+        }
+    }
+}
+
 impl GeneratedType {
     pub fn new(condition: GeneratedTypeCondition, parents: HashSet<Type>) -> Self {
         Self { condition, parents }
+    }
+
+    pub fn new_with_one_parent(condition: GeneratedTypeCondition, parent: Type) -> Self {
+        Self::new(condition, vec![parent].into_iter().collect())
+    }
+
+    pub fn new_numeric(parent: Type) -> Self {
+        Self::new_with_one_parent(GeneratedTypeCondition::IsNumeric, parent)
+    }
+
+    pub fn new_integer(parent: Type) -> Self {
+        Self::new_with_one_parent(GeneratedTypeCondition::IsInteger, parent)
+    }
+
+    pub fn get_parents(&self) -> &HashSet<Type> {
+        &self.parents
     }
 
     pub fn generate(&self, statement: &SymbolNode) -> Vec<(Type, HashSet<Type>)> {
@@ -682,7 +723,7 @@ pub enum TypeError {
 mod test_type {
     use crate::{
         parsing::{interpretation::Interpretation, parser::Parser},
-        symbol::symbol_node::Symbol,
+        symbol::{symbol_node::Symbol, transformation::ExplicitTransformation},
     };
 
     use super::*;

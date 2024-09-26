@@ -1,3 +1,4 @@
+use log::{debug, trace};
 use std::collections::{HashMap, HashSet};
 
 use crate::constants::MAX_ADDITIONAL_VALID_TRANSFORMATION_DEPTH;
@@ -6,13 +7,14 @@ use crate::symbol::symbol_node::{Symbol, SymbolNode, SymbolNodeError};
 use crate::symbol::symbol_type::{Type, TypeError};
 use serde::{Deserialize, Serialize};
 
+use super::algorithm::AlgorithmType;
 use super::symbol_node::{SymbolName, SymbolNodeAddress, SymbolNodeRoot};
-use super::symbol_type::TypeHierarchy;
+use super::symbol_type::{GeneratedType, TypeHierarchy};
 
 #[derive(Clone, Debug, Hash, PartialEq, Eq, Serialize, Deserialize)]
 pub enum Transformation {
     ExplicitTransformation(ExplicitTransformation),
-    AdditionAlgorithm(AdditionAlgorithm),
+    AlgorithmTransformation(AlgorithmTransformation),
     ApplyToBothSidesTransformation(ApplyToBothSidesTransformation),
 }
 
@@ -22,9 +24,9 @@ impl From<ExplicitTransformation> for Transformation {
     }
 }
 
-impl From<AdditionAlgorithm> for Transformation {
-    fn from(algorithm: AdditionAlgorithm) -> Self {
-        Self::AdditionAlgorithm(algorithm)
+impl From<AlgorithmTransformation> for Transformation {
+    fn from(algorithm: AlgorithmTransformation) -> Self {
+        Self::AlgorithmTransformation(algorithm)
     }
 }
 
@@ -38,7 +40,7 @@ impl Transformation {
     pub fn to_symbol_string(&self) -> String {
         match self {
             Self::ExplicitTransformation(t) => t.to_symbol_string(),
-            Self::AdditionAlgorithm(t) => t.to_symbol_string(),
+            Self::AlgorithmTransformation(t) => t.to_symbol_string(),
             Self::ApplyToBothSidesTransformation(t) => t.to_symbol_string(),
         }
     }
@@ -50,7 +52,7 @@ impl Transformation {
     ) -> Result<SymbolNode, TransformationError> {
         match self {
             Self::ExplicitTransformation(t) => t.typed_relabel_and_transform(hierarchy, statement),
-            Self::AdditionAlgorithm(t) => t.transform(hierarchy, statement),
+            Self::AlgorithmTransformation(t) => t.transform(hierarchy, statement),
             Self::ApplyToBothSidesTransformation(t) => t.transform(hierarchy, statement),
         }
     }
@@ -102,6 +104,10 @@ impl Transformation {
         // MAX_ADDITIONAL_VALID_TRANSFORMATION_DEPTH to limit.
         // We also implement our own call stack to avoid stack overflows and make it easier to
         // inspect the contents
+        debug!(
+            "get_valid_transformations({})",
+            statement.to_symbol_string()
+        );
         let mut call_stack = vec![(statement.clone(), true, false, 0)];
         let mut already_processed: HashSet<SymbolNode> = HashSet::new();
         let mut child_to_valid_transformations: HashMap<SymbolNode, HashSet<SymbolNode>> =
@@ -112,6 +118,13 @@ impl Transformation {
         while let Some((current_statement, should_return, are_children_processed, depth)) =
             call_stack.pop()
         {
+            trace!(
+                "({}, {}, {}, {})",
+                current_statement.to_symbol_string(),
+                should_return,
+                are_children_processed,
+                depth,
+            );
             if !are_children_processed {
                 // Push the statement back onto the stack with children marked as processed
                 // since we're about to process them
@@ -130,15 +143,13 @@ impl Transformation {
                     .collect::<HashSet<_>>();
                 match self.transform_at(hierarchy, &current_statement, vec![]) {
                     Ok(result) => {
-                        // Also push the transformed statement on so that it gets processed
                         let final_max_depth = max_depth.saturating_sub(depth);
 
+                        // Also push the transformed statement on so that it gets processed
                         valid_roots.insert(result.clone());
-                        if (!already_processed.contains(&result))
-                            && (result.get_depth() <= final_max_depth)
-                        {
-                            call_stack.push((result.clone(), should_return, false, depth));
 
+                        // Bail out if we've gotten too deep
+                        if result.get_depth() <= final_max_depth {
                             // Log the transformation as a valid one
                             child_to_valid_transformations
                                 .entry(current_statement.clone())
@@ -148,6 +159,15 @@ impl Transformation {
                                 .or_insert_with(|| {
                                     vec![result.clone()].into_iter().collect::<HashSet<_>>()
                                 });
+
+                            // Push the result onto the call stack for further processing
+                            if !already_processed.contains(&result) {
+                                call_stack.push((result.clone(), should_return, false, depth));
+                            } else {
+                                debug!("Already processed!");
+                            }
+                        } else {
+                            debug!("Max depth reached!");
                         }
                     }
                     _ => {}
@@ -163,7 +183,7 @@ impl Transformation {
                         to_return.extend(result.clone());
                     }
 
-                    // Log the child transformations valid
+                    // Log the child transformations as valid
                     child_to_valid_transformations
                         .entry(to_apply.clone())
                         .and_modify(|value| {
@@ -252,14 +272,14 @@ impl Transformation {
     pub fn to_interpreted_string(&self, interpretations: &Vec<Interpretation>) -> String {
         match self {
             Self::ExplicitTransformation(t) => t.to_interpreted_string(interpretations),
-            Self::AdditionAlgorithm(a) => a.to_string(),
+            Self::AlgorithmTransformation(a) => a.to_string(),
             Self::ApplyToBothSidesTransformation(t) => t.to_interpreted_string(interpretations),
         }
     }
 
     pub fn contains_arbitrary_nodes(&self) -> bool {
         match self {
-            Self::AdditionAlgorithm(_) => false,
+            Self::AlgorithmTransformation(_) => false,
             Self::ExplicitTransformation(t) => t.contains_arbitrary_nodes(),
             Self::ApplyToBothSidesTransformation(t) => {
                 t.get_transformation().contains_arbitrary_nodes()
@@ -269,7 +289,7 @@ impl Transformation {
 
     pub fn get_arbitrary_nodes(&self) -> HashSet<SymbolNode> {
         match self {
-            Self::AdditionAlgorithm(_) => HashSet::new(),
+            Self::AlgorithmTransformation(_) => HashSet::new(),
             Self::ExplicitTransformation(t) => t.get_arbitrary_nodes(),
             Self::ApplyToBothSidesTransformation(t) => t.get_transformation().get_arbitrary_nodes(),
         }
@@ -281,7 +301,7 @@ impl Transformation {
         substatements: &HashSet<SymbolNode>,
     ) -> Result<HashSet<Self>, TransformationError> {
         match self {
-            Self::AdditionAlgorithm(_) => Ok(vec![self.clone()].into_iter().collect()),
+            Self::AlgorithmTransformation(_) => Ok(vec![self.clone()].into_iter().collect()),
             Self::ExplicitTransformation(t) => Ok(t
                 .instantiate_arbitrary_nodes(hierarchy, substatements)?
                 .into_iter()
@@ -297,29 +317,39 @@ impl Transformation {
 }
 
 #[derive(Clone, Debug, Hash, PartialEq, Eq, Serialize, Deserialize)]
-pub struct AdditionAlgorithm {
+pub struct AlgorithmTransformation {
+    algorithm_type: AlgorithmType,
     operator: Symbol,
-    input_type: Type,
+    input_type: GeneratedType,
 }
 
-impl AdditionAlgorithm {
-    pub fn new(operator: Symbol, input_type: Type) -> Self {
+impl AlgorithmTransformation {
+    pub fn new(algorithm_type: AlgorithmType, operator: Symbol, input_type: GeneratedType) -> Self {
         Self {
+            algorithm_type,
             operator,
             input_type,
         }
     }
 
     pub fn to_symbol_string(&self) -> String {
-        format!("AdditionAlgorithm({})", self.operator.to_string())
+        format!(
+            "{}({})",
+            self.algorithm_type.to_string(),
+            self.operator.to_string()
+        )
     }
 
     pub fn get_operator(&self) -> Symbol {
         self.operator.clone()
     }
 
-    pub fn get_input_type(&self) -> Type {
+    pub fn get_input_type(&self) -> GeneratedType {
         self.input_type.clone()
+    }
+
+    pub fn get_algorithm_type(&self) -> AlgorithmType {
+        self.algorithm_type.clone()
     }
 
     pub fn transform(
@@ -328,20 +358,21 @@ impl AdditionAlgorithm {
         statement: &SymbolNode,
     ) -> Result<SymbolNode, TransformationError> {
         if !statement.has_children() {
-            if hierarchy
-                .is_subtype_of(
-                    &statement.get_symbol()?.get_evaluates_to_type(),
-                    &self.input_type,
-                )
-                .map_err(|e| Into::<TransformationError>::into(e))?
-            {
+            if self.input_type.satisfies_condition(statement.get_symbol()?) {
                 return Ok(statement.clone());
             } else {
-                return Err(TransformationError::NoValidTransformations);
+                return Err(
+                    TransformationError::GeneratedTypeConditionFailedDuringAlgorithm(
+                        statement
+                            .get_symbol()
+                            .expect("We already checked it above.")
+                            .clone(),
+                    ),
+                );
             }
         }
 
-        if statement.get_n_children() != 2 {
+        if statement.get_n_children() != 2 || statement.get_symbol()? != &self.get_operator() {
             return Err(TransformationError::NoValidTransformations);
         }
 
@@ -349,22 +380,18 @@ impl AdditionAlgorithm {
         let left = self.transform(hierarchy, &children[0])?;
         let right = self.transform(hierarchy, &children[1])?;
 
-        let left_value = Self::try_parse_number(&left.get_root_as_string())?;
-        let right_value = Self::try_parse_number(&right.get_root_as_string())?;
-        // TODO This will overflow on big enough numbers
-        let final_value = left_value + right_value;
-        Ok(SymbolNode::leaf(Symbol::new(
-            final_value.to_string(),
-            self.input_type.clone(),
-        )))
+        let final_value = self
+            .algorithm_type
+            .transform(&left.get_root_as_string(), &right.get_root_as_string())?;
+        let to_return = SymbolNode::leaf(Symbol::new_with_same_type_as_value(&final_value));
+        Ok(to_return)
     }
 
     pub fn to_string(&self) -> String {
         format!(
-            "{} {} {}",
-            self.input_type.to_string(),
+            "{}({})",
+            self.algorithm_type.to_string(),
             self.operator.get_name(),
-            self.input_type.to_string()
         )
         .to_string()
     }
@@ -597,10 +624,15 @@ impl ExplicitTransformation {
         hierarchy: &TypeHierarchy,
         substatements: &HashSet<SymbolNode>,
     ) -> Result<HashSet<Self>, TransformationError> {
+        debug!(
+            "instantiate_arbitrary_nodes for {}",
+            self.to_symbol_string()
+        );
         self.validate_arbitrary_nodes()?;
 
         let mut to_return = HashSet::new();
         for arbitrary_node in self.get_arbitrary_nodes() {
+            trace!("arbitrary_node: {:?}", arbitrary_node);
             let substatement_predicates = substatements
                 .iter()
                 .filter_map(|s| {
@@ -615,14 +647,17 @@ impl ExplicitTransformation {
                 .flatten()
                 .collect::<HashSet<_>>();
             for predicate in substatement_predicates {
-                let new_from = self
-                    .from
+                trace!("predicate: {}", predicate.to_symbol_string());
+                let predicate_symbol_names = predicate.get_symbol_names();
+                let disambiguated_from = self.from.relabel_to_avoid(&predicate_symbol_names);
+                let disambiguated_to = self.to.relabel_to_avoid(&predicate_symbol_names);
+                let new_from = disambiguated_from
                     .replace_arbitrary_using_predicate(arbitrary_node.get_symbol()?, &predicate)?;
-                let new_to = self
-                    .to
+                let new_to = disambiguated_to
                     .replace_arbitrary_using_predicate(arbitrary_node.get_symbol()?, &predicate)?;
 
                 let transform = ExplicitTransformation::new(new_from, new_to);
+                trace!("transform: {}", transform.to_symbol_string());
                 to_return.insert(transform);
             }
         }
@@ -825,6 +860,7 @@ pub enum TransformationError {
     ApplyToBothSidesCalledOnNChildren(usize),
     StatementTypesDoNotMatch,
     NoValidTransformations,
+    GeneratedTypeConditionFailedDuringAlgorithm(Symbol),
     TransformCalledOnArbitrary,
     UnableToParse(SymbolName),
     ArbitraryNodeHasNonOneChildren,
@@ -855,7 +891,7 @@ impl From<TypeError> for TransformationError {
 mod test_transformation {
     use crate::{
         parsing::{interpretation::Interpretation, parser::Parser, tokenizer::Token},
-        symbol::symbol_node::SymbolNodeRoot,
+        symbol::{symbol_node::SymbolNodeRoot, symbol_type::GeneratedTypeCondition},
     };
 
     use super::*;
@@ -870,6 +906,7 @@ mod test_transformation {
             .add_child_to_parent("Integer".into(), Type::Object)
             .unwrap();
         let interpretations = vec![
+            Interpretation::infix_operator("=_0".into(), 1, "=".into()), //Disambiguation
             Interpretation::infix_operator("=".into(), 1, "=".into()),
             Interpretation::infix_operator("&".into(), 2, "&".into()),
             Interpretation::outfix_operator(("|".into(), "|".into()), 2, "Integer".into()),
@@ -880,7 +917,12 @@ mod test_transformation {
 
         let parser = Parser::new(interpretations.clone());
 
-        let custom_tokens = vec!["=".to_string(), "&".to_string(), "|".to_string()];
+        let custom_tokens = vec![
+            "=_0".to_string(),
+            "=".to_string(),
+            "&".to_string(),
+            "|".to_string(),
+        ];
 
         let parse = |s: &str| parser.parse_from_string(custom_tokens.clone(), s).unwrap();
 
@@ -888,6 +930,7 @@ mod test_transformation {
         let q = parse("q");
         let f_of_p = parse("F(p)");
         let p_equals_p = parse("p=p");
+        let p_equals_0_p = parse("p=_0p");
         let reflexivity = ExplicitTransformation::new(f_of_p.clone(), p_equals_p.clone());
 
         let substatements = vec![p.clone(), q.clone(), p_equals_p.clone()]
@@ -895,14 +938,28 @@ mod test_transformation {
             .collect::<HashSet<_>>();
         let expected: HashSet<_> = vec![
             ExplicitTransformation::new(p.clone(), p_equals_p.clone()),
-            ExplicitTransformation::new(p_equals_p.clone(), p_equals_p.clone()),
+            ExplicitTransformation::new(p_equals_p.clone(), p_equals_0_p.clone()),
         ]
         .into_iter()
         .collect();
         let actual = reflexivity
             .instantiate_arbitrary_nodes(&types, &substatements)
             .unwrap();
-        assert_eq!(actual, expected);
+        assert_eq!(
+            actual,
+            expected,
+            "actual:\n{}\n\nexpected:\n{}",
+            actual
+                .iter()
+                .map(|t| t.to_interpreted_string(&interpretations))
+                .collect::<Vec<_>>()
+                .join("\n"),
+            expected
+                .iter()
+                .map(|t| t.to_interpreted_string(&interpretations))
+                .collect::<Vec<_>>()
+                .join("\n"),
+        );
     }
 
     #[test]
@@ -915,12 +972,15 @@ mod test_transformation {
             .add_child_to_parent("Integer".into(), Type::Object)
             .unwrap();
         let interpretations = vec![
+            Interpretation::infix_operator("=_0".into(), 1, "Boolean".into()), // Disambiguation
             Interpretation::infix_operator("=".into(), 1, "Boolean".into()),
             Interpretation::infix_operator("&".into(), 2, "Boolean".into()),
             Interpretation::outfix_operator(("|".into(), "|".into()), 2, "Integer".into()),
             Interpretation::postfix_operator("!".into(), 3, "Integer".into()),
             Interpretation::prefix_operator("-".into(), 4, "Integer".into()),
+            Interpretation::singleton("p_0", "Boolean".into()), // Disambiguation
             Interpretation::singleton("p", "Boolean".into()),
+            Interpretation::singleton("q_0", "Boolean".into()), // Disambiguation
             Interpretation::singleton("q", "Boolean".into()),
             Interpretation::singleton("x", "Integer".into()),
             Interpretation::singleton("y", "Integer".into()),
@@ -932,6 +992,7 @@ mod test_transformation {
         let parser = Parser::new(interpretations.clone());
 
         let custom_tokens = vec![
+            "=_0".to_string(),
             "=".to_string(),
             "&".to_string(),
             "|".to_string(),
@@ -959,9 +1020,8 @@ mod test_transformation {
             .collect::<HashSet<_>>();
         let expected = vec![
             ExplicitTransformation::new(p_equals_q.clone(), p_equals_q.clone()),
-            ExplicitTransformation::new(p_equals_q.clone(), parse("(p=p)=(p=q)")),
-            ExplicitTransformation::new(p_equals_q.clone(), parse("(p=q)=(q=q)")),
-            ExplicitTransformation::new(p_equals_q.clone(), p_equals_q.clone()),
+            ExplicitTransformation::new(parse("p_0=_0q"), parse("(p=p_0)=_0(p=q)")),
+            ExplicitTransformation::new(parse("p=_0q_0"), parse("(p=q)=_0(q_0=q)")),
         ]
         .into_iter()
         .collect();
@@ -1067,8 +1127,11 @@ mod test_transformation {
 
     #[test]
     fn test_transformation_applies_algorithm() {
-        let algorithm =
-            AdditionAlgorithm::new(Symbol::new("+".to_string(), "Real".into()), "Real".into());
+        let algorithm = AlgorithmTransformation::new(
+            AlgorithmType::Addition,
+            Symbol::new("+".to_string(), "Real".into()),
+            GeneratedType::new_numeric("Real".into()),
+        );
         let parser = Parser::new(vec![
             Interpretation::singleton("a", "Real".into()),
             Interpretation::singleton("b", "Real".into()),
@@ -1083,7 +1146,12 @@ mod test_transformation {
         let hierarchy = TypeHierarchy::chain(vec!["Real".into()]).unwrap();
         assert_eq!(
             algorithm.transform(&hierarchy, &from),
-            Err(TransformationError::UnableToParse("a".to_string()))
+            Err(
+                TransformationError::GeneratedTypeConditionFailedDuringAlgorithm(Symbol::new(
+                    "a".to_string(),
+                    "Real".into()
+                ))
+            )
         );
 
         let from = parser
@@ -1091,10 +1159,7 @@ mod test_transformation {
             .unwrap();
         assert_eq!(
             algorithm.transform(&hierarchy, &from),
-            Ok(SymbolNode::leaf(Symbol::new(
-                "3".to_string(),
-                "Real".into()
-            )))
+            Ok(SymbolNode::leaf(Symbol::new("3".to_string(), "3".into())))
         );
     }
 
@@ -1102,7 +1167,7 @@ mod test_transformation {
     fn test_transformation_gets_valid_transformations() {
         let mut hierarchy =
             TypeHierarchy::chain(vec!["Real".into(), "Integer".into(), "=".into()]).unwrap();
-        hierarchy.add_chain(vec!["Boolean".into()]);
+        hierarchy.add_chain(vec!["Boolean".into()]).unwrap();
         let interpretations = vec![
             Interpretation::infix_operator("=".into(), 1, "=".into()),
             Interpretation::singleton("x", "Integer".into()),
@@ -1248,7 +1313,7 @@ mod test_transformation {
             ExplicitTransformation::new(x_equals_y.clone(), arbitrary_x_equals_arbitrary_y.clone())
                 .into();
         assert_eq!(
-            transformation.transform(&hierarchy, &x_equals_y),
+            transformation.transform(&mut hierarchy, &x_equals_y),
             Err(TransformationError::TransformCalledOnArbitrary)
         );
     }

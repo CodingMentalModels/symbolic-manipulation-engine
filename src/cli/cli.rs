@@ -1,3 +1,4 @@
+use log::debug;
 use std::path::PathBuf;
 
 use clap::ArgMatches;
@@ -5,7 +6,10 @@ use serde_json::to_string;
 
 use crate::{
     cli::filesystem::FileSystem,
-    config::{CONTEXT_DIRECTORY_RELATIVE_PATH, STATE_DIRECTORY_RELATIVE_PATH},
+    config::{
+        CONTEXT_DIRECTORY_RELATIVE_PATH, STATE_DIRECTORY_RELATIVE_PATH, WORKSPACE_STATE_FILE_NAME,
+        WORKSPACE_STATE_TEST_INPUT_FILE_NAME,
+    },
     constants::*,
     context::context::Context,
     parsing::{
@@ -16,6 +20,7 @@ use crate::{
         parser::Parser,
     },
     symbol::{
+        algorithm::AlgorithmType,
         symbol_type::{GeneratedType, GeneratedTypeCondition, Type},
         transformation::ExplicitTransformation,
     },
@@ -26,27 +31,38 @@ use crate::{
 
 pub struct Cli {
     pub filesystem: FileSystem,
+    pub mode: CliMode,
 }
 
 impl Cli {
-    pub fn new(filesystem: FileSystem) -> Self {
-        Self { filesystem }
+    pub fn new(mut filesystem: FileSystem, mode: CliMode) -> Self {
+        if mode == CliMode::Testing {
+            Self::prepare_for_testing(&mut filesystem).unwrap();
+        }
+        Self { filesystem, mode }
+    }
+
+    fn prepare_for_testing(filesystem: &mut FileSystem) -> Result<(), String> {
+        remove_workspace_state_file(filesystem);
+        copy_test_input_to_workspace_state(filesystem)?;
+        Ok(())
+    }
+
+    fn get_relative_path(&self) -> &str {
+        STATE_DIRECTORY_RELATIVE_PATH
     }
 
     pub fn init(&self) -> Result<String, String> {
-        if self.filesystem.path_exists(STATE_DIRECTORY_RELATIVE_PATH) {
+        if self.filesystem.path_exists(self.get_relative_path()) {
             return Err("A workspace already exists in this directory".to_string());
         }
 
-        match self
-            .filesystem
-            .create_directory(STATE_DIRECTORY_RELATIVE_PATH)
-        {
-            true => println!("Created directory {}", STATE_DIRECTORY_RELATIVE_PATH),
+        match self.filesystem.create_directory(self.get_relative_path()) {
+            true => println!("Created directory {}", self.get_relative_path()),
             false => {
                 return Err(format!(
                     "Couldn't create directory {}",
-                    STATE_DIRECTORY_RELATIVE_PATH
+                    self.get_relative_path()
                 ));
             }
         }
@@ -60,7 +76,7 @@ impl Cli {
     }
 
     pub fn rmws(&self, sub_matches: &ArgMatches) -> Result<String, String> {
-        if !self.filesystem.path_exists(STATE_DIRECTORY_RELATIVE_PATH) {
+        if !self.filesystem.path_exists(self.get_relative_path()) {
             return Err("No workspace exists in this directory".to_string());
         }
 
@@ -68,10 +84,7 @@ impl Cli {
             return Err("Use the --force flag to remove the workspace".to_string());
         }
 
-        match self
-            .filesystem
-            .remove_directory(STATE_DIRECTORY_RELATIVE_PATH)
-        {
+        match self.filesystem.remove_directory(self.get_relative_path()) {
             true => {
                 return Ok(format!(
                     "Removed workspace in {}",
@@ -81,7 +94,7 @@ impl Cli {
             false => {
                 return Err(format!(
                     "Couldn't remove directory {}",
-                    STATE_DIRECTORY_RELATIVE_PATH
+                    self.get_relative_path()
                 ));
             }
         };
@@ -265,7 +278,7 @@ impl Cli {
             None => Err("No statement index provided.".to_string()),
             Some(index_string) => match index_string.parse::<usize>() {
                 Ok(statement_index) => {
-                    let workspace = workspace_store.compile();
+                    let mut workspace = workspace_store.compile();
                     let mut result = workspace
                         .get_valid_transformations_from(statement_index)
                         .map_err(|e| format!("Error getting valid transformations: {:?}", e))?
@@ -282,6 +295,7 @@ impl Cli {
             },
         }
     }
+
     pub fn add_transformation(&mut self, sub_matches: &ArgMatches) -> Result<String, String> {
         let mut workspace_store = self.load_workspace_store()?;
         let from_as_string = match sub_matches.get_one::<String>("from") {
@@ -294,10 +308,42 @@ impl Cli {
         };
         let is_equivalence = sub_matches.get_flag("is-equivalence");
         workspace_store
-            .add_parsed_transformation(is_equivalence, &to_as_string, &from_as_string)
+            .add_parsed_transformation(is_equivalence, &from_as_string, &to_as_string)
             .map_err(|e| format!("Workspace Error: {:?}", e).to_string())?;
         self.update_workspace_store(workspace_store)?;
         return Ok("Transformation added.".to_string());
+    }
+
+    pub fn add_algorithm(&mut self, sub_matches: &ArgMatches) -> Result<String, String> {
+        let mut workspace_store = self.load_workspace_store()?;
+        let algorithm_type = match sub_matches.get_one::<String>("algorithm-type") {
+            None => return Err("No algorithm-type provided.".to_string()),
+            Some(algorithm_type_string) => AlgorithmType::from_string(algorithm_type_string)
+                .map_err(|_| {
+                    format!(
+                        "Invalid Algorithm Type {}.  Valid types are:\n{}",
+                        algorithm_type_string,
+                        AlgorithmType::all()
+                            .into_iter()
+                            .map(|t| t.to_string())
+                            .collect::<Vec<_>>()
+                            .join("\n"),
+                    )
+                })?,
+        };
+        let operator = match sub_matches.get_one::<String>("operator") {
+            None => return Err("No operator provided.".to_string()),
+            Some(operator) => operator,
+        };
+        let input_type = match sub_matches.get_one::<String>("input-type") {
+            None => return Err("No input-type provided.".to_string()),
+            Some(input_type) => input_type,
+        };
+        workspace_store
+            .add_algorithm(&algorithm_type, &operator, &input_type)
+            .map_err(|e| format!("Workspace Error: {:?}", e).to_string())?;
+        self.update_workspace_store(workspace_store)?;
+        return Ok("Algorithm added.".to_string());
     }
 
     pub fn add_joint_transformation(&mut self, sub_matches: &ArgMatches) -> Result<String, String> {
@@ -445,8 +491,8 @@ impl Cli {
     ) -> Result<(), String> {
         workspace_store.truncate(N_TRANSACTIONS_TO_KEEP_IN_WORKSPACE_STORE);
         self.filesystem.write_file(
-            STATE_DIRECTORY_RELATIVE_PATH,
-            "workspace.toml",
+            self.get_relative_path(),
+            WORKSPACE_STATE_FILE_NAME,
             workspace_store
                 .serialize()
                 .map_err(|e| format!("{:?}", e))?,
@@ -454,23 +500,37 @@ impl Cli {
         )
     }
 
-    fn load_workspace_store(&self) -> Result<WorkspaceTransactionStore, String> {
-        if !self.filesystem.path_exists(STATE_DIRECTORY_RELATIVE_PATH) {
-            return Err("No workspace exists in this directory".to_string());
+    pub fn load_workspace_store(&self) -> Result<WorkspaceTransactionStore, String> {
+        if !self.filesystem.path_exists(self.get_relative_path()) {
+            return Err(format!(
+                "No workspace exists in this directory: {}",
+                self.get_relative_path()
+            )
+            .to_string());
         }
 
         match self
             .filesystem
-            .read_file(STATE_DIRECTORY_RELATIVE_PATH, "workspace.toml")
+            .read_file(self.get_relative_path(), WORKSPACE_STATE_FILE_NAME)
         {
             Ok(contents) => match WorkspaceTransactionStore::deserialize(&contents) {
-                Ok(workspace_store) => return Ok(workspace_store),
+                Ok(workspace_store) => {
+                    debug!(
+                        "Loaded workspace store:\n{:?}\nWorkspace:\n{:?}",
+                        workspace_store,
+                        workspace_store.compile()
+                    );
+                    return Ok(workspace_store);
+                }
                 Err(e) => {
-                    return Err(format!("Couldn't deserialize workspace.toml: {}", e));
+                    return Err(format!(
+                        "Couldn't deserialize {}: {}",
+                        WORKSPACE_STATE_FILE_NAME, e
+                    ));
                 }
             },
             Err(_) => {
-                return Err("Couldn't read workspace.toml".to_string());
+                return Err(format!("Couldn't read {}", WORKSPACE_STATE_FILE_NAME).to_string());
             }
         };
     }
@@ -480,9 +540,20 @@ impl Cli {
     }
 }
 
-#[cfg(test)]
-mod test_cli {
-    use crate::symbol::symbol_type::TypeHierarchy;
+fn copy_test_input_to_workspace_state(filesystem: &mut FileSystem) -> Result<(), String> {
+    filesystem.copy_file(
+        STATE_DIRECTORY_RELATIVE_PATH,
+        WORKSPACE_STATE_TEST_INPUT_FILE_NAME,
+        WORKSPACE_STATE_FILE_NAME,
+    )
+}
 
-    use super::*;
+fn remove_workspace_state_file(filesystem: &mut FileSystem) {
+    let _removed = filesystem.remove_file(STATE_DIRECTORY_RELATIVE_PATH, WORKSPACE_STATE_FILE_NAME);
+}
+
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
+pub enum CliMode {
+    Production,
+    Testing,
 }
