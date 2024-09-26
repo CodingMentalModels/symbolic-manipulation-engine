@@ -405,7 +405,7 @@ impl Workspace {
     }
 
     pub fn get_valid_transformations_from(
-        &mut self,
+        &self,
         statement_index: StatementIndex,
     ) -> Result<Vec<SymbolNode>, WorkspaceError> {
         let from_statement = self.get_statement(statement_index)?;
