@@ -1505,17 +1505,6 @@ mod test_workspace {
                 .collect::<Vec<_>>()
                 .join("\n")
         );
-        //        assert_eq!(
-        //            actual,
-        //            expected,
-        //            "\n{}",
-        //            actual
-        //                .clone()
-        //                .into_iter()
-        //                .map(|(t, _)| t.to_symbol_string())
-        //                .collect::<Vec<_>>()
-        //                .join("\n")
-        //        );
     }
 
     #[test]
