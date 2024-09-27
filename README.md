@@ -6,11 +6,9 @@ The Symbolic Manipulation Engine is an extensible engine for defining allowable 
 
 It's currently under development, sometimes live at https://twitch.tv/codingmentalmodels.
 
-A VSCode front end is also under development but not currently public.
+A VSCode front-end is also under development but not currently public.
 
 ## Upcoming Features
-- Tautologies -- Transformations requiring no starting statement.
-- Algorithms for simplifying other arithmetic expressions (currently only Addition exists).
 - LaTeX support
 
 ## User Stories
@@ -70,20 +68,25 @@ A type system is necessary because:
 - When we write math, we implicitly know what types things are, and notation, etc. reflects that.  
 
 Our type system should:
-- Model and enforce a type hierarchy, to allow e.g. $\mathbb{N} \subset \mathbb{Z} \subset \mathbb{Q} \subset \ldots$.  
+- Model and enforce a `TypeHierarchy`, to allow e.g. $\mathbb{N} \subset \mathbb{Z} \subset \mathbb{Q} \subset \ldots$.  
 - Allow transformations to be predicated on the types of the variables involved.
 
-Our symbols then have:
-- An arity (could be 0)
+Our `Symbols` then have:
+- A name (how it appears)
 - A return type
+- Possibly children
 
-Expressions should be checked for unambiguous arities and return types.
+Because `Type`s and `Symbols` aren't semantic,
+- The engine is agnostic about what it means to have a statement.  Is it a true logical statement?  Is it one step in a series of calculations?  It doesn't matter.  It's just something that can be transformed with `Transformation`s.
+- The engine doesn't care if you try to write $p \and \not p$ or set up the Barber's paradox.  It doesn't try to stop you, but what you can do with that is probably going to be uninteresting.
 
-## Generic vs. Unique
+In order to facilitate higher order logic, there's a notion of an Arbitrary symbol in `Transformations`, which can be used to express things like:
+- Leibnitz Rule: `p=q -> Any(p)=Any(q)`
+- Mathematical Induction
 
-Symbols may be "Generic" or "Unique", with "Generic" symbols being interchangeable from a transformation perspective.
+## A note on Godel's Incompleteness Theorem
 
-e.g. the transformation $a = b => b = a$ could be defined for the generic symbols $a$, $b$, and the unique symbol $=$.  In that case $x = y$ would be transformable, but $x + y$ wouldn't be, because $=$ is a unique.
+TODO
 
 
 
