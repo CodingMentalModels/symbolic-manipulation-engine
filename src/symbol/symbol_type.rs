@@ -2,6 +2,8 @@ use std::collections::{HashMap, HashSet};
 use std::fmt;
 use std::hash::{Hash, Hasher};
 
+use regex::Regex;
+
 use serde::{
     de::{MapAccess, Visitor},
     ser::{SerializeMap, Serializer},
@@ -615,6 +617,7 @@ impl GeneratedType {
 pub enum GeneratedTypeCondition {
     IsInteger,
     IsNumeric,
+    SatisfiesRegex(String),
 }
 
 impl GeneratedTypeCondition {
@@ -627,6 +630,13 @@ impl GeneratedTypeCondition {
             Self::IsNumeric => {
                 // TODO: This will fail on big enough numbers
                 return symbol.get_name().parse::<f64>().is_ok();
+            }
+            Self::SatisfiesRegex(pattern) => {
+                if let Ok(regex) = Regex::new(pattern) {
+                    regex.is_match(&symbol.get_name())
+                } else {
+                    false
+                }
             }
         }
     }
