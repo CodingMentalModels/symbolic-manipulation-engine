@@ -84,6 +84,21 @@ In order to facilitate higher order logic, there's a notion of an Arbitrary symb
 - Leibnitz Rule: `p=q -> Any(p)=Any(q)`
 - Mathematical Induction
 
+## Deductive System
+
+You can use the engine as a deductive system by supplying the various rules as `Transformation`s.  For example,
+- $p, q$ -> $p \and q$
+
+What's more, the type system allows you to get quantification for free.
+- A `Type` can be viewed as a predicate, so a `Symbol` having that `Type` means that it satisfies the predicate.
+- For all quantification is free when a `Symbol` has a `Type` corresponding to the Predicate you care about.
+- Exists quantification can be done with a subtype corresponding to the particular element.
+
+Universal Elimination: If we have a statement S(x:U) then we can always write S(c:U) for free for any c:U.
+Universal Introduction: If we have a statement S(x:U) then we know that it holds for all U.
+Existential Elimination: If we have a statement S(x:V) where V is a subtype of U, then we can always state that x:U.
+Existential Introduction: If we have a statement S(x:V) where V is a subtype of U, then we know there's at least one x it holds for in U.
+
 ## A note on Godel's Incompleteness Theorem
 
 TODO
