@@ -848,6 +848,39 @@ mod test_parser {
     }
 
     #[test]
+    fn test_parser_parses_regex_generated_type() {
+        let plus = Interpretation::infix_operator("+".into(), 1, "+".into());
+        let regex_condition = GeneratedTypeCondition::SatisfiesRegex("[rowan]".to_string());
+        let variable = Interpretation::new(
+            regex_condition.clone().into(),
+            ExpressionType::Singleton,
+            DEFAULT_PRECEDENCE,
+            InterpretedType::SameAsValue,
+        );
+
+        let parser = Parser::new(vec![plus, variable]);
+        let a_plus_n = parser
+            .parse_from_string(vec!["+".to_string()], "a+n")
+            .unwrap();
+
+        let expected = SymbolNode::new_from_symbol(
+            Symbol::new("+".to_string(), "+".into()),
+            vec![SymbolNode::singleton("a"), SymbolNode::singleton("n")],
+        );
+        assert_eq!(a_plus_n, expected);
+
+        let a_plus_b = parser
+            .parse_from_string(vec!["+".to_string()], "a+b")
+            .unwrap();
+
+        let expected = SymbolNode::new_from_symbol(
+            Symbol::new("+".to_string(), "+".into()),
+            vec![SymbolNode::singleton("a"), SymbolNode::leaf_object("b")],
+        );
+        assert_eq!(a_plus_b, expected);
+    }
+
+    #[test]
     fn test_parser_parses_generated_type() {
         let plus = Interpretation::infix_operator("+".into(), 1, "+".into());
         let integer_condition = GeneratedTypeCondition::IsInteger;

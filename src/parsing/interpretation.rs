@@ -1,6 +1,8 @@
 use serde::{Deserialize, Serialize};
 use ts_rs::TS;
 
+use regex::Regex;
+
 use crate::{
     constants::*,
     parsing::parser::ParserError,
@@ -244,6 +246,17 @@ impl Interpretation {
         }
         match &self.condition {
             InterpretationCondition::Matches(token_to_match) => token == token_to_match,
+            InterpretationCondition::SatisfiesRegex(pattern) => {
+                if let Ok(regex) = Regex::new(pattern) {
+                    if let Token::Object(token_string) = token {
+                        regex.is_match(&token_string)
+                    } else {
+                        false
+                    }
+                } else {
+                    false
+                }
+            }
             InterpretationCondition::IsObject => {
                 if let Token::Object(_) = token {
                     return true;
@@ -287,6 +300,7 @@ pub enum InterpretationCondition {
     IsObject,
     IsInteger,
     IsNumeric,
+    SatisfiesRegex(String),
 }
 
 impl From<GeneratedTypeCondition> for InterpretationCondition {
@@ -294,6 +308,7 @@ impl From<GeneratedTypeCondition> for InterpretationCondition {
         match value {
             GeneratedTypeCondition::IsInteger => Self::IsInteger,
             GeneratedTypeCondition::IsNumeric => Self::IsNumeric,
+            GeneratedTypeCondition::SatisfiesRegex(s) => Self::SatisfiesRegex(s),
         }
     }
 }
@@ -307,6 +322,13 @@ impl InterpretationCondition {
             }
             Self::IsInteger => {
                 Interpretation::is_integer(&Token::Object(statement.get_root_as_string()))
+            }
+            Self::SatisfiesRegex(pattern) => {
+                if let Ok(regex) = Regex::new(pattern) {
+                    regex.is_match(&statement.get_root().get_name())
+                } else {
+                    false
+                }
             }
             Self::Matches(token) => {
                 if let Token::Object(s) = token {

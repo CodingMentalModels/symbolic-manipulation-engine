@@ -172,6 +172,9 @@ impl Cli {
             let generated_type_condition = match condition {
                 InterpretationCondition::IsInteger => GeneratedTypeCondition::IsInteger,
                 InterpretationCondition::IsNumeric => GeneratedTypeCondition::IsNumeric,
+                InterpretationCondition::SatisfiesRegex(p) => {
+                    GeneratedTypeCondition::SatisfiesRegex(p)
+                }
                 InterpretationCondition::IsObject => {
                     unimplemented!();
                 }
