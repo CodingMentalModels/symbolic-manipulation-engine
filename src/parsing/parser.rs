@@ -324,6 +324,51 @@ mod test_parser {
     }
 
     #[test]
+    fn test_parser_handles_overloaded_infix_and_prefix() {
+        let tokens = vec!["-".to_string()];
+
+        let minus = Interpretation::infix_operator("-".into(), 2, "-".into());
+        let negative = Interpretation::prefix_operator("-".into(), 1, "AdditiveInverse".into());
+        let to_integer = |s: &str| Interpretation::singleton(s.into(), "Integer".into());
+
+        let parser = Parser::new(vec![
+            to_integer("x"),
+            to_integer("y"),
+            minus.clone(),
+            negative.clone(),
+        ]);
+        let actual = parser.parse_from_string(tokens.clone(), "x--y");
+        let expected = SymbolNode::new(
+            Symbol::new_with_same_type_as_value("-").into(),
+            vec![
+                SymbolNode::leaf(Symbol::new("x".to_string(), "Integer".into())),
+                SymbolNode::new(
+                    Symbol::new("-".to_string(), "AdditiveInverse".into()).into(),
+                    vec![SymbolNode::leaf(Symbol::new(
+                        "y".to_string(),
+                        "Integer".into(),
+                    ))],
+                ),
+            ],
+        );
+        assert_eq!(actual.unwrap(), expected);
+
+        // Other order of interpretations shouldn't matter
+        let parser = Parser::new(vec![
+            to_integer("x"),
+            to_integer("y"),
+            negative.clone(),
+            minus.clone(),
+        ]);
+        let actual = parser.parse_from_string(tokens.clone(), "x--y");
+        assert_eq!(actual.unwrap(), expected);
+
+        let actual = parser.parse_from_string(tokens.clone(), "----y");
+        let expected = parser.parse_from_string(tokens.clone(), "-(-(-(-y)))");
+        assert_eq!(actual, expected);
+    }
+
+    #[test]
     fn test_parser_continues_on_infix() {
         let tokens = vec!["&".to_string(), "|".to_string()];
 
