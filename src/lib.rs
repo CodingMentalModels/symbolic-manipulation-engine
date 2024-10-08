@@ -67,6 +67,18 @@ pub fn build_cli() -> Command {
                 Arg::new("arbitrary").long("arbitrary").short('a').action(ArgAction::SetTrue).help("Will treat the resulting symbol as arbitrary over its output type.")
                 )
             )
+        .subcommand(Command::new("update-interpretation").about("Update an Interpretation from the Workspace by its index to have a new match string.")
+            .arg(
+                Arg::new("index").required(true).help("Index of interpretation to update (0-indexed).")
+            ).arg(
+                Arg::new("new-match-string").required(true).help("New string to match. Note that if this is applied to a non-match interpretation, it will yeild an error.")
+            ))
+        .subcommand(Command::new("duplicate-interpretation").about("Duplicate an Interpretation from the Workspace by its index and give it a new match string.")
+            .arg(
+                Arg::new("index").required(true).help("Index of interpretation to update (0-indexed).")
+            ).arg(
+                Arg::new("new-match-string").required(true).help("New string to match. Note that if this is applied to a non-match interpretation, it will yeild an error.")
+            ))
         .subcommand(Command::new("remove-interpretation").about("Remove an Interpretation from the Workspace by its index.")
             .arg(
                 Arg::new("index").required(true).help("Index of interpretation to remove (0-indexed).")

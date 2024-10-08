@@ -159,6 +159,17 @@ impl Workspace {
         }
     }
 
+    pub fn get_interpretation(
+        &self,
+        idx: InterpretationIndex,
+    ) -> Result<&Interpretation, WorkspaceError> {
+        if idx >= self.interpretations.len() {
+            Err(WorkspaceError::InvalidInterpretationIndex(idx))
+        } else {
+            Ok(&self.interpretations[idx])
+        }
+    }
+
     pub fn get_interpretations(&self) -> &Vec<Interpretation> {
         &self.interpretations
     }
@@ -291,6 +302,34 @@ impl Workspace {
         }
         self.interpretations.push(interpretation);
         Ok(())
+    }
+
+    pub fn update_interpretation(
+        &mut self,
+        interpretation_index: InterpretationIndex,
+        new_interpretation: Interpretation,
+    ) -> Result<Interpretation, WorkspaceError> {
+        if interpretation_index >= self.interpretations.len() {
+            return Err(WorkspaceError::InvalidInterpretationIndex(
+                interpretation_index,
+            ));
+        }
+        self.interpretations[interpretation_index] = new_interpretation.clone();
+        Ok(new_interpretation)
+    }
+
+    pub fn duplicate_interpretation(
+        &mut self,
+        interpretation_index: InterpretationIndex,
+    ) -> Result<Interpretation, WorkspaceError> {
+        if interpretation_index >= self.interpretations.len() {
+            return Err(WorkspaceError::InvalidInterpretationIndex(
+                interpretation_index,
+            ));
+        }
+        let new_interpretation = self.interpretations[interpretation_index].clone();
+        self.add_interpretation(new_interpretation.clone())?;
+        Ok(new_interpretation)
     }
 
     pub fn remove_interpretation(
@@ -759,6 +798,12 @@ impl WorkspaceTransactionStore {
             WorkspaceTransactionItem::AddInterpretation(interpretation) => {
                 workspace.add_interpretation(interpretation)?;
             }
+            WorkspaceTransactionItem::DuplicateInterpretation(idx) => {
+                workspace.duplicate_interpretation(idx)?;
+            }
+            WorkspaceTransactionItem::UpdateInterpretation(idx, interpretation) => {
+                workspace.update_interpretation(idx, interpretation)?;
+            }
             WorkspaceTransactionItem::RemoveInterpretation(index) => {
                 workspace.remove_interpretation(index)?;
             }
@@ -1054,7 +1099,9 @@ pub enum WorkspaceTransactionItem {
     AddType((Type, Type)), // New Type, Parent
     AddGeneratedType(GeneratedType),
     AddInterpretation(Interpretation),
-    RemoveInterpretation(usize),
+    DuplicateInterpretation(InterpretationIndex),
+    UpdateInterpretation(InterpretationIndex, Interpretation),
+    RemoveInterpretation(InterpretationIndex),
     AddHypothesis(SymbolNode),
     AddTransformation(Transformation),
     Derive((SymbolNode, Provenance)),
