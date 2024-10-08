@@ -222,8 +222,8 @@ kind = "sameAsValue"
 
 [[transactions.items]]
 
-[transactions.items.AddGeneratedType]
-condition = "IsNumeric"
+[transactions.items.AddGeneratedType.condition]
+kind = "isNumeric"
 
 [[transactions.items.AddGeneratedType.parents]]
 kind = "namedType"
