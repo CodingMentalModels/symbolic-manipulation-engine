@@ -215,10 +215,10 @@ impl Cli {
                     let to_return = workspace_store
                         .add(WorkspaceTransaction::new(vec![
                             WorkspaceTransactionItem::DuplicateInterpretation(index),
-                            WorkspaceTransactionItem::UpdateInterpretation(
+                            WorkspaceTransactionItem::UpdateInterpretation((
                                 new_idx,
                                 new_interpretation,
-                            ),
+                            )),
                         ]))
                         .map_err(|e| format!("Workspace Error: {:?}", e).to_string())
                         .map(|interpretation| {
@@ -251,10 +251,10 @@ impl Cli {
                         .map_err(|e| format!("Interpretation Error: {:?}", e));
                     let to_return = workspace_store
                         .add(
-                            WorkspaceTransactionItem::UpdateInterpretation(
+                            WorkspaceTransactionItem::UpdateInterpretation((
                                 index,
                                 new_interpretation,
-                            )
+                            ))
                             .into(),
                         )
                         .map_err(|e| format!("Workspace Error: {:?}", e).to_string())

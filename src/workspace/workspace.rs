@@ -801,7 +801,7 @@ impl WorkspaceTransactionStore {
             WorkspaceTransactionItem::DuplicateInterpretation(idx) => {
                 workspace.duplicate_interpretation(idx)?;
             }
-            WorkspaceTransactionItem::UpdateInterpretation(idx, interpretation) => {
+            WorkspaceTransactionItem::UpdateInterpretation((idx, interpretation)) => {
                 workspace.update_interpretation(idx, interpretation)?;
             }
             WorkspaceTransactionItem::RemoveInterpretation(index) => {
@@ -1100,7 +1100,7 @@ pub enum WorkspaceTransactionItem {
     AddGeneratedType(GeneratedType),
     AddInterpretation(Interpretation),
     DuplicateInterpretation(InterpretationIndex),
-    UpdateInterpretation(InterpretationIndex, Interpretation),
+    UpdateInterpretation((InterpretationIndex, Interpretation)),
     RemoveInterpretation(InterpretationIndex),
     AddHypothesis(SymbolNode),
     AddTransformation(Transformation),
