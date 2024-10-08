@@ -613,6 +613,7 @@ impl GeneratedType {
 }
 
 #[derive(Clone, Debug, Hash, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[serde(tag = "kind", content = "value", rename_all = "camelCase")]
 #[ts(export)]
 pub enum GeneratedTypeCondition {
     IsInteger,
