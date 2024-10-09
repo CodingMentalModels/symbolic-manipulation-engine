@@ -71,13 +71,13 @@ pub fn build_cli() -> Command {
             .arg(
                 Arg::new("index").required(true).help("Index of interpretation to update (0-indexed).")
             ).arg(
-                Arg::new("new-match-string").required(true).help("New string to match. Note that if this is applied to a non-match interpretation, it will yeild an error.")
+                Arg::new("new-match-string").required(true).help("New string to match. Note that if this is applied to a non-match interpretation, it will yield an error.")
             ))
         .subcommand(Command::new("duplicate-interpretation").about("Duplicate an Interpretation from the Workspace by its index and give it a new match string.")
             .arg(
                 Arg::new("index").required(true).help("Index of interpretation to update (0-indexed).")
             ).arg(
-                Arg::new("new-match-string").required(true).help("New string to match. Note that if this is applied to a non-match interpretation, it will yeild an error.")
+                Arg::new("new-match-string").required(true).help("New string to match. Note that if this is applied to a non-match interpretation, it will yield an error.")
             ))
         .subcommand(Command::new("remove-interpretation").about("Remove an Interpretation from the Workspace by its index.")
             .arg(
