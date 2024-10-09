@@ -194,6 +194,81 @@ impl Cli {
         return Ok("Interpretation added.".to_string());
     }
 
+    pub fn duplicate_interpretation(&mut self, sub_matches: &ArgMatches) -> Result<String, String> {
+        let mut workspace_store = self.load_workspace_store()?;
+        let workspace = workspace_store.compile();
+        match sub_matches.get_one::<String>("index") {
+            None => Err("Invalid Interpretation Index.".to_string()),
+            Some(index_string) => match index_string.parse::<usize>() {
+                Ok(index) => {
+                    let new_match_string = sub_matches
+                        .get_one::<String>("new-match-string")
+                        .ok_or("Invalid New Match String.")?;
+                    let mut new_interpretation = workspace
+                        .get_interpretation(index)
+                        .map_err(|e| format!("Workspace Error: {:?}", e))?
+                        .clone();
+                    new_interpretation
+                        .update_match_string(new_match_string)
+                        .map_err(|e| format!("Interpretation Error: {:?}", e))?;
+                    let new_idx = workspace.get_interpretations().len();
+                    let to_return = workspace_store
+                        .add(WorkspaceTransaction::new(vec![
+                            WorkspaceTransactionItem::DuplicateInterpretation(index),
+                            WorkspaceTransactionItem::UpdateInterpretation((
+                                new_idx,
+                                new_interpretation,
+                            )),
+                        ]))
+                        .map_err(|e| format!("Workspace Error: {:?}", e).to_string())
+                        .map(|interpretation| {
+                            format!("Updated Interpretation: {:?}", interpretation).to_string()
+                        });
+                    self.update_workspace_store(workspace_store)?;
+                    to_return
+                }
+                Err(_) => Err(format!("Unable to parse index: {}", index_string).to_string()),
+            },
+        }
+    }
+
+    pub fn update_interpretation(&mut self, sub_matches: &ArgMatches) -> Result<String, String> {
+        let mut workspace_store = self.load_workspace_store()?;
+        match sub_matches.get_one::<String>("index") {
+            None => Err("Invalid Interpretation Index.".to_string()),
+            Some(index_string) => match index_string.parse::<usize>() {
+                Ok(index) => {
+                    let new_match_string = sub_matches
+                        .get_one::<String>("new-match-string")
+                        .ok_or("Invalid New Match String.")?;
+                    let mut new_interpretation = workspace_store
+                        .compile()
+                        .get_interpretation(index)
+                        .map_err(|e| format!("Workspace Error: {:?}", e))?
+                        .clone();
+                    new_interpretation
+                        .update_match_string(new_match_string)
+                        .map_err(|e| format!("Interpretation Error: {:?}", e));
+                    let to_return = workspace_store
+                        .add(
+                            WorkspaceTransactionItem::UpdateInterpretation((
+                                index,
+                                new_interpretation,
+                            ))
+                            .into(),
+                        )
+                        .map_err(|e| format!("Workspace Error: {:?}", e).to_string())
+                        .map(|interpretation| {
+                            format!("Updated Interpretation: {:?}", interpretation).to_string()
+                        });
+                    self.update_workspace_store(workspace_store)?;
+                    to_return
+                }
+                Err(_) => Err(format!("Unable to parse index: {}", index_string).to_string()),
+            },
+        }
+    }
+
     pub fn remove_interpretation(&mut self, sub_matches: &ArgMatches) -> Result<String, String> {
         let mut workspace_store = self.load_workspace_store()?;
         match sub_matches.get_one::<String>("index") {

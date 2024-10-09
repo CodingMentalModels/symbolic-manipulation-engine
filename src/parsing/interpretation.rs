@@ -233,6 +233,19 @@ impl Interpretation {
             && self.output_type.could_produce(statement)
     }
 
+    pub fn update_match_string(
+        &mut self,
+        new_match_name: &str,
+    ) -> Result<String, InterpretationError> {
+        match &self.condition {
+            InterpretationCondition::Matches(_old_match) => {
+                self.condition = InterpretationCondition::Matches(new_match_name.into());
+                Ok(new_match_name.to_string())
+            }
+            condition => Err(InterpretationError::NonMatchCondition(condition.clone())),
+        }
+    }
+
     pub fn satisfies_condition(&self, so_far: &Option<SymbolNode>, token: &Token) -> bool {
         let is_ok_expression_type = match self.expression_type {
             ExpressionType::Singleton
@@ -290,6 +303,11 @@ impl Interpretation {
             return false;
         }
     }
+}
+
+#[derive(Clone, Debug, Hash, PartialEq, Eq, Serialize, Deserialize, TS)]
+pub enum InterpretationError {
+    NonMatchCondition(InterpretationCondition),
 }
 
 #[derive(Clone, Debug, Hash, PartialEq, Eq, Serialize, Deserialize, TS)]

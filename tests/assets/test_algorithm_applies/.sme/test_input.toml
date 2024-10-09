@@ -119,7 +119,9 @@ kind = "namedType"
 value = "Real"
 
 [[transactions.items.Snapshot.generated_types]]
-condition = "IsNumeric"
+
+[transactions.items.Snapshot.generated_types.condition]
+kind = "isNumeric"
 
 [[transactions.items.Snapshot.generated_types.parents]]
 kind = "namedType"
@@ -1025,8 +1027,8 @@ name = "+"
 kind = "namedType"
 value = "+"
 
-[transactions.items.Snapshot.transformations.AlgorithmTransformation.input_type]
-condition = "IsNumeric"
+[transactions.items.Snapshot.transformations.AlgorithmTransformation.input_type.condition]
+kind = "isNumeric"
 
 [[transactions.items.Snapshot.transformations.AlgorithmTransformation.input_type.parents]]
 kind = "namedType"
@@ -1044,8 +1046,8 @@ name = "*"
 kind = "namedType"
 value = "*"
 
-[transactions.items.Snapshot.transformations.AlgorithmTransformation.input_type]
-condition = "IsNumeric"
+[transactions.items.Snapshot.transformations.AlgorithmTransformation.input_type.condition]
+kind = "isNumeric"
 
 [[transactions.items.Snapshot.transformations.AlgorithmTransformation.input_type.parents]]
 kind = "namedType"

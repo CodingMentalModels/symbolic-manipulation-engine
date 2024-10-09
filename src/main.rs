@@ -26,6 +26,10 @@ fn main() {
         Some(("export-context", sub_matches)) => cli.export_context(sub_matches),
         Some(("ls-contexts", _sub_matches)) => cli.ls_contexts(),
         Some(("add-interpretation", sub_matches)) => cli.add_interpretation(sub_matches),
+        Some(("update-interpretation", sub_matches)) => cli.update_interpretation(sub_matches),
+        Some(("duplicate-interpretation", sub_matches)) => {
+            cli.duplicate_interpretation(sub_matches)
+        }
         Some(("remove-interpretation", sub_matches)) => cli.remove_interpretation(sub_matches),
         Some(("add-type", sub_matches)) => cli.add_type(sub_matches),
         Some(("add-algorithm", sub_matches)) => cli.add_algorithm(sub_matches),

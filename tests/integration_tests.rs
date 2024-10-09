@@ -78,3 +78,48 @@ fn test_applies_joint_transforms() {
         .unwrap();
     cli.ls().unwrap();
 }
+
+#[test]
+fn test_duplicates_interpretations() {
+    let root_dir = current_dir().unwrap();
+    let dir = root_dir.join(Path::new(
+        "tests\\assets\\test_duplicates_interpretations\\",
+    ));
+    let filesystem = FileSystem::new(dir);
+    let mut cli = Cli::new(filesystem, CliMode::Testing);
+    let matches = build_cli().get_matches_from(vec![
+        "symbolic-manipulation-engine",
+        "add-type",
+        "--",
+        "Integer",
+    ]);
+    cli.add_type(matches.subcommand_matches("add-type").unwrap())
+        .unwrap();
+    let matches = build_cli().get_matches_from(vec![
+        "symbolic-manipulation-engine",
+        "add-interpretation",
+        "--",
+        "Singleton",
+        "1",
+        "Integer",
+        "a",
+    ]);
+    cli.add_interpretation(matches.subcommand_matches("add-interpretation").unwrap())
+        .unwrap();
+    let matches = build_cli().get_matches_from(vec![
+        "symbolic-manipulation-engine",
+        "duplicate-interpretation",
+        "--",
+        "0",
+        "b",
+    ]);
+    cli.duplicate_interpretation(
+        matches
+            .subcommand_matches("duplicate-interpretation")
+            .unwrap(),
+    )
+    .unwrap();
+    let workspace_store = cli.load_workspace_store().unwrap();
+    let workspace = workspace_store.compile();
+    assert_eq!(workspace.get_interpretations().len(), 2);
+}
