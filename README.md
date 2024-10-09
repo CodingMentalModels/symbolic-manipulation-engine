@@ -2,7 +2,7 @@
 
 At the end of the day, math reduces to moving symbols around on a piece of paper. So why not let a computer do it instead?
 
-The Symbolic Manipulation Engine is an extensible engine for defining allowable symbolic manipulations, saving them into "Contexts" so that they can be reused / shared / etc., and creating tooling for parsing input (e.g. from a command line) and displaying output (LaTeX, etc.), such that doing math, physics, etc. is faster / easier than doing it on paper / blackboard / whiteboard, etc.
+The Symbolic Manipulation Engine is an extensible engine for defining allowable symbolic manipulations, saving them into "Contexts" so that they can be reused / shared / etc., and creating tooling for parsing input (e.g. from a command line) and displaying output (LaTeX, etc.), with the goal that doing math (and therefore physics, economics, etc.) is faster / easier / less error prone than doing it on paper / blackboard / whiteboard, etc.
 
 It's currently under development, sometimes live at https://twitch.tv/codingmentalmodels.
 
@@ -109,16 +109,10 @@ TODO
 
 ### Core Manipulations
 
-- `Symbol`s are pure syntax; they have no inherent meaning but have `Type`s, format strings, and (optionally) `LaTeX` representations.
-- `Type`s are also purely syntactic; they restrict the types of transformations that are valid.  For example:
-    - Integer (arity = 0), e.g. 2, 5, -2, x
-    - 2 (arity = 0), uniquely corresponds to the number 2.  Has $2 \in \mathbb{Z} \subset \mathbb{Q} \subset \mathbb{R} \ldots$ etc. as part of its type hierarchy.
-    - Proposition (arity = 0), e.g. p, q
-    - `+` (arity = 2, variable types, but we can define it on e.g. Quaternions and it'll apply to everything else in the type hierarchy)
-    - Function (arity = 2, the domain and the range)
-
-- `Statement`s are trees of `Symbol`s
-- `Transformation`s are rules for mapping one or more `Statement`s to a new `Statement`.  
+- `Symbol`s are pure syntax; they have no inherent meaning but have `Type`s.
+- `Type`s are also purely syntactic; they restrict the types of transformations that are valid.
+- `Statement`s are trees of `Symbol`s.
+- `Transformation`s are the engine's core primitives; a `Transformation` determines how to go from one `Statement` to the next, although it can also be a `Tautology` (a `Transformation` with no "from" statement) or a `JointTransformation` (a `Transformation` with two "from" statements). New `Transformation`s can be created by composing multiple `Transformation`s. While the engine is agnostic about the meaning of a `Transformation`, it's often useful to think about them as constituting postulates (when they've been added directly) or theorems (when they've been composed of other `Transformation`s).
 - `Context`s are groups of saved, allowable `Transformation`s which can be imported and used, e.g. one might have a `Basic Algebra` `Context`, which can perform algebraic manipulations.
 
 ### Context
