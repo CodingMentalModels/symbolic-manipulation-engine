@@ -761,6 +761,14 @@ impl WorkspaceTransactionStore {
         self.transactions[0..self.next_index].to_vec()
     }
 
+    pub fn get_types(&self) -> TypeHierarchy {
+        self.compile().get_types().clone()
+    }
+
+    pub fn get_type_names(&self) -> HashSet<String> {
+        self.get_types().get_type_names()
+    }
+
     pub fn compile(&self) -> Workspace {
         let mut workspace = Workspace::default();
         for transaction in self.get_live_transactions() {
@@ -1032,7 +1040,7 @@ impl WorkspaceTransactionStore {
         let mut items = Vec::new();
         let mut already_added = HashSet::new();
         for generated_type in workspace.get_generated_types().clone() {
-            for (t, parents) in generated_type.generate(statement) {
+            for (t, parents) in generated_type.generate(statement, &self.get_type_names()) {
                 if !already_added.contains(&t) && !workspace.get_types().contains_type(&t) {
                     items.extend(self.get_add_type_to_parents_items(t.clone(), &parents));
                     already_added.insert(t);

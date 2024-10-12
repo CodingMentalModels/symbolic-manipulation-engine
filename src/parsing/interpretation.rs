@@ -270,6 +270,7 @@ impl Interpretation {
                     false
                 }
             }
+            InterpretationCondition::SubtypeOf(_) => true,
             InterpretationCondition::IsObject => {
                 if let Token::Object(_) = token {
                     return true;
@@ -319,6 +320,7 @@ pub enum InterpretationCondition {
     IsInteger,
     IsNumeric,
     SatisfiesRegex(String),
+    SubtypeOf(Type),
 }
 
 impl From<GeneratedTypeCondition> for InterpretationCondition {
@@ -327,6 +329,7 @@ impl From<GeneratedTypeCondition> for InterpretationCondition {
             GeneratedTypeCondition::IsInteger => Self::IsInteger,
             GeneratedTypeCondition::IsNumeric => Self::IsNumeric,
             GeneratedTypeCondition::SatisfiesRegex(s) => Self::SatisfiesRegex(s),
+            GeneratedTypeCondition::SubtypeOf(parent) => Self::SubtypeOf(parent),
         }
     }
 }
@@ -348,6 +351,8 @@ impl InterpretationCondition {
                     false
                 }
             }
+            Self::SubtypeOf(_) => true, // Ideally this would check the parent but we don't have
+            // the TypeHierarchy here
             Self::Matches(token) => {
                 if let Token::Object(s) = token {
                     return s == &statement.get_root_as_string();

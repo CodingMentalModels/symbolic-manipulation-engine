@@ -408,6 +408,13 @@ impl TypeHierarchy {
         self.type_map.iter().map(|(t, _)| t).cloned().collect()
     }
 
+    pub fn get_type_names(&self) -> HashSet<String> {
+        self.get_types()
+            .into_iter()
+            .map(|t| t.to_string())
+            .collect()
+    }
+
     pub fn get_shared_types(&self, other: &Self) -> HashSet<Type> {
         self.get_types()
             .intersection(&other.get_types())
@@ -588,11 +595,15 @@ impl GeneratedType {
         &self.parents
     }
 
-    pub fn generate(&self, statement: &SymbolNode) -> Vec<(Type, HashSet<Type>)> {
+    pub fn generate(
+        &self,
+        statement: &SymbolNode,
+        existing_type_names: &HashSet<String>,
+    ) -> Vec<(Type, HashSet<Type>)> {
         let mut to_return: Vec<(Type, HashSet<Type>)> = statement
             .get_children()
             .iter()
-            .map(|child| self.generate(child))
+            .map(|child| self.generate(child, existing_type_names))
             .flatten()
             .collect();
         if !statement.is_join()
@@ -602,7 +613,20 @@ impl GeneratedType {
                     .expect("We checked that statement isn't join."),
             )
         {
-            to_return.push((statement.get_root_as_string().into(), self.parents.clone()));
+            match &self.condition {
+                GeneratedTypeCondition::SubtypeOf(parent) => {
+                    let statement_with_new_name = statement.relabel_to_avoid(existing_type_names);
+                    to_return.push((
+                        statement_with_new_name.get_root_as_string().into(),
+                        vec![parent.clone()].into_iter().collect(),
+                    ));
+                }
+                GeneratedTypeCondition::IsInteger
+                | GeneratedTypeCondition::IsNumeric
+                | GeneratedTypeCondition::SatisfiesRegex(_) => {
+                    to_return.push((statement.get_root_as_string().into(), self.parents.clone()));
+                }
+            }
         }
         to_return
     }
@@ -619,6 +643,7 @@ pub enum GeneratedTypeCondition {
     IsInteger,
     IsNumeric,
     SatisfiesRegex(String),
+    SubtypeOf(Type),
 }
 
 impl GeneratedTypeCondition {
@@ -639,6 +664,7 @@ impl GeneratedTypeCondition {
                     false
                 }
             }
+            Self::SubtypeOf(_parent) => true,
         }
     }
 }
