@@ -8,7 +8,7 @@ use serde::{Deserialize, Serialize};
 
 use super::transformation::TransformationError;
 
-#[derive(Clone, Debug, Hash, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Clone, Debug, Hash, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
 pub enum AlgorithmType {
     Addition,
     Subtraction,
@@ -64,7 +64,7 @@ impl AlgorithmType {
 }
 
 // TODO Use rug or another arbitrary precision crate
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, PartialOrd, Serialize, Deserialize)]
 pub struct Rational {
     internal: f64,
 }

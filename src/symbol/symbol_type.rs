@@ -1,3 +1,4 @@
+use std::cmp::Ordering;
 use std::collections::{HashMap, HashSet};
 use std::fmt;
 use std::hash::{Hash, Hasher};
@@ -557,6 +558,36 @@ pub struct GeneratedType {
     parents: HashSet<Type>,
 }
 
+impl PartialOrd for GeneratedType {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        let mut self_parents: Vec<_> = self.parents.iter().collect();
+        let mut other_parents: Vec<_> = other.parents.iter().collect();
+
+        self_parents.sort();
+        other_parents.sort();
+
+        match self.condition.partial_cmp(&other.condition) {
+            Some(Ordering::Equal) => self_parents.partial_cmp(&other_parents),
+            other => other,
+        }
+    }
+}
+
+impl Ord for GeneratedType {
+    fn cmp(&self, other: &Self) -> Ordering {
+        let mut self_parents: Vec<_> = self.parents.iter().collect();
+        let mut other_parents: Vec<_> = other.parents.iter().collect();
+
+        self_parents.sort();
+        other_parents.sort();
+
+        match self.condition.cmp(&other.condition) {
+            Ordering::Equal => self_parents.cmp(&other_parents),
+            other => other,
+        }
+    }
+}
+
 impl Hash for GeneratedType {
     fn hash<H: Hasher>(&self, state: &mut H) {
         self.condition.hash(state);
@@ -612,7 +643,7 @@ impl GeneratedType {
     }
 }
 
-#[derive(Clone, Debug, Hash, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[derive(Clone, Debug, Hash, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize, TS)]
 #[serde(tag = "kind", content = "value", rename_all = "camelCase")]
 #[ts(export)]
 pub enum GeneratedTypeCondition {
@@ -643,7 +674,7 @@ impl GeneratedTypeCondition {
     }
 }
 
-#[derive(Clone, Debug, Hash, PartialEq, Eq, PartialOrd, Serialize, Deserialize, TS)]
+#[derive(Clone, Debug, Hash, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize, TS)]
 #[serde(tag = "kind", content = "value", rename_all = "camelCase")]
 #[ts(export)]
 pub enum Type {

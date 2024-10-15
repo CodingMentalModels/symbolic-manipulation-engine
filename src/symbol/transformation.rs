@@ -11,7 +11,7 @@ use super::algorithm::AlgorithmType;
 use super::symbol_node::{SymbolName, SymbolNodeAddress, SymbolNodeRoot};
 use super::symbol_type::{GeneratedType, TypeHierarchy};
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub struct TransformationLattice {
     statements: HashSet<SymbolNode>,
     available_transformations: HashSet<Transformation>,
@@ -245,7 +245,7 @@ impl TransformationLattice {
     }
 }
 
-#[derive(Clone, Debug, Hash, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Clone, Debug, Hash, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
 pub enum Transformation {
     ExplicitTransformation(ExplicitTransformation),
     AlgorithmTransformation(AlgorithmTransformation),
@@ -550,7 +550,7 @@ impl Transformation {
     }
 }
 
-#[derive(Clone, Debug, Hash, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Clone, Debug, Hash, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
 pub struct AlgorithmTransformation {
     algorithm_type: AlgorithmType,
     operator: Symbol,
@@ -638,7 +638,7 @@ impl AlgorithmTransformation {
     }
 }
 
-#[derive(Clone, Debug, Hash, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Clone, Debug, Hash, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
 pub struct ApplyToBothSidesTransformation {
     symbol: Symbol,
     transformation: ExplicitTransformation,
@@ -727,7 +727,7 @@ impl ApplyToBothSidesTransformation {
     }
 }
 
-#[derive(Clone, Debug, Hash, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Clone, Debug, Hash, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
 pub struct ExplicitTransformation {
     pub from: SymbolNode,
     pub to: SymbolNode,

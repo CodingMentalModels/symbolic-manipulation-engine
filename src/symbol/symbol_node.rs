@@ -92,7 +92,7 @@ impl Predicate {
     }
 }
 
-#[derive(Clone, Hash, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Clone, Hash, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
 pub struct SymbolNode {
     root: SymbolNodeRoot,
     children: Vec<SymbolNode>,
@@ -959,7 +959,7 @@ impl Substitution {
     }
 }
 
-#[derive(Clone, Debug, Hash, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Clone, Debug, Hash, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
 pub enum SymbolNodeRoot {
     Symbol(Symbol),
     Join,
@@ -1029,7 +1029,7 @@ impl SymbolNodeRoot {
     }
 }
 
-#[derive(Clone, Debug, Default, Hash, PartialEq, Eq, PartialOrd, Serialize, Deserialize)]
+#[derive(Clone, Debug, Default, Hash, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
 pub struct Symbol {
     name: SymbolName,
     evaluates_to_type: Type,
