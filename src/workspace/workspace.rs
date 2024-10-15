@@ -245,49 +245,6 @@ impl Workspace {
         &self.transformation_lattice
     }
 
-    pub fn get_statement_pairs(&self) -> Vec<SymbolNode> {
-        self.get_statement_pairs_and_provenance_including(None)
-            .into_iter()
-            .map(|(s, _)| s)
-            .collect()
-    }
-
-    pub fn get_statement_pairs_and_provenance(&self) -> Vec<(SymbolNode, StatementProvenance)> {
-        self.get_statement_pairs_and_provenance_including(None)
-    }
-
-    pub fn get_statement_pairs_including(&self, statement: Option<&SymbolNode>) -> Vec<SymbolNode> {
-        self.get_statement_pairs_and_provenance_including(statement)
-            .into_iter()
-            .map(|(s, _)| s)
-            .collect()
-    }
-
-    pub fn get_statement_pairs_and_provenance_including(
-        &self,
-        statement: Option<&SymbolNode>,
-    ) -> Vec<(SymbolNode, StatementProvenance)> {
-        // Returns pairs of statements for use in joint transforms
-        // Returns both orders as well as duplicates since those are valid joint transform args
-        let left = self.get_ordered_statements();
-        let right = self.get_ordered_statements();
-        let mut to_return = Vec::new();
-        for i in 0..left.len() {
-            for j in 0..right.len() {
-                if statement.is_none()
-                    || (Some(&left[i]) == statement)
-                    || (Some(&right[i]) == statement)
-                {
-                    to_return.push((
-                        left[i].clone().join(right[j].clone()),
-                        StatementProvenance::Joint((i, j)),
-                    ));
-                }
-            }
-        }
-        to_return
-    }
-
     pub fn get_statement(&self, index: StatementIndex) -> Result<SymbolNode, WorkspaceError> {
         if self.statement_index_is_invalid(index) {
             Err(WorkspaceError::InvalidStatementIndex(index))
@@ -519,83 +476,6 @@ impl Workspace {
 
     fn add_generated_type(&mut self, generated_type: GeneratedType) {
         self.generated_types.push(generated_type);
-    }
-
-    pub fn get_instantiated_transformations_with_indices(
-        &self,
-        maybe_desired: Option<SymbolNode>,
-    ) -> Result<HashSet<(Transformation, TransformationIndex)>, WorkspaceError> {
-        // TODO Desired should probably wind up at the top of what we test, but this vec
-        // doesn't stay ordered.  If we pass it down the dependency chain, we could ensure that
-        // it's checked first
-        let statements = if let Some(desired) = maybe_desired {
-            let mut statements = vec![desired];
-            statements.append(&mut self.get_ordered_statements().clone());
-            statements
-        } else {
-            self.get_ordered_statements().clone()
-        };
-        let substatements = statements
-            .iter()
-            .map(|statement| statement.get_substatements())
-            .flatten()
-            .collect::<HashSet<_>>();
-
-        debug!(
-            "substatements:\n{}",
-            substatements
-                .clone()
-                .into_iter()
-                .map(|s| s.to_symbol_string())
-                .collect::<Vec<_>>()
-                .join("\n")
-        );
-        let mut to_return = HashSet::new();
-        for (transform, transform_idx) in self.get_arbitrary_transformations_with_indices() {
-            to_return = to_return
-                .union(
-                    &transform
-                        .instantiate_arbitrary_nodes(self.get_types(), &substatements)
-                        .map_err(|e| Into::<WorkspaceError>::into(e))?
-                        .into_iter()
-                        .map(|t| (t, transform_idx))
-                        .collect(),
-                )
-                .cloned()
-                .collect();
-        }
-
-        to_return = to_return
-            .union(
-                &self
-                    .get_non_arbitrary_transformations_with_indices()
-                    .into_iter()
-                    .collect::<HashSet<_>>(),
-            )
-            .cloned()
-            .collect();
-
-        return Ok(to_return);
-    }
-
-    fn get_arbitrary_transformations_with_indices(
-        &self,
-    ) -> HashSet<(Transformation, TransformationIndex)> {
-        self.get_transformations_with_indices()
-            .iter()
-            .filter(|(t, _)| t.contains_arbitrary_nodes())
-            .cloned()
-            .collect()
-    }
-
-    fn get_non_arbitrary_transformations_with_indices(
-        &self,
-    ) -> HashSet<(Transformation, TransformationIndex)> {
-        self.get_transformations_with_indices()
-            .iter()
-            .filter(|(t, _)| !t.contains_arbitrary_nodes())
-            .cloned()
-            .collect()
     }
 
     pub fn to_json(&self) -> Result<String, WorkspaceError> {
@@ -910,50 +790,15 @@ impl WorkspaceTransactionStore {
     ) -> Result<SymbolNode, WorkspaceError> {
         let mut transaction = self.get_generated_types_transaction(&desired)?;
         let workspace = self.compile();
-        if workspace.contains_statement(&desired) {
-            return Err(WorkspaceError::StatementsAlreadyInclude(desired.clone()));
-        }
-        if desired.get_arbitrary_nodes().len() > 0 {
-            return Err(WorkspaceError::ContainsArbitraryNode);
-        }
-        let instantiated_transformations =
-            workspace.get_instantiated_transformations_with_indices(Some(desired.clone()))?;
-        debug!(
-            "instantiated_transformations:\n{}",
-            instantiated_transformations
-                .clone()
-                .into_iter()
-                .map(|(t, _)| t.to_symbol_string())
-                .collect::<Vec<_>>()
-                .join("\n")
-        );
-        for (transform, transform_idx) in instantiated_transformations {
-            let statements = if transform.is_joint_transform() {
-                workspace.get_statement_pairs_and_provenance()
-            } else {
-                workspace.get_statements_and_provenance().clone()
-            };
-            for (statement, statement_provenance) in statements.into_iter() {
-                match transform.try_transform_into(workspace.get_types(), &statement, &desired) {
-                    Ok(output) => {
-                        // TODO Derive the appropriate transform addresses
-                        let provenance =
-                            Provenance::Derived((transform_idx, statement_provenance, vec![]));
-
-                        transaction.add(WorkspaceTransactionItem::Derive((
-                            output.clone(),
-                            provenance,
-                        )));
-                        self.add(transaction)?;
-                        return Ok(output);
-                    }
-                    Err(_) => {
-                        // Do nothing, keep trying transformations
-                    }
-                }
-            }
-        }
-        return Err(WorkspaceError::NoTransformationsPossible);
+        let (from_statement, transformation, to_statement) =
+            workspace.transformation_lattice.try_transform_into(desired);
+        transaction.add(WorkspaceTransactionItem::Derive((
+            from_statement,
+            transformation,
+            to_statement,
+        )));
+        self.add(transaction)?;
+        Ok(desired)
     }
 
     fn get_generated_types_transaction(

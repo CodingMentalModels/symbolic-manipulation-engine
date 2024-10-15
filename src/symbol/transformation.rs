@@ -102,6 +102,147 @@ impl TransformationLattice {
             Ok(())
         }
     }
+
+    pub fn try_transform_into(
+        &mut self,
+        types: &TypeHierarchy,
+        desired: SymbolNode,
+    ) -> Result<(SymbolNode, Transformation, SymbolNode), TransformationError> {
+        if self.contains_statement(&desired) {
+            return Err(TransformationError::AlreadyContainsStatement(
+                desired.clone(),
+            ));
+        }
+        if desired.get_arbitrary_nodes().len() > 0 {
+            return Err(TransformationError::StatementContainsArbitraryNode(
+                desired.clone(),
+            ));
+        }
+        let instantiated_transformations =
+            self.get_instantiated_transformations(types, Some(desired.clone()))?;
+
+        debug!(
+            "instantiated_transformations:\n{}",
+            instantiated_transformations
+                .clone()
+                .into_iter()
+                .map(|t| t.to_symbol_string())
+                .collect::<Vec<_>>()
+                .join("\n")
+        );
+        for transform in instantiated_transformations {
+            let statements = if transform.is_joint_transform() {
+                self.get_statement_pairs()
+            } else {
+                self.get_statements().clone()
+            };
+            for statement in statements.into_iter() {
+                match transform.try_transform_into(types, &statement, &desired) {
+                    Ok(output) => {
+                        // TODO Derive the appropriate transform addresses
+                        return Ok((statement, transform, output));
+                    }
+                    Err(_) => {
+                        // Do nothing, keep trying transformations
+                    }
+                }
+            }
+        }
+        return Err(TransformationError::NoValidTransformationsPossible);
+    }
+
+    pub fn get_instantiated_transformations(
+        &self,
+        types: &TypeHierarchy,
+        maybe_desired: Option<SymbolNode>,
+    ) -> Result<HashSet<Transformation>, TransformationError> {
+        // TODO Desired should probably wind up at the top of what we test, but this vec
+        // doesn't stay ordered.  If we pass it down the dependency chain, we could ensure that
+        // it's checked first
+        let statements = if let Some(desired) = maybe_desired {
+            let mut statements = vec![desired];
+            statements.append(&mut self.get_ordered_statements().clone());
+            statements
+        } else {
+            self.get_ordered_statements().clone()
+        };
+        let substatements = statements
+            .iter()
+            .map(|statement| statement.get_substatements())
+            .flatten()
+            .collect::<HashSet<_>>();
+
+        debug!(
+            "substatements:\n{}",
+            substatements
+                .clone()
+                .into_iter()
+                .map(|s| s.to_symbol_string())
+                .collect::<Vec<_>>()
+                .join("\n")
+        );
+        let mut to_return = HashSet::new();
+        for transform in self.get_arbitrary_transformations() {
+            to_return = to_return
+                .union(&transform.instantiate_arbitrary_nodes(types, &substatements)?)
+                .cloned()
+                .collect();
+        }
+
+        to_return = to_return
+            .union(
+                &self
+                    .get_non_arbitrary_transformations()
+                    .into_iter()
+                    .collect::<HashSet<_>>(),
+            )
+            .cloned()
+            .collect();
+
+        return Ok(to_return);
+    }
+
+    fn get_arbitrary_transformations(&self) -> HashSet<Transformation> {
+        self.get_available_transformations()
+            .iter()
+            .filter(|t| t.contains_arbitrary_nodes())
+            .cloned()
+            .collect()
+    }
+
+    fn get_non_arbitrary_transformations(&self) -> HashSet<Transformation> {
+        self.get_available_transformations()
+            .iter()
+            .filter(|t| !t.contains_arbitrary_nodes())
+            .cloned()
+            .collect()
+    }
+
+    pub fn get_statement_pairs(&self) -> HashSet<SymbolNode> {
+        self.get_statement_pairs_including(None)
+    }
+
+    pub fn get_statement_pairs_including(
+        &self,
+        statement: Option<&SymbolNode>,
+    ) -> HashSet<SymbolNode> {
+        // Returns pairs of statements for use in joint transforms
+        // Returns both orders as well as duplicates since those are valid joint transform args
+        let left = self.get_ordered_statements();
+        let right = self.get_ordered_statements();
+        let mut to_return = HashSet::new();
+        for i in 0..left.len() {
+            for j in 0..right.len() {
+                if statement.is_none()
+                    || (Some(&left[i]) == statement)
+                    || (Some(&right[i]) == statement)
+                {
+                    to_return.insert(left[i].clone().join(right[j].clone()));
+                }
+            }
+        }
+        to_return
+    }
 }
 
 #[derive(Clone, Debug, Hash, PartialEq, Eq, Serialize, Deserialize)]
@@ -184,7 +325,7 @@ impl Transformation {
         if valid_transformations.contains(to) {
             Ok(to.clone())
         } else {
-            Err(TransformationError::NoValidTransformations)
+            Err(TransformationError::NoValidTransformationsPossible)
         }
     }
 
@@ -466,7 +607,7 @@ impl AlgorithmTransformation {
         }
 
         if statement.get_n_children() != 2 || statement.get_symbol()? != &self.get_operator() {
-            return Err(TransformationError::NoValidTransformations);
+            return Err(TransformationError::NoValidTransformationsPossible);
         }
 
         let children = statement.get_children().clone();
@@ -951,10 +1092,11 @@ pub enum TransformationError {
     AlreadyContainsTransformation(Transformation),
     RelabellingsKeysMismatch,
     StatementDoesNotMatch(SymbolNode, SymbolNode),
+    StatementContainsArbitraryNode(SymbolNode),
     SymbolDoesntMatch(Symbol),
     ApplyToBothSidesCalledOnNChildren(usize),
     StatementTypesDoNotMatch,
-    NoValidTransformations,
+    NoValidTransformationsPossible,
     GeneratedTypeConditionFailedDuringAlgorithm(Symbol),
     TransformCalledOnArbitrary,
     UnableToParse(SymbolName),
