@@ -984,10 +984,30 @@ impl DisplayTransformationLattice {
     }
 }
 
-impl From<&TransformationLattice> for Vec<DisplayTransformationLattice> {
+impl From<&TransformationLattice> for DisplayTransformationLattice {
     fn from(lattice: &TransformationLattice) -> Self {
-        todo!();
-        // Self::new(statements, available_transformations, transformations)
+        let statements = lattice
+            .get_ordered_statements()
+            .into_iter()
+            .map(|s| s.to_display_symbol_node())
+            .collect();
+        let available_transformations = lattice
+            .get_ordered_available_transformations()
+            .into_iter()
+            .map(|t| t.to_display_transformation())
+            .collect();
+        let transformations = lattice
+            .get_edges()
+            .into_iter()
+            .map(|from, transform, to| {
+                (
+                    from.to_display_symbol_node(),
+                    transform.to_display_transform(),
+                    to.to_display_symbol_node(),
+                )
+            })
+            .collect();
+        Self::new(statements, available_transformations, transformations)
     }
 }
 
