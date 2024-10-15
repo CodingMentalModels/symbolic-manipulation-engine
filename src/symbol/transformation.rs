@@ -88,6 +88,20 @@ impl TransformationLattice {
             Ok(())
         }
     }
+
+    pub fn add_available_transformation(
+        &mut self,
+        transformation: Transformation,
+    ) -> Result<(), TransformationError> {
+        if self.contains_transformation(&transformation) {
+            Err(TransformationError::AlreadyContainsTransformation(
+                transformation.clone(),
+            ))
+        } else {
+            self.available_transformations.insert(transformation);
+            Ok(())
+        }
+    }
 }
 
 #[derive(Clone, Debug, Hash, PartialEq, Eq, Serialize, Deserialize)]
@@ -934,6 +948,7 @@ pub enum TransformationError {
     InvalidFunctionCalledOn(SymbolNodeRoot),
     InvalidTypes(TypeError),
     AlreadyContainsStatement(SymbolNode),
+    AlreadyContainsTransformation(Transformation),
     RelabellingsKeysMismatch,
     StatementDoesNotMatch(SymbolNode, SymbolNode),
     SymbolDoesntMatch(Symbol),

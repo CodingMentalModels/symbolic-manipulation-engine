@@ -223,6 +223,10 @@ impl Workspace {
         self.transformation_lattice.get_ordered_statements()
     }
 
+    pub fn contains_statement(&self, statement: &SymbolNode) -> bool {
+        self.transformation_lattice.contains_statement(statement)
+    }
+
     pub fn get_available_transformations(&self) -> &HashSet<Transformation> {
         self.transformation_lattice.get_available_transformations()
     }
@@ -230,6 +234,11 @@ impl Workspace {
     pub fn get_ordered_available_transformations(&self) -> Vec<Transformation> {
         self.transformation_lattice
             .get_ordered_available_transformations()
+    }
+
+    pub fn contains_transformation(&self, transformation: &Transformation) -> bool {
+        self.transformation_lattice
+            .contains_transformation(transformation)
     }
 
     pub fn get_transformation_lattice(&self) -> &TransformationLattice {
@@ -378,7 +387,7 @@ impl Workspace {
     fn add_transformation(&mut self, transformation: Transformation) -> Result<(), WorkspaceError> {
         self.types.binds_transformation_or_error(&transformation)?;
         self.transformation_lattice
-            .add_transformation(transformation)
+            .add_available_transformation(transformation)
             .map_err(|e| e.into())
     }
 
@@ -475,28 +484,6 @@ impl Workspace {
         Ok(provenance)
     }
 
-    pub fn get_provenance(&self, index: StatementIndex) -> Result<Provenance, WorkspaceError> {
-        todo!();
-    }
-
-    pub fn get_display_provenances(&self) -> Vec<DisplayProvenance> {
-        todo!()
-    }
-
-    pub fn get_display_provenance(
-        &self,
-        index: StatementIndex,
-    ) -> Result<DisplayProvenance, WorkspaceError> {
-        todo!();
-    }
-
-    pub fn get_display_statement_provenance(
-        &self,
-        provenance: &StatementProvenance,
-    ) -> Result<String, WorkspaceError> {
-        todo!();
-    }
-
     pub fn get_display_symbol_nodes(&self) -> Result<Vec<DisplaySymbolNode>, WorkspaceError> {
         let mut to_return = Vec::new();
         for i in 0..self.get_statements().len() {
@@ -543,10 +530,10 @@ impl Workspace {
         // it's checked first
         let statements = if let Some(desired) = maybe_desired {
             let mut statements = vec![desired];
-            statements.append(&mut self.get_statements().clone());
+            statements.append(&mut self.get_ordered_statements().clone());
             statements
         } else {
-            self.get_statements().clone()
+            self.get_ordered_statements().clone()
         };
         let substatements = statements
             .iter()
@@ -923,7 +910,7 @@ impl WorkspaceTransactionStore {
     ) -> Result<SymbolNode, WorkspaceError> {
         let mut transaction = self.get_generated_types_transaction(&desired)?;
         let workspace = self.compile();
-        if workspace.statements.contains(&desired) {
+        if workspace.contains_statement(&desired) {
             return Err(WorkspaceError::StatementsAlreadyInclude(desired.clone()));
         }
         if desired.get_arbitrary_nodes().len() > 0 {
