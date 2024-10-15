@@ -11,6 +11,46 @@ use super::algorithm::AlgorithmType;
 use super::symbol_node::{SymbolName, SymbolNodeAddress, SymbolNodeRoot};
 use super::symbol_type::{GeneratedType, TypeHierarchy};
 
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct TransformationLattice {
+    statements: HashSet<SymbolNode>,
+    available_transformations: HashSet<Transformation>,
+    transformations_from: HashMap<SymbolNode, Vec<Transformation>>,
+}
+
+impl TransformationLattice {
+    pub fn new(
+        statements: HashSet<SymbolNode>,
+        available_transformations: HashSet<Transformation>,
+        transformations_from: HashMap<SymbolNode, Vec<Transformation>>,
+    ) -> Self {
+        Self {
+            statements,
+            available_transformations,
+            transformations_from,
+        }
+    }
+
+    pub fn empty() -> Self {
+        Self::new(HashSet::new(), HashSet::new(), HashMap::new())
+    }
+
+    pub fn get_statements(&self) -> &HashSet<SymbolNode> {
+        &self.statements
+    }
+
+    pub fn get_available_transformations(&self) -> &HashSet<Transformation> {
+        &self.available_transformations
+    }
+
+    pub fn get_transformations_from(&self, statement: &SymbolNode) -> Vec<&Transformation> {
+        self.transformations_from
+            .get(statement)
+            .map(|v| v.iter().collect())
+            .unwrap_or_else(Vec::new)
+    }
+}
+
 #[derive(Clone, Debug, Hash, PartialEq, Eq, Serialize, Deserialize)]
 pub enum Transformation {
     ExplicitTransformation(ExplicitTransformation),
