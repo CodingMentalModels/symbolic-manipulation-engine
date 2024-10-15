@@ -39,8 +39,28 @@ impl TransformationLattice {
         &self.statements
     }
 
+    pub fn get_ordered_statements(&self) -> Vec<SymbolNode> {
+        let mut to_return = self
+            .get_statements()
+            .into_iter()
+            .cloned()
+            .collect::<Vec<_>>();
+        to_return.sort();
+        to_return
+    }
+
     pub fn get_available_transformations(&self) -> &HashSet<Transformation> {
         &self.available_transformations
+    }
+
+    pub fn get_ordered_available_transformations(&self) -> Vec<Transformation> {
+        let mut to_return = self
+            .get_available_transformations()
+            .into_iter()
+            .cloned()
+            .collect::<Vec<_>>();
+        to_return.sort();
+        to_return
     }
 
     pub fn get_transformations_from(&self, statement: &SymbolNode) -> Vec<&Transformation> {
@@ -48,6 +68,25 @@ impl TransformationLattice {
             .get(statement)
             .map(|v| v.iter().collect())
             .unwrap_or_else(Vec::new)
+    }
+
+    pub fn contains_statement(&self, statement: &SymbolNode) -> bool {
+        self.statements.contains(statement)
+    }
+
+    pub fn contains_transformation(&self, transformation: &Transformation) -> bool {
+        self.available_transformations.contains(transformation)
+    }
+
+    pub fn add_hypothesis(&mut self, hypothesis: SymbolNode) -> Result<(), TransformationError> {
+        if self.contains_statement(&hypothesis) {
+            Err(TransformationError::AlreadyContainsStatement(
+                hypothesis.clone(),
+            ))
+        } else {
+            self.statements.insert(hypothesis);
+            Ok(())
+        }
     }
 }
 
@@ -894,6 +933,7 @@ pub enum TransformationError {
     InvalidSymbolNodeError(SymbolNodeError),
     InvalidFunctionCalledOn(SymbolNodeRoot),
     InvalidTypes(TypeError),
+    AlreadyContainsStatement(SymbolNode),
     RelabellingsKeysMismatch,
     StatementDoesNotMatch(SymbolNode, SymbolNode),
     SymbolDoesntMatch(Symbol),
