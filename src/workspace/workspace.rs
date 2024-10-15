@@ -964,6 +964,36 @@ pub enum StatementProvenance {
 #[derive(Clone, Debug, Serialize, Deserialize, TS)]
 #[serde(rename_all = "camelCase")]
 #[ts(export)]
+pub struct DisplayTransformationLattice {
+    statements: Vec<DisplaySymbolNode>,
+    available_transformations: Vec<DisplayTransformation>,
+    transformations: Vec<(DisplaySymbolNode, DisplayTransformation, DisplaySymbolNode)>,
+}
+
+impl DisplayTransformationLattice {
+    pub fn new(
+        statements: Vec<DisplaySymbolNode>,
+        available_transformations: Vec<DisplayTransformation>,
+        transformations: Vec<(DisplaySymbolNode, DisplayTransformation, DisplaySymbolNode)>,
+    ) -> Self {
+        Self {
+            statements,
+            available_transformations,
+            transformations,
+        }
+    }
+}
+
+impl From<&TransformationLattice> for Vec<DisplayTransformationLattice> {
+    fn from(lattice: &TransformationLattice) -> Self {
+        todo!();
+        // Self::new(statements, available_transformations, transformations)
+    }
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
 pub struct DisplaySymbolNode {
     interpreted_string: String,
     types: Vec<(SymbolName, TypeName)>,
