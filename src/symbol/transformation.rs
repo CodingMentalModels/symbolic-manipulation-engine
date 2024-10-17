@@ -16,6 +16,7 @@ pub struct TransformationLattice {
     statements: HashSet<SymbolNode>,
     available_transformations: HashSet<Transformation>,
     transformations_from: HashMap<SymbolNode, Vec<Transformation>>,
+    transformations_to: HashMap<(SymbolNode, Transformation), SymbolNode>,
 }
 
 impl TransformationLattice {
@@ -23,16 +24,23 @@ impl TransformationLattice {
         statements: HashSet<SymbolNode>,
         available_transformations: HashSet<Transformation>,
         transformations_from: HashMap<SymbolNode, Vec<Transformation>>,
+        transformations_to: HashMap<(SymbolNode, Transformation), SymbolNode>,
     ) -> Self {
         Self {
             statements,
             available_transformations,
             transformations_from,
+            transformations_to,
         }
     }
 
     pub fn empty() -> Self {
-        Self::new(HashSet::new(), HashSet::new(), HashMap::new())
+        Self::new(
+            HashSet::new(),
+            HashSet::new(),
+            HashMap::new(),
+            HashMap::new(),
+        )
     }
 
     pub fn get_statements(&self) -> &HashSet<SymbolNode> {
@@ -68,6 +76,27 @@ impl TransformationLattice {
             .get(statement)
             .map(|v| v.iter().collect())
             .unwrap_or_else(Vec::new)
+    }
+
+    pub fn get_transformations_to(&self, statement: &SymbolNode) -> Vec<&Transformation> {
+        self.transformations_to
+            .iter()
+            .filter(|((_, _), to)| *to == statement)
+            .map(|((_, transformation), _)| transformation)
+            .collect()
+    }
+
+    pub fn get_ordered_applied_transformations(
+        &self,
+    ) -> Vec<(SymbolNode, Transformation, SymbolNode)> {
+        let mut mapped = self
+            .transformations_to
+            .clone()
+            .into_iter()
+            .map(|((from, transformation), to)| (from, transformation, to))
+            .collect::<Vec<_>>();
+        mapped.sort();
+        mapped
     }
 
     pub fn contains_statement(&self, statement: &SymbolNode) -> bool {
@@ -119,28 +148,37 @@ impl TransformationLattice {
             ));
         }
         let instantiated_transformations =
-            self.get_instantiated_transformations(types, Some(desired.clone()))?;
+            self.get_instantiated_transformations_with_arbitrary(types, Some(desired.clone()))?;
 
         debug!(
             "instantiated_transformations:\n{}",
             instantiated_transformations
                 .clone()
                 .into_iter()
-                .map(|t| t.to_symbol_string())
+                .map(|(instantiated, arbitrary)| format!(
+                    "{} ({})",
+                    instantiated.to_symbol_string(),
+                    arbitrary.to_symbol_string()
+                ))
                 .collect::<Vec<_>>()
                 .join("\n")
         );
-        for transform in instantiated_transformations {
-            let statements = if transform.is_joint_transform() {
+        for (instantiated_transform, arbitrary_transform) in instantiated_transformations {
+            let statements = if instantiated_transform.is_joint_transform() {
                 self.get_statement_pairs()
             } else {
                 self.get_statements().clone()
             };
             for statement in statements.into_iter() {
-                match transform.try_transform_into(types, &statement, &desired) {
+                match instantiated_transform.try_transform_into(types, &statement, &desired) {
                     Ok(output) => {
                         // TODO Derive the appropriate transform addresses
-                        return Ok((statement, transform, output));
+                        self.force_apply_transformation(
+                            statement.clone(),
+                            arbitrary_transform.clone(),
+                            output.clone(),
+                        );
+                        return Ok((statement, arbitrary_transform, output));
                     }
                     Err(_) => {
                         // Do nothing, keep trying transformations
@@ -151,11 +189,26 @@ impl TransformationLattice {
         return Err(TransformationError::NoValidTransformationsPossible);
     }
 
-    pub fn get_instantiated_transformations(
+    fn force_apply_transformation(
+        &mut self,
+        from: SymbolNode,
+        transformation: Transformation,
+        to: SymbolNode,
+    ) {
+        assert!(self.contains_statement(&from));
+        self.statements.insert(to.clone());
+        self.transformations_from
+            .entry(from.clone())
+            .or_default()
+            .push(transformation.clone());
+        self.transformations_to.insert((from, transformation), to);
+    }
+
+    pub fn get_instantiated_transformations_with_arbitrary(
         &self,
         types: &TypeHierarchy,
         maybe_desired: Option<SymbolNode>,
-    ) -> Result<HashSet<Transformation>, TransformationError> {
+    ) -> Result<HashSet<(Transformation, Transformation)>, TransformationError> {
         // TODO Desired should probably wind up at the top of what we test, but this vec
         // doesn't stay ordered.  If we pass it down the dependency chain, we could ensure that
         // it's checked first
@@ -182,9 +235,15 @@ impl TransformationLattice {
                 .join("\n")
         );
         let mut to_return = HashSet::new();
-        for transform in self.get_arbitrary_transformations() {
+        for arbitrary_transform in self.get_arbitrary_transformations() {
             to_return = to_return
-                .union(&transform.instantiate_arbitrary_nodes(types, &substatements)?)
+                .union(
+                    &arbitrary_transform
+                        .instantiate_arbitrary_nodes(types, &substatements)?
+                        .into_iter()
+                        .map(|instantiated| (instantiated, arbitrary_transform.clone()))
+                        .collect(),
+                )
                 .cloned()
                 .collect();
         }
@@ -194,6 +253,7 @@ impl TransformationLattice {
                 &self
                     .get_non_arbitrary_transformations()
                     .into_iter()
+                    .map(|t| (t.clone(), t)) // Instantiated == Arbitrary for non-arbitrary
                     .collect::<HashSet<_>>(),
             )
             .cloned()

@@ -40,6 +40,7 @@ pub struct DisplayWorkspace {
     generated_types: Vec<DisplayGeneratedType>,
     interpretations: Vec<DisplayInterpretation>,
     statements: Vec<DisplaySymbolNode>,
+    transformations: Vec<DisplayTransformation>,
     transformation_lattice: DisplayTransformationLattice,
 }
 
@@ -58,7 +59,15 @@ impl DisplayWorkspace {
                 .map(|i| DisplayInterpretation::from(i))
                 .collect(),
             statements: workspace.get_display_symbol_nodes()?,
-            transformation_lattice: workspace.transformation_lattice.into(),
+            transformations: workspace
+                .get_available_transformations()
+                .iter()
+                .map(|t| t.to_interpreted_string(&workspace.interpretations))
+                .collect(),
+            transformation_lattice: DisplayTransformationLattice::from_transformation_lattice(
+                &workspace.interpretations,
+                &workspace.transformation_lattice,
+            ),
         })
     }
 }
@@ -965,49 +974,82 @@ pub enum StatementProvenance {
 #[serde(rename_all = "camelCase")]
 #[ts(export)]
 pub struct DisplayTransformationLattice {
-    statements: Vec<DisplaySymbolNode>,
-    available_transformations: Vec<DisplayTransformation>,
-    transformations: Vec<(DisplaySymbolNode, DisplayTransformation, DisplaySymbolNode)>,
+    nodes: Vec<DisplayTransformationLatticeNode>,
+    links: Vec<DisplayTransformationLatticeLink>,
 }
 
 impl DisplayTransformationLattice {
     pub fn new(
-        statements: Vec<DisplaySymbolNode>,
-        available_transformations: Vec<DisplayTransformation>,
-        transformations: Vec<(DisplaySymbolNode, DisplayTransformation, DisplaySymbolNode)>,
+        nodes: Vec<DisplayTransformationLatticeNode>,
+        links: Vec<DisplayTransformationLatticeLink>,
     ) -> Self {
-        Self {
-            statements,
-            available_transformations,
-            transformations,
-        }
+        Self { nodes, links }
     }
-}
 
-impl From<&TransformationLattice> for DisplayTransformationLattice {
-    fn from(lattice: &TransformationLattice) -> Self {
-        let statements = lattice
+    pub fn from_transformation_lattice(
+        interpretations: &Vec<Interpretation>,
+        lattice: &TransformationLattice,
+    ) -> Self {
+        let node_to_id = lattice
             .get_ordered_statements()
+            .iter()
+            .enumerate()
+            .map(|(i, statement)| (statement.to_interpreted_string(interpretations), i))
+            .collect::<HashMap<_, _>>();
+        let nodes = node_to_id
+            .clone()
             .into_iter()
-            .map(|s| s.to_display_symbol_node())
+            .map(|(node, id)| DisplayTransformationLatticeNode::new(id.to_string(), node))
             .collect();
-        let available_transformations = lattice
-            .get_ordered_available_transformations()
+        let links = lattice
+            .get_ordered_applied_transformations()
             .into_iter()
-            .map(|t| t.to_display_transformation())
-            .collect();
-        let transformations = lattice
-            .get_edges()
-            .into_iter()
-            .map(|from, transform, to| {
-                (
-                    from.to_display_symbol_node(),
-                    transform.to_display_transform(),
-                    to.to_display_symbol_node(),
+            .map(|(from, transformation, to)| {
+                DisplayTransformationLatticeLink::new(
+                    node_to_id
+                        .get(from.to_interpreted_string(interpretations))
+                        .expect("Nodes are coming from the same lattice."),
+                    transformation.to_interpreted_string(interpretations),
+                    node_to_id
+                        .get(to.to_interpreted_string(interpretations))
+                        .expect("Nodes are coming from the same lattice."),
                 )
             })
             .collect();
-        Self::new(statements, available_transformations, transformations)
+        Self::new(nodes, links)
+    }
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub struct DisplayTransformationLatticeNode {
+    id: String,
+    description: String,
+}
+
+impl DisplayTransformationLatticeNode {
+    pub fn new(id: String, description: String) -> Self {
+        Self { id, description }
+    }
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub struct DisplayTransformationLatticeLink {
+    source: String,
+    target: String,
+    relation: String,
+}
+
+impl DisplayTransformationLatticeLink {
+    pub fn new(source: String, target: String, relation: String) -> Self {
+        Self {
+            source,
+            target,
+            relation,
+        }
     }
 }
 
