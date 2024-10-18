@@ -121,15 +121,20 @@ mod tests {
             &TransformationLattice::empty()
         );
 
-        let mut types = TypeHierarchy::chain(vec!["Group Element".into()]).unwrap();
-        types.add_chain(vec!["Operator".into(), "*".into()]);
-        types.add_chain(vec!["=".into()]);
+        let mut types = TypeHierarchy::chain(vec!["Group Element".into(), "*".into()]).unwrap();
+        types
+            .add_child_to_parent("inv".into(), "Group Element".into())
+            .unwrap();
+        types
+            .add_child_to_parent("1".into(), "Group Element".into())
+            .unwrap();
+        types.add_chain(vec!["=".into()]).unwrap();
 
-        let equals_interpretation = Interpretation::infix_operator("=".into(), 1, "Integer".into());
-        let times_interpretation = Interpretation::infix_operator("*".into(), 3, "Integer".into());
+        let equals_interpretation = Interpretation::infix_operator("=".into(), 1, "=".into());
+        let times_interpretation = Interpretation::infix_operator("*".into(), 3, "*".into());
         let inverse_interpretation = Interpretation::function("inv".into(), 90);
         let g_interpretation = Interpretation::singleton("g", "Group Element".into());
-        let one_interpretation = Interpretation::singleton("1", "Group Element".into());
+        let one_interpretation = Interpretation::singleton("1", "1".into());
 
         let parser = Parser::new(vec![
             equals_interpretation,

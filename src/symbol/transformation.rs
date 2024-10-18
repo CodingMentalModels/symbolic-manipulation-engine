@@ -159,7 +159,7 @@ impl TransformationLattice {
                 desired.clone(),
             ));
         }
-        if desired.get_arbitrary_nodes().len() > 0 {
+        if desired.contains_arbitrary_nodes() {
             return Err(TransformationError::StatementContainsArbitraryNode(
                 desired.clone(),
             ));
@@ -398,6 +398,16 @@ impl Transformation {
         from: &SymbolNode,
         to: &SymbolNode,
     ) -> Result<SymbolNode, TransformationError> {
+        if from.contains_arbitrary_nodes() {
+            return Err(TransformationError::StatementContainsArbitraryNode(
+                from.clone(),
+            ));
+        }
+        if to.contains_arbitrary_nodes() {
+            return Err(TransformationError::StatementContainsArbitraryNode(
+                to.clone(),
+            ));
+        }
         let valid_transformations = self.get_valid_transformations(hierarchy, from);
         if valid_transformations.contains(to) {
             Ok(to.clone())

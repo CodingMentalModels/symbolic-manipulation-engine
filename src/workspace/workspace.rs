@@ -339,10 +339,10 @@ impl Workspace {
         self.types
             .binds_statement_or_error(&statement)
             .map_err(|x| WorkspaceError::from(x))?;
-        if statement.get_arbitrary_nodes().len() > 0 {
-            return Err(WorkspaceError::ContainsArbitraryNode);
+        if statement.contains_arbitrary_nodes() {
+            return Err(WorkspaceError::StatementContainsArbitraryNode(statement));
         }
-        self.transformation_lattice.add_hypothesis(statement);
+        self.transformation_lattice.add_hypothesis(statement)?;
         Ok(())
     }
 
@@ -1098,7 +1098,7 @@ pub enum WorkspaceError {
     InvalidTransformationIndex(TransformationIndex),
     InvalidInterpretationIndex(InterpretationIndex),
     InvalidTransformationAddress,
-    ContainsArbitraryNode,
+    StatementContainsArbitraryNode(SymbolNode),
     ParserError(ParserError),
     UnableToSerialize(String),
     TransformationError(TransformationError),
@@ -1132,6 +1132,9 @@ impl From<ParserError> for WorkspaceError {
 impl From<TransformationError> for WorkspaceError {
     fn from(value: TransformationError) -> Self {
         match value {
+            TransformationError::StatementContainsArbitraryNode(s) => {
+                Self::StatementContainsArbitraryNode(s)
+            }
             TransformationError::ArbitraryNodeHasNonOneChildren => {
                 Self::ArbitraryNodeHasNonOneChildren
             }
@@ -1581,20 +1584,13 @@ mod test_workspace {
 
         let workspace = Workspace::new(types.clone(), vec![], interpretations.clone());
         let mut workspace_store = WorkspaceTransactionStore::snapshot(workspace);
-        assert_eq!(
-            workspace_store.add_parsed_hypothesis("Any(p)"),
-            Err(WorkspaceError::ContainsArbitraryNode)
-        );
-        assert_eq!(
-            workspace_store.add_parsed_hypothesis("Any(p)=q"),
-            Err(WorkspaceError::ContainsArbitraryNode)
-        );
+        assert!(workspace_store.add_parsed_hypothesis("Any(p)").is_err(),);
+        assert!(workspace_store.add_parsed_hypothesis("Any(p)=q").is_err());
 
         workspace_store.add_parsed_hypothesis("p=q").unwrap();
-        assert_eq!(
-            workspace_store.try_transform_into_parsed("Any(p)=Any(q)"),
-            Err(WorkspaceError::ContainsArbitraryNode)
-        );
+        assert!(workspace_store
+            .try_transform_into_parsed("Any(p)=Any(q)")
+            .is_err());
     }
 
     #[test]
