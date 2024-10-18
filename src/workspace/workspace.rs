@@ -346,8 +346,17 @@ impl Workspace {
         Ok(())
     }
 
-    fn add_derived_statement(&mut self, statement: SymbolNode) {
-        todo!()
+    fn add_derived_statement(
+        &mut self,
+        from_statement: SymbolNode,
+        transformation: Transformation,
+        to_statement: SymbolNode,
+    ) -> Result<(), WorkspaceError> {
+        self.transformation_lattice.add_derived_statement(
+            from_statement,
+            transformation,
+            to_statement,
+        )
     }
 
     fn add_transformation(&mut self, transformation: Transformation) -> Result<(), WorkspaceError> {
@@ -368,26 +377,34 @@ impl Workspace {
             }
             Ok(s) => s,
         };
-        let instantiated_transformations =
-            self.get_instantiated_transformations_with_indices(Some(desired.clone()))?;
+        let instantiated_transformations = self
+            .transformation_lattice
+            .get_instantiated_transformations_with_arbitrary(
+                self.get_types(),
+                Some(desired.clone()),
+            )?;
         debug!(
             "instantiated_transformations:\n{}",
             instantiated_transformations
                 .clone()
                 .into_iter()
-                .map(|(t, _)| t.to_symbol_string())
+                .map(|(instantiated, arbitrary)| format!(
+                    "Instantiated: {}; Arbitrary: {}",
+                    instantiated.to_symbol_string(),
+                    arbitrary.to_symbol_string()
+                ))
                 .collect::<Vec<_>>()
                 .join("\n")
         );
-        for (transformation, _) in instantiated_transformations {
-            let statements = if transformation.is_joint_transform() {
-                self.get_statement_pairs()
+        for (instantiated, _) in instantiated_transformations {
+            let statements = if instantiated.is_joint_transform() {
+                self.transformation_lattice.get_statement_pairs()
             } else {
-                self.get_statements().clone()
+                self.transformation_lattice.get_statements().clone()
             };
             for statement in statements {
                 let valid_transformations =
-                    transformation.get_valid_transformations(self.get_types(), &statement);
+                    instantiated.get_valid_transformations(self.get_types(), &statement);
                 if valid_transformations.contains(&desired)
                     && !self.get_statements().contains(&desired)
                 {
@@ -403,23 +420,29 @@ impl Workspace {
         statement_index: StatementIndex,
     ) -> Result<Vec<SymbolNode>, WorkspaceError> {
         let from_statement = self.get_statement(statement_index)?;
-        let instantiated_transformations =
-            self.get_instantiated_transformations_with_indices(None)?;
+        let instantiated_transformations = self
+            .transformation_lattice
+            .get_instantiated_transformations_with_arbitrary(self.get_types(), None)?;
         debug!(
             "instantiated_transformations:\n{}",
             instantiated_transformations
                 .clone()
                 .into_iter()
-                .map(|(t, _)| t.to_symbol_string())
+                .map(|(instantiated, arbitrary)| format!(
+                    "instantiated: {}; arbitrary: {}",
+                    instantiated.to_symbol_string(),
+                    arbitrary.to_symbol_string()
+                ))
                 .collect::<Vec<_>>()
                 .join("\n")
         );
         let mut to_return = HashSet::new();
         for (transformation, _) in instantiated_transformations {
             let statements = if transformation.is_joint_transform() {
-                self.get_statement_pairs_including(Some(&from_statement))
+                self.transformation_lattice
+                    .get_statement_pairs_including(Some(&from_statement))
             } else {
-                vec![from_statement.clone()]
+                vec![from_statement.clone()].into_iter().collect()
             };
             for statement in statements {
                 let valid_transformations =
@@ -431,23 +454,6 @@ impl Workspace {
             .into_iter()
             .filter(|s| !self.get_statements().contains(s))
             .collect());
-    }
-
-    pub fn get_provenance_lineage(
-        &self,
-        index: StatementIndex,
-    ) -> Result<Vec<Provenance>, WorkspaceError> {
-        let mut provenance = Vec::new();
-        let mut current_index = index;
-        loop {
-            let current_provenance = self.get_provenance(current_index)?;
-            provenance.push(current_provenance.clone());
-            match current_provenance {
-                Provenance::Hypothesis => break,
-                Provenance::Derived((parent_index, _, _)) => current_index = parent_index,
-            }
-        }
-        Ok(provenance)
     }
 
     pub fn get_display_symbol_nodes(&self) -> Result<Vec<DisplaySymbolNode>, WorkspaceError> {
@@ -467,15 +473,14 @@ impl Workspace {
         let (interpreted_string, type_map) = statement
             .to_interpreted_string_and_type_map(&self.interpretations)
             .map_err(|e| Into::<WorkspaceError>::into(e))?;
-        let provenance = self.get_display_provenance(index)?;
         Ok(DisplaySymbolNode::new(
             interpreted_string,
             type_map
                 .into_iter()
                 .map(|(name, t)| (name, t.to_string()))
                 .collect(),
-            provenance.get_from_statement(),
-            provenance.get_from_transformation(),
+            Some("".to_string()), // TODO Populate from the lattice
+            Some("".to_string()), // TODO Populate from the lattice
         ))
     }
 
@@ -634,8 +639,8 @@ impl WorkspaceTransactionStore {
             WorkspaceTransactionItem::AddTransformation(transformation) => {
                 workspace.add_transformation(transformation)?;
             }
-            WorkspaceTransactionItem::Derive((statement, provenance)) => {
-                workspace.add_derived_statement(statement, provenance);
+            WorkspaceTransactionItem::Derive((from_statement, transform, to_statement)) => {
+                workspace.add_derived_statement(from_statement, transform, to_statement);
             }
         };
         Ok(())
@@ -799,8 +804,9 @@ impl WorkspaceTransactionStore {
     ) -> Result<SymbolNode, WorkspaceError> {
         let mut transaction = self.get_generated_types_transaction(&desired)?;
         let workspace = self.compile();
-        let (from_statement, transformation, to_statement) =
-            workspace.transformation_lattice.try_transform_into(desired);
+        let (from_statement, transformation, to_statement) = workspace
+            .transformation_lattice
+            .try_transform_into(workspace.get_types(), desired)?;
         transaction.add(WorkspaceTransactionItem::Derive((
             from_statement,
             transformation,
@@ -890,7 +896,7 @@ pub enum WorkspaceTransactionItem {
     RemoveInterpretation(InterpretationIndex),
     AddHypothesis(SymbolNode),
     AddTransformation(Transformation),
-    Derive((SymbolNode, Provenance)),
+    Derive((SymbolNode, Transformation, SymbolNode)),
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, TS)]
