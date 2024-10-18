@@ -346,17 +346,17 @@ impl Workspace {
         Ok(())
     }
 
-    fn add_derived_statement(
+    fn force_apply_transformation(
         &mut self,
         from_statement: SymbolNode,
         transformation: Transformation,
         to_statement: SymbolNode,
-    ) -> Result<(), WorkspaceError> {
-        self.transformation_lattice.add_derived_statement(
+    ) {
+        self.transformation_lattice.force_apply_transformation(
             from_statement,
             transformation,
             to_statement,
-        )
+        );
     }
 
     fn add_transformation(&mut self, transformation: Transformation) -> Result<(), WorkspaceError> {
@@ -640,7 +640,7 @@ impl WorkspaceTransactionStore {
                 workspace.add_transformation(transformation)?;
             }
             WorkspaceTransactionItem::Derive((from_statement, transform, to_statement)) => {
-                workspace.add_derived_statement(from_statement, transform, to_statement);
+                workspace.force_apply_transformation(from_statement, transform, to_statement);
             }
         };
         Ok(())
@@ -803,10 +803,11 @@ impl WorkspaceTransactionStore {
         desired: SymbolNode,
     ) -> Result<SymbolNode, WorkspaceError> {
         let mut transaction = self.get_generated_types_transaction(&desired)?;
-        let workspace = self.compile();
+        let mut workspace = self.compile();
+        let type_hierarchy = workspace.get_types().clone();
         let (from_statement, transformation, to_statement) = workspace
             .transformation_lattice
-            .try_transform_into(workspace.get_types(), desired)?;
+            .try_transform_into(&type_hierarchy, desired.clone())?;
         transaction.add(WorkspaceTransactionItem::Derive((
             from_statement,
             transformation,
@@ -1014,11 +1015,13 @@ impl DisplayTransformationLattice {
                 DisplayTransformationLatticeLink::new(
                     node_to_id
                         .get(from.to_interpreted_string(interpretations))
-                        .expect("Nodes are coming from the same lattice."),
+                        .expect("Nodes are coming from the same lattice.")
+                        .to_string(),
                     transformation.to_interpreted_string(interpretations),
                     node_to_id
                         .get(to.to_interpreted_string(interpretations))
-                        .expect("Nodes are coming from the same lattice."),
+                        .expect("Nodes are coming from the same lattice.")
+                        .to_string(),
                 )
             })
             .collect();

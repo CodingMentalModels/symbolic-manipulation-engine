@@ -189,7 +189,7 @@ impl TransformationLattice {
         return Err(TransformationError::NoValidTransformationsPossible);
     }
 
-    fn force_apply_transformation(
+    pub fn force_apply_transformation(
         &mut self,
         from: SymbolNode,
         transformation: Transformation,
