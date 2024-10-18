@@ -26,7 +26,6 @@ use crate::{
 };
 
 type SymbolNodeString = String;
-type ProvenanceString = String;
 type DisplayTransformation = String;
 type StatementIndex = usize;
 type TransformationIndex = usize;
@@ -1001,7 +1000,7 @@ impl DisplayTransformationLattice {
             .iter()
             .enumerate()
             .map(|(i, statement)| (statement.to_interpreted_string(interpretations), i))
-            .collect::<HashMap<_, _>>();
+            .collect::<HashMap<String, usize>>();
         let nodes = node_to_id
             .clone()
             .into_iter()
@@ -1011,18 +1010,35 @@ impl DisplayTransformationLattice {
             .get_ordered_applied_transformations()
             .into_iter()
             .map(|(from, transformation, to)| {
-                DisplayTransformationLatticeLink::new(
-                    node_to_id
-                        .get(&from.to_interpreted_string(interpretations))
-                        .expect("Nodes are coming from the same lattice.")
-                        .to_string(),
-                    transformation.to_interpreted_string(interpretations),
-                    node_to_id
-                        .get(&to.to_interpreted_string(interpretations))
-                        .expect("Nodes are coming from the same lattice.")
-                        .to_string(),
-                )
-            })
+                let separate_froms = if from.is_join() {
+                    assert_eq!(from.get_n_children(), 2);
+                    from.get_children().clone()
+                } else {
+                    vec![from]
+                };
+                let mut to_return = Vec::new();
+                for separate_from in separate_froms {
+                    let new_link = DisplayTransformationLatticeLink::new(
+                        node_to_id
+                            .get(&separate_from.to_interpreted_string(interpretations))
+                            .expect(&format!(
+                                "Nodes are coming from the same lattice but {} is missing (from_statement).",
+                                separate_from.to_interpreted_string(interpretations)
+                            ))
+                            .to_string(),
+                        transformation.to_interpreted_string(interpretations),
+                        node_to_id
+                            .get(&to.to_interpreted_string(interpretations))
+                            .expect(&format!(
+                                "Nodes are coming from the same lattice but {} is missing (to_statement).",
+                                to.to_interpreted_string(interpretations)
+                            ))
+                            .to_string(),
+                    );
+                    to_return.push(new_link);
+                }
+                to_return
+            }).flatten()
             .collect();
         Self::new(nodes, links)
     }
@@ -1047,16 +1063,16 @@ impl DisplayTransformationLatticeNode {
 #[ts(export)]
 pub struct DisplayTransformationLatticeLink {
     source: String,
-    target: String,
     relation: String,
+    target: String,
 }
 
 impl DisplayTransformationLatticeLink {
-    pub fn new(source: String, target: String, relation: String) -> Self {
+    pub fn new(source: String, relation: String, target: String) -> Self {
         Self {
             source,
-            target,
             relation,
+            target,
         }
     }
 }
