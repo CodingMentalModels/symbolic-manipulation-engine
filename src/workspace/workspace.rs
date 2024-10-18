@@ -417,9 +417,8 @@ impl Workspace {
 
     pub fn get_valid_transformations_from(
         &self,
-        statement_index: StatementIndex,
+        from_statement: SymbolNode,
     ) -> Result<Vec<SymbolNode>, WorkspaceError> {
-        let from_statement = self.get_statement(statement_index)?;
         let instantiated_transformations = self
             .transformation_lattice
             .get_instantiated_transformations_with_arbitrary(self.get_types(), None)?;
@@ -1760,44 +1759,52 @@ mod test_workspace {
             .add_parsed_transformation(false, "a+b", "b+a")
             .unwrap();
 
-        workspace_store.add_parsed_hypothesis("x+y").unwrap();
+        let x_plus_y = workspace_store.add_parsed_hypothesis("x+y").unwrap();
         let expected = vec![workspace_store.compile().parse_from_string("y+x").unwrap()];
         assert_eq!(
             workspace_store
                 .compile()
-                .get_valid_transformations_from(0)
+                .get_valid_transformations_from(x_plus_y.clone())
                 .unwrap(),
             expected
         );
-        workspace_store.try_transform_into_parsed("y+x").unwrap();
+        let y_plus_x = workspace_store.try_transform_into_parsed("y+x").unwrap();
         assert_eq!(
             workspace_store
                 .compile()
-                .get_valid_transformations_from(0)
+                .get_valid_transformations_from(x_plus_y.clone())
+                .unwrap(),
+            vec![],
+        );
+        assert_eq!(
+            workspace_store
+                .compile()
+                .get_valid_transformations_from(y_plus_x.clone())
                 .unwrap(),
             vec![],
         );
 
-        workspace_store.add_parsed_hypothesis("j+k").unwrap();
+        let j_plus_k = workspace_store.add_parsed_hypothesis("j+k").unwrap();
         assert_eq!(workspace_store.compile().get_statements().len(), 3);
         assert_eq!(
             workspace_store
                 .compile()
-                .get_valid_transformations_from(0)
+                .get_valid_transformations_from(x_plus_y.clone())
                 .unwrap(),
             vec![],
         );
 
-        let expected = vec![workspace_store.compile().parse_from_string("k+j").unwrap()];
+        let k_plus_j = workspace_store.compile().parse_from_string("k+j").unwrap();
+        let expected = vec![k_plus_j.clone()];
         assert_eq!(
             workspace_store
                 .compile()
-                .get_valid_transformations_from(2)
+                .get_valid_transformations_from(j_plus_k)
                 .unwrap(),
             expected
         );
 
-        workspace_store.add_parsed_hypothesis("a+(b+c)").unwrap();
+        let a_plus_b_plus_c = workspace_store.add_parsed_hypothesis("a+(b+c)").unwrap();
         let expected = vec![
             workspace_store
                 .compile()
@@ -1817,7 +1824,7 @@ mod test_workspace {
         assert_eq!(
             workspace_store
                 .compile()
-                .get_valid_transformations_from(3)
+                .get_valid_transformations_from(a_plus_b_plus_c)
                 .unwrap()
                 .into_iter()
                 .collect::<HashSet<_>>(),

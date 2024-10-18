@@ -356,9 +356,10 @@ impl Cli {
             None => Err("No statement index provided.".to_string()),
             Some(index_string) => match index_string.parse::<usize>() {
                 Ok(statement_index) => {
-                    let mut workspace = workspace_store.compile();
+                    let workspace = workspace_store.compile();
+                    let statement = workspace.get_ordered_statements()[statement_index].clone();
                     let mut result = workspace
-                        .get_valid_transformations_from(statement_index)
+                        .get_valid_transformations_from(statement)
                         .map_err(|e| format!("Error getting valid transformations: {:?}", e))?
                         .into_iter()
                         .map(|n| {
