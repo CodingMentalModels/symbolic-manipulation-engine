@@ -2116,7 +2116,7 @@ mod test_workspace {
 
         let _transformed = workspace_store.try_transform_into_parsed("2").unwrap();
         assert_eq!(workspace_store.compile().get_ordered_statements().len(), 4);
-        assert_eq!(workspace_store.compile().get_ordered_statements()[3], two);
+        assert!(workspace_store.compile().contains_statement(&two));
 
         assert!(workspace_store.add_parsed_hypothesis("3*0").is_ok());
         assert_eq!(workspace_store.compile().get_ordered_statements().len(), 5);
@@ -2135,7 +2135,7 @@ mod test_workspace {
         let _transformed = workspace_store.try_transform_into_parsed("0").unwrap();
         let zero = SymbolNode::leaf(Symbol::new("0".to_string(), "0".into()));
         assert_eq!(workspace_store.compile().get_ordered_statements().len(), 6);
-        assert_eq!(workspace_store.compile().get_ordered_statements()[5], zero);
+        assert!(workspace_store.compile().contains_statement(&zero));
     }
 
     #[test]

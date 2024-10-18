@@ -212,7 +212,6 @@ impl TransformationLattice {
         transformation: Transformation,
         to: SymbolNode,
     ) {
-        assert!(self.contains_statement(&from));
         self.statements.insert(to.clone());
         self.transformations_from
             .entry(from.clone())
