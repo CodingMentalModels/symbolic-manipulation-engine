@@ -1014,12 +1014,12 @@ impl DisplayTransformationLattice {
             .map(|(from, transformation, to)| {
                 DisplayTransformationLatticeLink::new(
                     node_to_id
-                        .get(from.to_interpreted_string(interpretations))
+                        .get(&from.to_interpreted_string(interpretations))
                         .expect("Nodes are coming from the same lattice.")
                         .to_string(),
                     transformation.to_interpreted_string(interpretations),
                     node_to_id
-                        .get(to.to_interpreted_string(interpretations))
+                        .get(&to.to_interpreted_string(interpretations))
                         .expect("Nodes are coming from the same lattice.")
                         .to_string(),
                 )
@@ -1411,11 +1411,13 @@ mod test_workspace {
         // except that y will be replaced with y_0 to disambiguate the transform y
         // from the predicate y
         let expected = instantiate("x=y_0", "x+y=y_0+y");
-        let results = workspace_store
-            .compile()
-            .get_instantiated_transformations_with_indices(Some(
-                workspace.parse_from_string("x+y=5+y").unwrap(),
-            ))
+        let workspace = workspace_store.compile();
+        let results = workspace
+            .transformation_lattice
+            .get_instantiated_transformations_with_arbitrary(
+                &types,
+                Some(workspace.parse_from_string("x+y=5+y").unwrap()),
+            )
             .unwrap()
             .into_iter()
             .map(|(r, _)| r)
@@ -1475,14 +1477,11 @@ mod test_workspace {
         workspace_store.add_parsed_hypothesis("p^s").unwrap();
 
         let instantiate = |from: &str, to: &str| {
-            (
-                ExplicitTransformation::new(
-                    workspace_store.compile().parse_from_string(from).unwrap(),
-                    workspace_store.compile().parse_from_string(to).unwrap(),
-                )
-                .into(),
-                0,
+            ExplicitTransformation::new(
+                workspace_store.compile().parse_from_string(from).unwrap(),
+                workspace_store.compile().parse_from_string(to).unwrap(),
             )
+            .into()
         };
 
         let expected = vec![
@@ -1494,22 +1493,26 @@ mod test_workspace {
         ]
         .into_iter()
         .collect();
-        let actual = workspace_store
-            .compile()
-            .get_instantiated_transformations_with_indices(None)
-            .unwrap();
+        let workspace = workspace_store.compile();
+        let actual: HashSet<Transformation> = workspace
+            .transformation_lattice
+            .get_instantiated_transformations_with_arbitrary(&types, None)
+            .unwrap()
+            .into_iter()
+            .map(|(t, _)| t)
+            .collect();
         assert_eq!(
             actual,
             expected,
             "actual:\n{}\n\nexpected:\n{}",
             actual
                 .iter()
-                .map(|(t, _)| t.to_interpreted_string(&interpretations))
+                .map(|t| t.to_interpreted_string(&interpretations))
                 .collect::<Vec<_>>()
                 .join("\n"),
             expected
                 .iter()
-                .map(|(t, _)| t.to_interpreted_string(&interpretations))
+                .map(|t| t.to_interpreted_string(&interpretations))
                 .collect::<Vec<_>>()
                 .join("\n"),
         );
@@ -1533,22 +1536,26 @@ mod test_workspace {
         .into_iter()
         .collect();
 
-        let actual = workspace_store
+        let actual: HashSet<_> = workspace_store
             .compile()
-            .get_instantiated_transformations_with_indices(None)
-            .unwrap();
+            .transformation_lattice
+            .get_instantiated_transformations_with_arbitrary(&types, None)
+            .unwrap()
+            .into_iter()
+            .map(|(t, _)| t)
+            .collect();
         assert_eq!(
             actual,
             expected,
             "Actual:\n{}\n\nExpected:\n{}",
             actual
                 .iter()
-                .map(|(n, _)| n.to_interpreted_string(&interpretations))
+                .map(|n| n.to_interpreted_string(&interpretations))
                 .collect::<Vec<_>>()
                 .join("\n"),
             expected
                 .iter()
-                .map(|(n, _)| n.to_interpreted_string(&interpretations))
+                .map(|n| n.to_interpreted_string(&interpretations))
                 .collect::<Vec<_>>()
                 .join("\n"),
         );
@@ -1990,12 +1997,12 @@ mod test_workspace {
         let mut workspace = Workspace::new(types, vec![], vec![]);
         let statement = SymbolNode::leaf_object("a");
         workspace.add_hypothesis(statement).unwrap();
-        assert_eq!(workspace.statements.len(), 1);
+        assert_eq!(workspace.get_ordered_statements().len(), 1);
 
         let statement = SymbolNode::leaf_object("b");
         workspace.add_hypothesis(statement).unwrap();
 
-        assert_eq!(workspace.statements.len(), 2);
+        assert_eq!(workspace.get_ordered_statements().len(), 2);
     }
 
     #[test]
@@ -2027,7 +2034,10 @@ mod test_workspace {
             Symbol::new("+".to_string(), "Integer".into()),
             vec![SymbolNode::singleton("2"), SymbolNode::singleton("2")],
         );
-        assert_eq!(workspace_store.compile().statements, vec![expected]);
+        assert_eq!(
+            workspace_store.compile().get_ordered_statements(),
+            vec![expected]
+        );
     }
 
     #[test]
@@ -2059,10 +2069,10 @@ mod test_workspace {
         let mut workspace_store = WorkspaceTransactionStore::snapshot(workspace);
 
         assert!(workspace_store.add_parsed_hypothesis("2+2").is_ok());
-        assert_eq!(workspace_store.compile().statements.len(), 1);
+        assert_eq!(workspace_store.compile().get_ordered_statements().len(), 1);
         let two = SymbolNode::leaf(Symbol::new("2".to_string(), "2".into()));
         assert_eq!(
-            workspace_store.compile().statements,
+            workspace_store.compile().get_ordered_statements(),
             vec![SymbolNode::new(
                 Symbol::new_with_same_type_as_value("+").into(),
                 vec![two.clone(), two.clone()]
@@ -2072,76 +2082,84 @@ mod test_workspace {
         workspace_store
             .add_algorithm(&AlgorithmType::Addition, "+", "Real")
             .unwrap();
-        assert_eq!(workspace_store.compile().transformation_lattice.len(), 1);
+        assert_eq!(
+            workspace_store
+                .compile()
+                .transformation_lattice
+                .get_available_transformations()
+                .len(),
+            1
+        );
 
         let _transformed = workspace_store.try_transform_into_parsed("4").unwrap();
-        assert_eq!(workspace_store.compile().statements.len(), 2);
+        assert_eq!(workspace_store.compile().get_ordered_statements().len(), 2);
         let four = SymbolNode::leaf(Symbol::new("4".to_string(), "4".into()));
-        assert_eq!(workspace_store.compile().statements[1], four);
+        assert_eq!(workspace_store.compile().get_ordered_statements()[1], four);
 
         let hypothesis_result = workspace_store.add_parsed_hypothesis("8/4");
         assert!(hypothesis_result.is_ok(), "{:?}", hypothesis_result);
-        assert_eq!(workspace_store.compile().statements.len(), 3);
+        assert_eq!(workspace_store.compile().get_ordered_statements().len(), 3);
         workspace_store
             .add_algorithm(&AlgorithmType::Division, "/", "Real")
             .unwrap();
-        assert_eq!(workspace_store.compile().transformation_lattice.len(), 2);
+        assert_eq!(
+            workspace_store
+                .compile()
+                .transformation_lattice
+                .get_available_transformations()
+                .len(),
+            2
+        );
 
         let _transformed = workspace_store.try_transform_into_parsed("2").unwrap();
-        assert_eq!(workspace_store.compile().statements.len(), 4);
-        assert_eq!(workspace_store.compile().statements[3], two);
+        assert_eq!(workspace_store.compile().get_ordered_statements().len(), 4);
+        assert_eq!(workspace_store.compile().get_ordered_statements()[3], two);
 
         assert!(workspace_store.add_parsed_hypothesis("3*0").is_ok());
-        assert_eq!(workspace_store.compile().statements.len(), 5);
+        assert_eq!(workspace_store.compile().get_ordered_statements().len(), 5);
         workspace_store
             .add_algorithm(&AlgorithmType::Multiplication, "*", "Real")
             .unwrap();
-        assert_eq!(workspace_store.compile().transformation_lattice.len(), 3);
+        assert_eq!(
+            workspace_store
+                .compile()
+                .transformation_lattice
+                .get_available_transformations()
+                .len(),
+            3
+        );
 
         let _transformed = workspace_store.try_transform_into_parsed("0").unwrap();
         let zero = SymbolNode::leaf(Symbol::new("0".to_string(), "0".into()));
-        assert_eq!(workspace_store.compile().statements.len(), 6);
-        assert_eq!(workspace_store.compile().statements[5], zero);
+        assert_eq!(workspace_store.compile().get_ordered_statements().len(), 6);
+        assert_eq!(workspace_store.compile().get_ordered_statements()[5], zero);
     }
 
     #[test]
-    fn test_workspace_transforms_statement_and_maintains_provenance() {
+    fn test_workspace_transforms_statement() {
         let types = TypeHierarchy::new();
         let workspace = Workspace::new(types, vec![], vec![]);
         let mut workspace_store = WorkspaceTransactionStore::snapshot(workspace);
         assert!(workspace_store.add_parsed_hypothesis("a").is_ok());
-        assert_eq!(workspace_store.compile().statements.len(), 1);
+        assert_eq!(workspace_store.compile().get_ordered_statements().len(), 1);
 
         workspace_store
             .add_parsed_transformation(false, "a", "b")
             .unwrap();
-        assert_eq!(workspace_store.compile().transformation_lattice.len(), 1);
+        assert_eq!(
+            workspace_store
+                .compile()
+                .transformation_lattice
+                .get_available_transformations()
+                .len(),
+            1
+        );
 
         let _transformed = workspace_store.try_transform_into_parsed("b").unwrap();
-        assert_eq!(workspace_store.compile().statements.len(), 2);
+        assert_eq!(workspace_store.compile().get_ordered_statements().len(), 2);
         assert_eq!(
-            workspace_store.compile().statements,
+            workspace_store.compile().get_ordered_statements(),
             vec![SymbolNode::leaf_object("a"), SymbolNode::leaf_object("b")]
-        );
-
-        assert_eq!(
-            workspace_store.compile().get_provenance(0),
-            Ok(Provenance::Hypothesis)
-        );
-        // TODO Currently we don't derive the transformation addresses but this assertion should
-        // fail
-        assert_eq!(
-            workspace_store.compile().get_provenance(1),
-            Ok(Provenance::Derived((
-                0,
-                StatementProvenance::Single(0),
-                vec![]
-            )))
-        );
-
-        assert_eq!(
-            workspace_store.compile().get_provenance_lineage(0),
-            Ok(vec![Provenance::Hypothesis])
         );
     }
 
@@ -2177,16 +2195,27 @@ mod test_workspace {
             types.clone(),
             vec![],
             vec![],
-            vec![
-                equality_reflexivity.clone().into(),
-                equality_symmetry.clone().into(),
-            ],
+            TransformationLattice::from_transformations(
+                vec![
+                    equality_reflexivity.clone().into(),
+                    equality_symmetry.clone().into(),
+                ]
+                .into_iter()
+                .collect(),
+            )
+            .unwrap(),
         )
         .unwrap();
 
         assert_eq!(workspace.try_import_context(context.clone()), Ok(()));
         assert_eq!(workspace.types, types);
-        assert_eq!(workspace.transformation_lattice.len(), 2);
+        assert_eq!(
+            workspace
+                .transformation_lattice
+                .get_available_transformations()
+                .len(),
+            2
+        );
 
         let mut complex_types = TypeHierarchy::chain(vec![
             "Complex".into(),
@@ -2206,7 +2235,12 @@ mod test_workspace {
             complex_types,
             vec![],
             vec![],
-            vec![equality_reflexivity.into(), equality_symmetry.into()],
+            TransformationLattice::from_transformations(
+                vec![equality_reflexivity.into(), equality_symmetry.into()]
+                    .into_iter()
+                    .collect(),
+            )
+            .unwrap(),
         )
         .unwrap();
 
@@ -2226,10 +2260,22 @@ mod test_workspace {
             ))
         );
 
-        assert_eq!(workspace.transformation_lattice.len(), 2);
+        assert_eq!(
+            workspace
+                .transformation_lattice
+                .get_available_transformations()
+                .len(),
+            2
+        );
 
         let inverted_types = TypeHierarchy::chain(vec!["Rational".into(), "Real".into()]).unwrap();
-        let conflicting_context = Context::new(inverted_types, vec![], vec![], vec![]).unwrap();
+        let conflicting_context = Context::new(
+            inverted_types,
+            vec![],
+            vec![],
+            TransformationLattice::empty(),
+        )
+        .unwrap();
 
         assert_eq!(
             workspace.try_import_context(conflicting_context),

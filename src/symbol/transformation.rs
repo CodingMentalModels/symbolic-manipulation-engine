@@ -43,6 +43,14 @@ impl TransformationLattice {
         )
     }
 
+    pub fn from_transformations(
+        transformations: HashSet<Transformation>,
+    ) -> Result<Self, TransformationError> {
+        let mut to_return = Self::empty();
+        to_return.add_available_transformations(transformations)?;
+        Ok(to_return)
+    }
+
     pub fn get_statements(&self) -> &HashSet<SymbolNode> {
         &self.statements
     }
@@ -116,6 +124,15 @@ impl TransformationLattice {
             self.statements.insert(hypothesis);
             Ok(())
         }
+    }
+
+    pub fn add_available_transformations(
+        &mut self,
+        transformations: HashSet<Transformation>,
+    ) -> Result<(), TransformationError> {
+        transformations
+            .into_iter()
+            .try_for_each(|t| self.add_available_transformation(t))
     }
 
     pub fn add_available_transformation(
@@ -1188,7 +1205,7 @@ impl From<TypeError> for TransformationError {
 mod test_transformation {
     use crate::{
         parsing::{interpretation::Interpretation, parser::Parser, tokenizer::Token},
-        symbol::{symbol_node::SymbolNodeRoot, symbol_type::GeneratedTypeCondition},
+        symbol::symbol_node::SymbolNodeRoot,
     };
 
     use super::*;

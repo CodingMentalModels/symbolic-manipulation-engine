@@ -248,7 +248,7 @@ impl Cli {
                         .clone();
                     new_interpretation
                         .update_match_string(new_match_string)
-                        .map_err(|e| format!("Interpretation Error: {:?}", e));
+                        .map_err(|e| format!("Interpretation Error: {:?}", e))?;
                     let to_return = workspace_store
                         .add(
                             WorkspaceTransactionItem::UpdateInterpretation((
