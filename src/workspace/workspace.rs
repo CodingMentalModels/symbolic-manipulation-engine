@@ -1001,11 +1001,6 @@ impl DisplayTransformationLattice {
             .enumerate()
             .map(|(i, statement)| (statement.to_interpreted_string(interpretations), i))
             .collect::<HashMap<String, usize>>();
-        let nodes = node_to_id
-            .clone()
-            .into_iter()
-            .map(|(node, id)| DisplayTransformationLatticeNode::new(id.to_string(), node))
-            .collect();
         let links = lattice
             .get_ordered_applied_transformations()
             .into_iter()
@@ -1039,6 +1034,20 @@ impl DisplayTransformationLattice {
                 }
                 to_return
             }).flatten()
+            .collect::<Vec<_>>();
+        let nodes = node_to_id
+            .clone()
+            .into_iter()
+            .map(|(node, id)| {
+                DisplayTransformationLatticeNode::new(
+                    id.to_string(),
+                    node,
+                    !links.iter().any(|link| link.target == id.to_string()), // Clearly could be
+                                                                             // faster if done
+                                                                             // while building
+                                                                             // links
+                )
+            })
             .collect();
         Self::new(nodes, links)
     }
@@ -1050,11 +1059,16 @@ impl DisplayTransformationLattice {
 pub struct DisplayTransformationLatticeNode {
     id: String,
     description: String,
+    is_initial: bool,
 }
 
 impl DisplayTransformationLatticeNode {
-    pub fn new(id: String, description: String) -> Self {
-        Self { id, description }
+    pub fn new(id: String, description: String, is_initial: bool) -> Self {
+        Self {
+            id,
+            description,
+            is_initial,
+        }
     }
 }
 
