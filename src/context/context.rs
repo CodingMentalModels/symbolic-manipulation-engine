@@ -52,12 +52,22 @@ impl Context {
     }
 
     pub fn from_workspace(workspace: &Workspace) -> Result<Self, ContextError> {
+        let lattice = TransformationLattice::from_transformations(
+            workspace
+                .get_transformation_lattice()
+                .get_available_transformations()
+                .clone(),
+        )
+        .map_err(|_| {
+            ContextError::InvalidTransformationLattice(
+                workspace.get_transformation_lattice().clone(),
+            )
+        })?;
         Self::new(
             workspace.get_types().clone(),
             workspace.get_generated_types().clone(),
             workspace.get_interpretations().clone(),
-            workspace.get_transformation_lattice().clone(), // TODO Pare this down to just what
-                                                            // should be saved
+            lattice,
         )
     }
 
@@ -90,6 +100,7 @@ impl Context {
 pub enum ContextError {
     StatementIncludesTypesNotInHierarchy(HashSet<Type>),
     InvalidTypeErrorTransformation(TypeError),
+    InvalidTransformationLattice(TransformationLattice),
 }
 
 impl From<TypeError> for ContextError {

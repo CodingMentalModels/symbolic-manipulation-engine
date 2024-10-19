@@ -34,15 +34,19 @@ fn test_add_algorithm() {
 
 #[test]
 fn test_algorithm_applies() {
-    // let root_dir = current_dir().unwrap();
-    // let dir = root_dir.join(Path::new("tests\\assets\\test_algorithm_applies\\"));
-    // let filesystem = FileSystem::new(dir);
-    // let cli = Cli::new(filesystem, CliMode::Testing);
-    // let matches =
-    //     build_cli().get_matches_from(vec!["symbolic-manipulation-engine", "derive", "--", "y=0"]);
-    // cli.derive(matches.subcommand_matches("derive").unwrap())
-    //     .unwrap();
-    // cli.ls().unwrap();
+    let root_dir = current_dir().unwrap();
+    let dir = root_dir.join(Path::new("tests\\assets\\test_algorithm_applies\\"));
+    let filesystem = FileSystem::new(dir);
+    let cli = Cli::new(filesystem, CliMode::Testing);
+    let matches = build_cli().get_matches_from(vec![
+        "symbolic-manipulation-engine",
+        "derive",
+        "--",
+        "x+y=15",
+    ]);
+    cli.derive(matches.subcommand_matches("derive").unwrap())
+        .unwrap();
+    cli.ls().unwrap();
 }
 
 #[test]
@@ -64,19 +68,19 @@ fn test_adds_to_both_sides() {
 
 #[test]
 fn test_applies_joint_transforms() {
-    // let root_dir = current_dir().unwrap();
-    // let dir = root_dir.join(Path::new("tests\\assets\\test_applies_joint_transforms\\"));
-    // let filesystem = FileSystem::new(dir);
-    // let cli = Cli::new(filesystem, CliMode::Testing);
-    // let matches = build_cli().get_matches_from(vec![
-    //     "symbolic-manipulation-engine",
-    //     "derive",
-    //     "--",
-    //     "5+y=x+10",
-    // ]);
-    // cli.derive(matches.subcommand_matches("derive").unwrap())
-    //     .unwrap();
-    // cli.ls().unwrap();
+    let root_dir = current_dir().unwrap();
+    let dir = root_dir.join(Path::new("tests\\assets\\test_applies_joint_transforms\\"));
+    let filesystem = FileSystem::new(dir);
+    let cli = Cli::new(filesystem, CliMode::Testing);
+    let matches = build_cli().get_matches_from(vec![
+        "symbolic-manipulation-engine",
+        "derive",
+        "--",
+        "x+y=5+10",
+    ]);
+    cli.derive(matches.subcommand_matches("derive").unwrap())
+        .unwrap();
+    cli.ls().unwrap();
 }
 
 #[test]
