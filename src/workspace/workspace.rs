@@ -1039,13 +1039,11 @@ impl DisplayTransformationLattice {
             .clone()
             .into_iter()
             .map(|(node, id)| {
+                // We're better off computing this above but this is fine for now
                 DisplayTransformationLatticeNode::new(
                     id.to_string(),
                     node,
-                    !links.iter().any(|link| link.target == id.to_string()), // Clearly could be
-                                                                             // faster if done
-                                                                             // while building
-                                                                             // links
+                    !links.iter().any(|link| link.target == id.to_string()),
                 )
             })
             .collect();
