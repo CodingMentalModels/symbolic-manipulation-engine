@@ -358,6 +358,14 @@ impl Workspace {
         );
     }
 
+    fn get_upstream_statement_and_transformation(
+        &self,
+        statement: &SymbolNode,
+    ) -> Option<(SymbolNode, Transformation)> {
+        self.transformation_lattice
+            .get_upstream_statement_and_transformation(statement)
+    }
+
     fn add_transformation(&mut self, transformation: Transformation) -> Result<(), WorkspaceError> {
         self.types.binds_transformation_or_error(&transformation)?;
         self.transformation_lattice
@@ -471,14 +479,22 @@ impl Workspace {
         let (interpreted_string, type_map) = statement
             .to_interpreted_string_and_type_map(&self.interpretations)
             .map_err(|e| Into::<WorkspaceError>::into(e))?;
+        let (upstream_statement, upstream_transformation) =
+            match self.get_upstream_statement_and_transformation(&statement) {
+                Some((s, t)) => (
+                    Some(s.to_interpreted_string(&self.interpretations)),
+                    Some(t.to_interpreted_string(&self.interpretations)),
+                ),
+                None => (None, None),
+            };
         Ok(DisplaySymbolNode::new(
             interpreted_string,
             type_map
                 .into_iter()
                 .map(|(name, t)| (name, t.to_string()))
                 .collect(),
-            Some("".to_string()), // TODO Populate from the lattice
-            Some("".to_string()), // TODO Populate from the lattice
+            upstream_statement,
+            upstream_transformation,
         ))
     }
 

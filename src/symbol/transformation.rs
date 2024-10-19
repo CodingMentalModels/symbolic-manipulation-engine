@@ -94,6 +94,25 @@ impl TransformationLattice {
             .collect()
     }
 
+    pub fn get_upstream_statement_and_transformation(
+        &self,
+        statement: &SymbolNode,
+    ) -> Option<(SymbolNode, Transformation)> {
+        let statements_and_transformations: Vec<_> = self
+            .transformations_to
+            .iter()
+            .filter(|((_, _), to)| *to == statement)
+            .map(|((from, transformation), _)| (from.clone(), transformation.clone()))
+            .collect();
+        if statements_and_transformations.len() == 0 {
+            return None;
+        }
+
+        let first_statement_and_transformation = statements_and_transformations[0].clone();
+
+        return Some(first_statement_and_transformation);
+    }
+
     pub fn get_ordered_applied_transformations(
         &self,
     ) -> Vec<(SymbolNode, Transformation, SymbolNode)> {
