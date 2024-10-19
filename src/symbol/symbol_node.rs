@@ -554,6 +554,16 @@ impl SymbolNode {
     }
 
     pub fn to_interpreted_string(&self, interpretations: &Vec<Interpretation>) -> String {
+        if self.is_join() {
+            let children = self.get_children();
+            let left = children[0].clone();
+            let right = children[1].clone();
+            return format!(
+                "({}, {})",
+                left.to_interpreted_string(interpretations),
+                right.to_interpreted_string(interpretations)
+            );
+        }
         if self.has_children() {
             let interpreted_children = self
                 .get_children()
