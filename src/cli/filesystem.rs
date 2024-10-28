@@ -29,6 +29,12 @@ impl FileSystem {
         path.exists()
     }
 
+    pub fn file_exists(&self, path: &str, filename: &str) -> bool {
+        let path = self.root_directory.join(path);
+        let path = path.join(filename);
+        path.exists()
+    }
+
     pub fn create_directory(&self, path: &str) -> bool {
         let path = self.root_directory.join(path);
         if path.exists() {
