@@ -3,7 +3,6 @@ use symbolic_manipulation_engine::build_cli;
 
 use symbolic_manipulation_engine::cli::cli::{Cli, CliMode};
 use symbolic_manipulation_engine::cli::filesystem::FileSystem;
-use symbolic_manipulation_engine::cli::history::CommandHistory;
 
 fn main() {
     let matches = build_cli().get_matches();
