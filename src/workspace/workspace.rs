@@ -20,12 +20,12 @@ use crate::{
         },
         transformation::{
             AlgorithmTransformation, ExplicitTransformation, Transformation, TransformationError,
+            TransformationLattice,
         },
     },
 };
 
 type SymbolNodeString = String;
-type ProvenanceString = String;
 type DisplayTransformation = String;
 type StatementIndex = usize;
 type TransformationIndex = usize;
@@ -40,7 +40,7 @@ pub struct DisplayWorkspace {
     interpretations: Vec<DisplayInterpretation>,
     statements: Vec<DisplaySymbolNode>,
     transformations: Vec<DisplayTransformation>,
-    provenance: Vec<DisplayProvenance>,
+    transformation_lattice: DisplayTransformationLattice,
 }
 
 impl DisplayWorkspace {
@@ -59,11 +59,14 @@ impl DisplayWorkspace {
                 .collect(),
             statements: workspace.get_display_symbol_nodes()?,
             transformations: workspace
-                .transformations
+                .get_available_transformations()
                 .iter()
                 .map(|t| t.to_interpreted_string(&workspace.interpretations))
                 .collect(),
-            provenance: workspace.get_display_provenances(),
+            transformation_lattice: DisplayTransformationLattice::from_transformation_lattice(
+                &workspace.interpretations,
+                &workspace.transformation_lattice,
+            ),
         })
     }
 }
@@ -73,9 +76,7 @@ pub struct Workspace {
     types: TypeHierarchy,
     generated_types: Vec<GeneratedType>,
     interpretations: Vec<Interpretation>,
-    statements: Vec<SymbolNode>,
-    transformations: Vec<Transformation>,
-    provenance: Vec<Provenance>,
+    transformation_lattice: TransformationLattice,
 }
 
 impl Default for Workspace {
@@ -94,9 +95,7 @@ impl Workspace {
             types,
             generated_types,
             interpretations,
-            statements: vec![],
-            transformations: vec![],
-            provenance: vec![],
+            transformation_lattice: TransformationLattice::empty(),
         }
     }
 
@@ -213,7 +212,7 @@ impl Workspace {
         self.types = new_types;
         self.generated_types = new_generated_types;
         self.interpretations = new_interpretations;
-        self.transformations = context.get_transformations().clone();
+        self.transformation_lattice = context.get_transformation_lattice().clone();
         Ok(())
     }
 
@@ -224,67 +223,52 @@ impl Workspace {
             .map_err(|e| e.into())
     }
 
-    pub fn get_statements(&self) -> &Vec<SymbolNode> {
-        &self.statements
+    pub fn get_statements(&self) -> &HashSet<SymbolNode> {
+        self.transformation_lattice.get_statements()
     }
 
-    pub fn get_statements_and_provenance(&self) -> Vec<(SymbolNode, StatementProvenance)> {
-        self.statements
-            .iter()
-            .cloned()
-            .enumerate()
-            .map(|(i, s)| (s, StatementProvenance::Single(i)))
-            .collect()
+    pub fn get_ordered_statements(&self) -> Vec<SymbolNode> {
+        self.transformation_lattice.get_ordered_statements()
     }
 
-    pub fn get_statement_pairs(&self) -> Vec<SymbolNode> {
-        self.get_statement_pairs_and_provenance_including(None)
-            .into_iter()
-            .map(|(s, _)| s)
-            .collect()
+    pub fn contains_statement(&self, statement: &SymbolNode) -> bool {
+        self.transformation_lattice.contains_statement(statement)
     }
 
-    pub fn get_statement_pairs_and_provenance(&self) -> Vec<(SymbolNode, StatementProvenance)> {
-        self.get_statement_pairs_and_provenance_including(None)
+    pub fn get_available_transformations(&self) -> &HashSet<Transformation> {
+        self.transformation_lattice.get_available_transformations()
     }
 
-    pub fn get_statement_pairs_including(&self, statement: Option<&SymbolNode>) -> Vec<SymbolNode> {
-        self.get_statement_pairs_and_provenance_including(statement)
-            .into_iter()
-            .map(|(s, _)| s)
-            .collect()
+    pub fn get_ordered_available_transformations(&self) -> Vec<Transformation> {
+        self.transformation_lattice
+            .get_ordered_available_transformations()
     }
 
-    pub fn get_statement_pairs_and_provenance_including(
-        &self,
-        statement: Option<&SymbolNode>,
-    ) -> Vec<(SymbolNode, StatementProvenance)> {
-        // Returns pairs of statements for use in joint transforms
-        // Returns both orders as well as duplicates since those are valid joint transform args
-        let left = self.get_statements();
-        let right = self.get_statements();
-        let mut to_return = Vec::new();
-        for i in 0..left.len() {
-            for j in 0..right.len() {
-                if statement.is_none()
-                    || (Some(&left[i]) == statement)
-                    || (Some(&right[i]) == statement)
-                {
-                    to_return.push((
-                        left[i].clone().join(right[j].clone()),
-                        StatementProvenance::Joint((i, j)),
-                    ));
-                }
-            }
-        }
-        to_return
+    pub fn contains_transformation(&self, transformation: &Transformation) -> bool {
+        self.transformation_lattice
+            .contains_transformation(transformation)
+    }
+
+    pub fn get_transformation_lattice(&self) -> &TransformationLattice {
+        &self.transformation_lattice
     }
 
     pub fn get_statement(&self, index: StatementIndex) -> Result<SymbolNode, WorkspaceError> {
         if self.statement_index_is_invalid(index) {
             Err(WorkspaceError::InvalidStatementIndex(index))
         } else {
-            Ok(self.statements[index].clone())
+            Ok(self.get_ordered_statements()[index].clone())
+        }
+    }
+
+    pub fn get_transformation(
+        &self,
+        index: TransformationIndex,
+    ) -> Result<Transformation, WorkspaceError> {
+        if self.transformation_index_is_invalid(index) {
+            Err(WorkspaceError::InvalidTransformationIndex(index))
+        } else {
+            Ok(self.get_ordered_available_transformations()[index].clone())
         }
     }
 
@@ -354,52 +338,39 @@ impl Workspace {
         self.types
             .binds_statement_or_error(&statement)
             .map_err(|x| WorkspaceError::from(x))?;
-        if statement.get_arbitrary_nodes().len() > 0 {
-            return Err(WorkspaceError::ContainsArbitraryNode);
+        if statement.contains_arbitrary_nodes() {
+            return Err(WorkspaceError::StatementContainsArbitraryNode(statement));
         }
-        self.statements.push(statement);
-        self.provenance.push(Provenance::Hypothesis);
+        self.transformation_lattice.add_hypothesis(statement)?;
         Ok(())
     }
 
-    fn add_derived_statement(&mut self, statement: SymbolNode, provenance: Provenance) {
-        self.statements.push(statement);
-        self.provenance.push(provenance);
+    fn force_apply_transformation(
+        &mut self,
+        from_statement: SymbolNode,
+        transformation: Transformation,
+        to_statement: SymbolNode,
+    ) {
+        self.transformation_lattice.force_apply_transformation(
+            from_statement,
+            transformation,
+            to_statement,
+        );
     }
 
-    pub fn get_transformations(&self) -> &Vec<Transformation> {
-        &self.transformations
-    }
-
-    pub fn get_transformations_with_indices(&self) -> Vec<(Transformation, TransformationIndex)> {
-        self.transformations
-            .clone()
-            .into_iter()
-            .enumerate()
-            .map(|(i, t)| (t, i))
-            .collect()
-    }
-
-    pub fn get_transformation(
+    fn get_upstream_statement_and_transformation(
         &self,
-        index: TransformationIndex,
-    ) -> Result<Transformation, WorkspaceError> {
-        if self.transformation_index_is_invalid(index) {
-            Err(WorkspaceError::InvalidTransformationIndex(index))
-        } else {
-            Ok(self.transformations[index].clone())
-        }
+        statement: &SymbolNode,
+    ) -> Option<(SymbolNode, Transformation)> {
+        self.transformation_lattice
+            .get_upstream_statement_and_transformation(statement)
     }
 
     fn add_transformation(&mut self, transformation: Transformation) -> Result<(), WorkspaceError> {
         self.types.binds_transformation_or_error(&transformation)?;
-        if self.transformations.contains(&transformation) {
-            return Err(WorkspaceError::TransformationsAlreadyInclude(
-                transformation,
-            ));
-        }
-        self.transformations.push(transformation);
-        Ok(())
+        self.transformation_lattice
+            .add_available_transformation(transformation)
+            .map_err(|e| e.into())
     }
 
     pub fn get_valid_transformations(
@@ -413,26 +384,34 @@ impl Workspace {
             }
             Ok(s) => s,
         };
-        let instantiated_transformations =
-            self.get_instantiated_transformations_with_indices(Some(desired.clone()))?;
+        let instantiated_transformations = self
+            .transformation_lattice
+            .get_instantiated_transformations_with_arbitrary(
+                self.get_types(),
+                Some(desired.clone()),
+            )?;
         debug!(
             "instantiated_transformations:\n{}",
             instantiated_transformations
                 .clone()
                 .into_iter()
-                .map(|(t, _)| t.to_symbol_string())
+                .map(|(instantiated, arbitrary)| format!(
+                    "Instantiated: {}; Arbitrary: {}",
+                    instantiated.to_symbol_string(),
+                    arbitrary.to_symbol_string()
+                ))
                 .collect::<Vec<_>>()
                 .join("\n")
         );
-        for (transformation, _) in instantiated_transformations {
-            let statements = if transformation.is_joint_transform() {
-                self.get_statement_pairs()
+        for (instantiated, _) in instantiated_transformations {
+            let statements = if instantiated.is_joint_transform() {
+                self.transformation_lattice.get_statement_pairs()
             } else {
-                self.get_statements().clone()
+                self.transformation_lattice.get_statements().clone()
             };
             for statement in statements {
                 let valid_transformations =
-                    transformation.get_valid_transformations(self.get_types(), &statement);
+                    instantiated.get_valid_transformations(self.get_types(), &statement);
                 if valid_transformations.contains(&desired)
                     && !self.get_statements().contains(&desired)
                 {
@@ -445,26 +424,31 @@ impl Workspace {
 
     pub fn get_valid_transformations_from(
         &self,
-        statement_index: StatementIndex,
+        from_statement: SymbolNode,
     ) -> Result<Vec<SymbolNode>, WorkspaceError> {
-        let from_statement = self.get_statement(statement_index)?;
-        let instantiated_transformations =
-            self.get_instantiated_transformations_with_indices(None)?;
+        let instantiated_transformations = self
+            .transformation_lattice
+            .get_instantiated_transformations_with_arbitrary(self.get_types(), None)?;
         debug!(
             "instantiated_transformations:\n{}",
             instantiated_transformations
                 .clone()
                 .into_iter()
-                .map(|(t, _)| t.to_symbol_string())
+                .map(|(instantiated, arbitrary)| format!(
+                    "instantiated: {}; arbitrary: {}",
+                    instantiated.to_symbol_string(),
+                    arbitrary.to_symbol_string()
+                ))
                 .collect::<Vec<_>>()
                 .join("\n")
         );
         let mut to_return = HashSet::new();
         for (transformation, _) in instantiated_transformations {
             let statements = if transformation.is_joint_transform() {
-                self.get_statement_pairs_including(Some(&from_statement))
+                self.transformation_lattice
+                    .get_statement_pairs_including(Some(&from_statement))
             } else {
-                vec![from_statement.clone()]
+                vec![from_statement.clone()].into_iter().collect()
             };
             for statement in statements {
                 let valid_transformations =
@@ -474,87 +458,13 @@ impl Workspace {
         }
         return Ok(to_return
             .into_iter()
-            .filter(|s| !self.statements.contains(s))
+            .filter(|s| !self.get_statements().contains(s))
             .collect());
-    }
-
-    pub fn get_provenance_lineage(
-        &self,
-        index: StatementIndex,
-    ) -> Result<Vec<Provenance>, WorkspaceError> {
-        let mut provenance = Vec::new();
-        let mut current_index = index;
-        loop {
-            let current_provenance = self.get_provenance(current_index)?;
-            provenance.push(current_provenance.clone());
-            match current_provenance {
-                Provenance::Hypothesis => break,
-                Provenance::Derived((parent_index, _, _)) => current_index = parent_index,
-            }
-        }
-        Ok(provenance)
-    }
-
-    pub fn get_provenance(&self, index: StatementIndex) -> Result<Provenance, WorkspaceError> {
-        if self.statement_index_is_invalid(index) {
-            return Err(WorkspaceError::InvalidStatementIndex(index));
-        }
-
-        Ok(self.provenance[index].clone())
-    }
-
-    pub fn get_display_provenances(&self) -> Vec<DisplayProvenance> {
-        let mut to_return = Vec::new();
-        for i in 0..self.statements.len() {
-            // TODO Ensure that this expectation is always valid
-            let provenance = self
-                .get_display_provenance(i)
-                .expect("We control the statements and provenance generation.");
-            to_return.push(provenance);
-        }
-        to_return
-    }
-
-    pub fn get_display_provenance(
-        &self,
-        index: StatementIndex,
-    ) -> Result<DisplayProvenance, WorkspaceError> {
-        let provenance = self.get_provenance(index)?;
-        match provenance {
-            Provenance::Hypothesis => Ok(DisplayProvenance::Hypothesis),
-            Provenance::Derived((transformation_idx, statement_provenance, addresses)) => {
-                let transformation = self.get_transformation(transformation_idx)?;
-                Ok(DisplayProvenance::Derived(DerivedDisplayProvenance::new(
-                    transformation.to_interpreted_string(&self.interpretations),
-                    self.get_display_statement_provenance(&statement_provenance)?,
-                    addresses,
-                )))
-            }
-        }
-    }
-
-    pub fn get_display_statement_provenance(
-        &self,
-        provenance: &StatementProvenance,
-    ) -> Result<String, WorkspaceError> {
-        let to_return = match provenance {
-            StatementProvenance::Single(i) => self
-                .get_statement(*i)?
-                .to_interpreted_string(&self.interpretations),
-            StatementProvenance::Joint((i, j)) => format!(
-                "{}, {}",
-                self.get_statement(*i)?
-                    .to_interpreted_string(&self.interpretations),
-                self.get_statement(*j)?
-                    .to_interpreted_string(&self.interpretations)
-            ),
-        };
-        Ok(to_return)
     }
 
     pub fn get_display_symbol_nodes(&self) -> Result<Vec<DisplaySymbolNode>, WorkspaceError> {
         let mut to_return = Vec::new();
-        for i in 0..self.statements.len() {
+        for i in 0..self.get_statements().len() {
             let node = self.get_display_symbol_node(i)?;
             to_return.push(node);
         }
@@ -569,15 +479,22 @@ impl Workspace {
         let (interpreted_string, type_map) = statement
             .to_interpreted_string_and_type_map(&self.interpretations)
             .map_err(|e| Into::<WorkspaceError>::into(e))?;
-        let provenance = self.get_display_provenance(index)?;
+        let (upstream_statement, upstream_transformation) =
+            match self.get_upstream_statement_and_transformation(&statement) {
+                Some((s, t)) => (
+                    Some(s.to_interpreted_string(&self.interpretations)),
+                    Some(t.to_interpreted_string(&self.interpretations)),
+                ),
+                None => (None, None),
+            };
         Ok(DisplaySymbolNode::new(
             interpreted_string,
             type_map
                 .into_iter()
                 .map(|(name, t)| (name, t.to_string()))
                 .collect(),
-            provenance.get_from_statement(),
-            provenance.get_from_transformation(),
+            upstream_statement,
+            upstream_transformation,
         ))
     }
 
@@ -587,83 +504,6 @@ impl Workspace {
 
     fn add_generated_type(&mut self, generated_type: GeneratedType) {
         self.generated_types.push(generated_type);
-    }
-
-    pub fn get_instantiated_transformations_with_indices(
-        &self,
-        maybe_desired: Option<SymbolNode>,
-    ) -> Result<HashSet<(Transformation, TransformationIndex)>, WorkspaceError> {
-        // TODO Desired should probably wind up at the top of what we test, but this vec
-        // doesn't stay ordered.  If we pass it down the dependency chain, we could ensure that
-        // it's checked first
-        let statements = if let Some(desired) = maybe_desired {
-            let mut statements = vec![desired];
-            statements.append(&mut self.get_statements().clone());
-            statements
-        } else {
-            self.get_statements().clone()
-        };
-        let substatements = statements
-            .iter()
-            .map(|statement| statement.get_substatements())
-            .flatten()
-            .collect::<HashSet<_>>();
-
-        debug!(
-            "substatements:\n{}",
-            substatements
-                .clone()
-                .into_iter()
-                .map(|s| s.to_symbol_string())
-                .collect::<Vec<_>>()
-                .join("\n")
-        );
-        let mut to_return = HashSet::new();
-        for (transform, transform_idx) in self.get_arbitrary_transformations_with_indices() {
-            to_return = to_return
-                .union(
-                    &transform
-                        .instantiate_arbitrary_nodes(self.get_types(), &substatements)
-                        .map_err(|e| Into::<WorkspaceError>::into(e))?
-                        .into_iter()
-                        .map(|t| (t, transform_idx))
-                        .collect(),
-                )
-                .cloned()
-                .collect();
-        }
-
-        to_return = to_return
-            .union(
-                &self
-                    .get_non_arbitrary_transformations_with_indices()
-                    .into_iter()
-                    .collect::<HashSet<_>>(),
-            )
-            .cloned()
-            .collect();
-
-        return Ok(to_return);
-    }
-
-    fn get_arbitrary_transformations_with_indices(
-        &self,
-    ) -> HashSet<(Transformation, TransformationIndex)> {
-        self.get_transformations_with_indices()
-            .iter()
-            .filter(|(t, _)| t.contains_arbitrary_nodes())
-            .cloned()
-            .collect()
-    }
-
-    fn get_non_arbitrary_transformations_with_indices(
-        &self,
-    ) -> HashSet<(Transformation, TransformationIndex)> {
-        self.get_transformations_with_indices()
-            .iter()
-            .filter(|(t, _)| !t.contains_arbitrary_nodes())
-            .cloned()
-            .collect()
     }
 
     pub fn to_json(&self) -> Result<String, WorkspaceError> {
@@ -680,11 +520,11 @@ impl Workspace {
     }
 
     fn statement_index_is_invalid(&self, index: StatementIndex) -> bool {
-        index >= self.statements.len() || index >= self.provenance.len()
+        index >= self.get_statements().len()
     }
 
     fn transformation_index_is_invalid(&self, index: TransformationIndex) -> bool {
-        index >= self.transformations.len()
+        index >= self.get_available_transformations().len()
     }
 
     fn add_type_to_parents(
@@ -813,8 +653,8 @@ impl WorkspaceTransactionStore {
             WorkspaceTransactionItem::AddTransformation(transformation) => {
                 workspace.add_transformation(transformation)?;
             }
-            WorkspaceTransactionItem::Derive((statement, provenance)) => {
-                workspace.add_derived_statement(statement, provenance);
+            WorkspaceTransactionItem::Derive((from_statement, transform, to_statement)) => {
+                workspace.force_apply_transformation(from_statement, transform, to_statement);
             }
         };
         Ok(())
@@ -977,51 +817,18 @@ impl WorkspaceTransactionStore {
         desired: SymbolNode,
     ) -> Result<SymbolNode, WorkspaceError> {
         let mut transaction = self.get_generated_types_transaction(&desired)?;
-        let workspace = self.compile();
-        if workspace.statements.contains(&desired) {
-            return Err(WorkspaceError::StatementsAlreadyInclude(desired.clone()));
-        }
-        if desired.get_arbitrary_nodes().len() > 0 {
-            return Err(WorkspaceError::ContainsArbitraryNode);
-        }
-        let instantiated_transformations =
-            workspace.get_instantiated_transformations_with_indices(Some(desired.clone()))?;
-        debug!(
-            "instantiated_transformations:\n{}",
-            instantiated_transformations
-                .clone()
-                .into_iter()
-                .map(|(t, _)| t.to_symbol_string())
-                .collect::<Vec<_>>()
-                .join("\n")
-        );
-        for (transform, transform_idx) in instantiated_transformations {
-            let statements = if transform.is_joint_transform() {
-                workspace.get_statement_pairs_and_provenance()
-            } else {
-                workspace.get_statements_and_provenance().clone()
-            };
-            for (statement, statement_provenance) in statements.into_iter() {
-                match transform.try_transform_into(workspace.get_types(), &statement, &desired) {
-                    Ok(output) => {
-                        // TODO Derive the appropriate transform addresses
-                        let provenance =
-                            Provenance::Derived((transform_idx, statement_provenance, vec![]));
-
-                        transaction.add(WorkspaceTransactionItem::Derive((
-                            output.clone(),
-                            provenance,
-                        )));
-                        self.add(transaction)?;
-                        return Ok(output);
-                    }
-                    Err(_) => {
-                        // Do nothing, keep trying transformations
-                    }
-                }
-            }
-        }
-        return Err(WorkspaceError::NoTransformationsPossible);
+        let mut workspace = self.compile();
+        let type_hierarchy = workspace.get_types().clone();
+        let (from_statement, transformation, to_statement) = workspace
+            .transformation_lattice
+            .try_transform_into(&type_hierarchy, desired.clone())?;
+        transaction.add(WorkspaceTransactionItem::Derive((
+            from_statement,
+            transformation,
+            to_statement,
+        )));
+        self.add(transaction)?;
+        Ok(desired)
     }
 
     fn get_generated_types_transaction(
@@ -1104,7 +911,7 @@ pub enum WorkspaceTransactionItem {
     RemoveInterpretation(InterpretationIndex),
     AddHypothesis(SymbolNode),
     AddTransformation(Transformation),
-    Derive((SymbolNode, Provenance)),
+    Derive((SymbolNode, Transformation, SymbolNode)),
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, TS)]
@@ -1187,6 +994,120 @@ pub enum StatementProvenance {
 #[derive(Clone, Debug, Serialize, Deserialize, TS)]
 #[serde(rename_all = "camelCase")]
 #[ts(export)]
+pub struct DisplayTransformationLattice {
+    nodes: Vec<DisplayTransformationLatticeNode>,
+    links: Vec<DisplayTransformationLatticeLink>,
+}
+
+impl DisplayTransformationLattice {
+    pub fn new(
+        nodes: Vec<DisplayTransformationLatticeNode>,
+        links: Vec<DisplayTransformationLatticeLink>,
+    ) -> Self {
+        Self { nodes, links }
+    }
+
+    pub fn from_transformation_lattice(
+        interpretations: &Vec<Interpretation>,
+        lattice: &TransformationLattice,
+    ) -> Self {
+        let node_to_id = lattice
+            .get_ordered_statements()
+            .iter()
+            .enumerate()
+            .map(|(i, statement)| (statement.to_interpreted_string(interpretations), i))
+            .collect::<HashMap<String, usize>>();
+        let links = lattice
+            .get_ordered_applied_transformations()
+            .into_iter()
+            .map(|(from, transformation, to)| {
+                let separate_froms = if from.is_join() {
+                    assert_eq!(from.get_n_children(), 2);
+                    from.get_children().clone()
+                } else {
+                    vec![from]
+                };
+                let mut to_return = Vec::new();
+                for separate_from in separate_froms {
+                    let new_link = DisplayTransformationLatticeLink::new(
+                        node_to_id
+                            .get(&separate_from.to_interpreted_string(interpretations))
+                            .expect(&format!(
+                                "Nodes are coming from the same lattice but {} is missing (from_statement).",
+                                separate_from.to_interpreted_string(interpretations)
+                            ))
+                            .to_string(),
+                        transformation.to_interpreted_string(interpretations),
+                        node_to_id
+                            .get(&to.to_interpreted_string(interpretations))
+                            .expect(&format!(
+                                "Nodes are coming from the same lattice but {} is missing (to_statement).",
+                                to.to_interpreted_string(interpretations)
+                            ))
+                            .to_string(),
+                    );
+                    to_return.push(new_link);
+                }
+                to_return
+            }).flatten()
+            .collect::<Vec<_>>();
+        let nodes = node_to_id
+            .clone()
+            .into_iter()
+            .map(|(node, id)| {
+                // We're better off computing this above but this is fine for now
+                DisplayTransformationLatticeNode::new(
+                    id.to_string(),
+                    node,
+                    !links.iter().any(|link| link.target == id.to_string()),
+                )
+            })
+            .collect();
+        Self::new(nodes, links)
+    }
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub struct DisplayTransformationLatticeNode {
+    id: String,
+    description: String,
+    is_initial: bool,
+}
+
+impl DisplayTransformationLatticeNode {
+    pub fn new(id: String, description: String, is_initial: bool) -> Self {
+        Self {
+            id,
+            description,
+            is_initial,
+        }
+    }
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub struct DisplayTransformationLatticeLink {
+    source: String,
+    relation: String,
+    target: String,
+}
+
+impl DisplayTransformationLatticeLink {
+    pub fn new(source: String, relation: String, target: String) -> Self {
+        Self {
+            source,
+            relation,
+            target,
+        }
+    }
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
 pub struct DisplaySymbolNode {
     interpreted_string: String,
     types: Vec<(SymbolName, TypeName)>,
@@ -1220,7 +1141,7 @@ pub enum WorkspaceError {
     InvalidTransformationIndex(TransformationIndex),
     InvalidInterpretationIndex(InterpretationIndex),
     InvalidTransformationAddress,
-    ContainsArbitraryNode,
+    StatementContainsArbitraryNode(SymbolNode),
     ParserError(ParserError),
     UnableToSerialize(String),
     TransformationError(TransformationError),
@@ -1254,6 +1175,9 @@ impl From<ParserError> for WorkspaceError {
 impl From<TransformationError> for WorkspaceError {
     fn from(value: TransformationError) -> Self {
         match value {
+            TransformationError::StatementContainsArbitraryNode(s) => {
+                Self::StatementContainsArbitraryNode(s)
+            }
             TransformationError::ArbitraryNodeHasNonOneChildren => {
                 Self::ArbitraryNodeHasNonOneChildren
             }
@@ -1533,11 +1457,13 @@ mod test_workspace {
         // except that y will be replaced with y_0 to disambiguate the transform y
         // from the predicate y
         let expected = instantiate("x=y_0", "x+y=y_0+y");
-        let results = workspace_store
-            .compile()
-            .get_instantiated_transformations_with_indices(Some(
-                workspace.parse_from_string("x+y=5+y").unwrap(),
-            ))
+        let workspace = workspace_store.compile();
+        let results = workspace
+            .transformation_lattice
+            .get_instantiated_transformations_with_arbitrary(
+                &types,
+                Some(workspace.parse_from_string("x+y=5+y").unwrap()),
+            )
             .unwrap()
             .into_iter()
             .map(|(r, _)| r)
@@ -1597,14 +1523,11 @@ mod test_workspace {
         workspace_store.add_parsed_hypothesis("p^s").unwrap();
 
         let instantiate = |from: &str, to: &str| {
-            (
-                ExplicitTransformation::new(
-                    workspace_store.compile().parse_from_string(from).unwrap(),
-                    workspace_store.compile().parse_from_string(to).unwrap(),
-                )
-                .into(),
-                0,
+            ExplicitTransformation::new(
+                workspace_store.compile().parse_from_string(from).unwrap(),
+                workspace_store.compile().parse_from_string(to).unwrap(),
             )
+            .into()
         };
 
         let expected = vec![
@@ -1616,22 +1539,26 @@ mod test_workspace {
         ]
         .into_iter()
         .collect();
-        let actual = workspace_store
-            .compile()
-            .get_instantiated_transformations_with_indices(None)
-            .unwrap();
+        let workspace = workspace_store.compile();
+        let actual: HashSet<Transformation> = workspace
+            .transformation_lattice
+            .get_instantiated_transformations_with_arbitrary(&types, None)
+            .unwrap()
+            .into_iter()
+            .map(|(t, _)| t)
+            .collect();
         assert_eq!(
             actual,
             expected,
             "actual:\n{}\n\nexpected:\n{}",
             actual
                 .iter()
-                .map(|(t, _)| t.to_interpreted_string(&interpretations))
+                .map(|t| t.to_interpreted_string(&interpretations))
                 .collect::<Vec<_>>()
                 .join("\n"),
             expected
                 .iter()
-                .map(|(t, _)| t.to_interpreted_string(&interpretations))
+                .map(|t| t.to_interpreted_string(&interpretations))
                 .collect::<Vec<_>>()
                 .join("\n"),
         );
@@ -1655,22 +1582,26 @@ mod test_workspace {
         .into_iter()
         .collect();
 
-        let actual = workspace_store
+        let actual: HashSet<_> = workspace_store
             .compile()
-            .get_instantiated_transformations_with_indices(None)
-            .unwrap();
+            .transformation_lattice
+            .get_instantiated_transformations_with_arbitrary(&types, None)
+            .unwrap()
+            .into_iter()
+            .map(|(t, _)| t)
+            .collect();
         assert_eq!(
             actual,
             expected,
             "Actual:\n{}\n\nExpected:\n{}",
             actual
                 .iter()
-                .map(|(n, _)| n.to_interpreted_string(&interpretations))
+                .map(|n| n.to_interpreted_string(&interpretations))
                 .collect::<Vec<_>>()
                 .join("\n"),
             expected
                 .iter()
-                .map(|(n, _)| n.to_interpreted_string(&interpretations))
+                .map(|n| n.to_interpreted_string(&interpretations))
                 .collect::<Vec<_>>()
                 .join("\n"),
         );
@@ -1696,20 +1627,13 @@ mod test_workspace {
 
         let workspace = Workspace::new(types.clone(), vec![], interpretations.clone());
         let mut workspace_store = WorkspaceTransactionStore::snapshot(workspace);
-        assert_eq!(
-            workspace_store.add_parsed_hypothesis("Any(p)"),
-            Err(WorkspaceError::ContainsArbitraryNode)
-        );
-        assert_eq!(
-            workspace_store.add_parsed_hypothesis("Any(p)=q"),
-            Err(WorkspaceError::ContainsArbitraryNode)
-        );
+        assert!(workspace_store.add_parsed_hypothesis("Any(p)").is_err(),);
+        assert!(workspace_store.add_parsed_hypothesis("Any(p)=q").is_err());
 
         workspace_store.add_parsed_hypothesis("p=q").unwrap();
-        assert_eq!(
-            workspace_store.try_transform_into_parsed("Any(p)=Any(q)"),
-            Err(WorkspaceError::ContainsArbitraryNode)
-        );
+        assert!(workspace_store
+            .try_transform_into_parsed("Any(p)=Any(q)")
+            .is_err());
     }
 
     #[test]
@@ -1879,44 +1803,52 @@ mod test_workspace {
             .add_parsed_transformation(false, "a+b", "b+a")
             .unwrap();
 
-        workspace_store.add_parsed_hypothesis("x+y").unwrap();
+        let x_plus_y = workspace_store.add_parsed_hypothesis("x+y").unwrap();
         let expected = vec![workspace_store.compile().parse_from_string("y+x").unwrap()];
         assert_eq!(
             workspace_store
                 .compile()
-                .get_valid_transformations_from(0)
+                .get_valid_transformations_from(x_plus_y.clone())
                 .unwrap(),
             expected
         );
-        workspace_store.try_transform_into_parsed("y+x").unwrap();
+        let y_plus_x = workspace_store.try_transform_into_parsed("y+x").unwrap();
         assert_eq!(
             workspace_store
                 .compile()
-                .get_valid_transformations_from(0)
+                .get_valid_transformations_from(x_plus_y.clone())
+                .unwrap(),
+            vec![],
+        );
+        assert_eq!(
+            workspace_store
+                .compile()
+                .get_valid_transformations_from(y_plus_x.clone())
                 .unwrap(),
             vec![],
         );
 
-        workspace_store.add_parsed_hypothesis("j+k").unwrap();
+        let j_plus_k = workspace_store.add_parsed_hypothesis("j+k").unwrap();
         assert_eq!(workspace_store.compile().get_statements().len(), 3);
         assert_eq!(
             workspace_store
                 .compile()
-                .get_valid_transformations_from(0)
+                .get_valid_transformations_from(x_plus_y.clone())
                 .unwrap(),
             vec![],
         );
 
-        let expected = vec![workspace_store.compile().parse_from_string("k+j").unwrap()];
+        let k_plus_j = workspace_store.compile().parse_from_string("k+j").unwrap();
+        let expected = vec![k_plus_j.clone()];
         assert_eq!(
             workspace_store
                 .compile()
-                .get_valid_transformations_from(2)
+                .get_valid_transformations_from(j_plus_k)
                 .unwrap(),
             expected
         );
 
-        workspace_store.add_parsed_hypothesis("a+(b+c)").unwrap();
+        let a_plus_b_plus_c = workspace_store.add_parsed_hypothesis("a+(b+c)").unwrap();
         let expected = vec![
             workspace_store
                 .compile()
@@ -1936,7 +1868,7 @@ mod test_workspace {
         assert_eq!(
             workspace_store
                 .compile()
-                .get_valid_transformations_from(3)
+                .get_valid_transformations_from(a_plus_b_plus_c)
                 .unwrap()
                 .into_iter()
                 .collect::<HashSet<_>>(),
@@ -2112,12 +2044,12 @@ mod test_workspace {
         let mut workspace = Workspace::new(types, vec![], vec![]);
         let statement = SymbolNode::leaf_object("a");
         workspace.add_hypothesis(statement).unwrap();
-        assert_eq!(workspace.statements.len(), 1);
+        assert_eq!(workspace.get_ordered_statements().len(), 1);
 
         let statement = SymbolNode::leaf_object("b");
         workspace.add_hypothesis(statement).unwrap();
 
-        assert_eq!(workspace.statements.len(), 2);
+        assert_eq!(workspace.get_ordered_statements().len(), 2);
     }
 
     #[test]
@@ -2149,7 +2081,10 @@ mod test_workspace {
             Symbol::new("+".to_string(), "Integer".into()),
             vec![SymbolNode::singleton("2"), SymbolNode::singleton("2")],
         );
-        assert_eq!(workspace_store.compile().statements, vec![expected]);
+        assert_eq!(
+            workspace_store.compile().get_ordered_statements(),
+            vec![expected]
+        );
     }
 
     #[test]
@@ -2181,10 +2116,10 @@ mod test_workspace {
         let mut workspace_store = WorkspaceTransactionStore::snapshot(workspace);
 
         assert!(workspace_store.add_parsed_hypothesis("2+2").is_ok());
-        assert_eq!(workspace_store.compile().statements.len(), 1);
+        assert_eq!(workspace_store.compile().get_ordered_statements().len(), 1);
         let two = SymbolNode::leaf(Symbol::new("2".to_string(), "2".into()));
         assert_eq!(
-            workspace_store.compile().statements,
+            workspace_store.compile().get_ordered_statements(),
             vec![SymbolNode::new(
                 Symbol::new_with_same_type_as_value("+").into(),
                 vec![two.clone(), two.clone()]
@@ -2194,76 +2129,84 @@ mod test_workspace {
         workspace_store
             .add_algorithm(&AlgorithmType::Addition, "+", "Real")
             .unwrap();
-        assert_eq!(workspace_store.compile().transformations.len(), 1);
+        assert_eq!(
+            workspace_store
+                .compile()
+                .transformation_lattice
+                .get_available_transformations()
+                .len(),
+            1
+        );
 
         let _transformed = workspace_store.try_transform_into_parsed("4").unwrap();
-        assert_eq!(workspace_store.compile().statements.len(), 2);
+        assert_eq!(workspace_store.compile().get_ordered_statements().len(), 2);
         let four = SymbolNode::leaf(Symbol::new("4".to_string(), "4".into()));
-        assert_eq!(workspace_store.compile().statements[1], four);
+        assert_eq!(workspace_store.compile().get_ordered_statements()[1], four);
 
         let hypothesis_result = workspace_store.add_parsed_hypothesis("8/4");
         assert!(hypothesis_result.is_ok(), "{:?}", hypothesis_result);
-        assert_eq!(workspace_store.compile().statements.len(), 3);
+        assert_eq!(workspace_store.compile().get_ordered_statements().len(), 3);
         workspace_store
             .add_algorithm(&AlgorithmType::Division, "/", "Real")
             .unwrap();
-        assert_eq!(workspace_store.compile().transformations.len(), 2);
+        assert_eq!(
+            workspace_store
+                .compile()
+                .transformation_lattice
+                .get_available_transformations()
+                .len(),
+            2
+        );
 
         let _transformed = workspace_store.try_transform_into_parsed("2").unwrap();
-        assert_eq!(workspace_store.compile().statements.len(), 4);
-        assert_eq!(workspace_store.compile().statements[3], two);
+        assert_eq!(workspace_store.compile().get_ordered_statements().len(), 4);
+        assert!(workspace_store.compile().contains_statement(&two));
 
         assert!(workspace_store.add_parsed_hypothesis("3*0").is_ok());
-        assert_eq!(workspace_store.compile().statements.len(), 5);
+        assert_eq!(workspace_store.compile().get_ordered_statements().len(), 5);
         workspace_store
             .add_algorithm(&AlgorithmType::Multiplication, "*", "Real")
             .unwrap();
-        assert_eq!(workspace_store.compile().transformations.len(), 3);
+        assert_eq!(
+            workspace_store
+                .compile()
+                .transformation_lattice
+                .get_available_transformations()
+                .len(),
+            3
+        );
 
         let _transformed = workspace_store.try_transform_into_parsed("0").unwrap();
         let zero = SymbolNode::leaf(Symbol::new("0".to_string(), "0".into()));
-        assert_eq!(workspace_store.compile().statements.len(), 6);
-        assert_eq!(workspace_store.compile().statements[5], zero);
+        assert_eq!(workspace_store.compile().get_ordered_statements().len(), 6);
+        assert!(workspace_store.compile().contains_statement(&zero));
     }
 
     #[test]
-    fn test_workspace_transforms_statement_and_maintains_provenance() {
+    fn test_workspace_transforms_statement() {
         let types = TypeHierarchy::new();
         let workspace = Workspace::new(types, vec![], vec![]);
         let mut workspace_store = WorkspaceTransactionStore::snapshot(workspace);
         assert!(workspace_store.add_parsed_hypothesis("a").is_ok());
-        assert_eq!(workspace_store.compile().statements.len(), 1);
+        assert_eq!(workspace_store.compile().get_ordered_statements().len(), 1);
 
         workspace_store
             .add_parsed_transformation(false, "a", "b")
             .unwrap();
-        assert_eq!(workspace_store.compile().transformations.len(), 1);
+        assert_eq!(
+            workspace_store
+                .compile()
+                .transformation_lattice
+                .get_available_transformations()
+                .len(),
+            1
+        );
 
         let _transformed = workspace_store.try_transform_into_parsed("b").unwrap();
-        assert_eq!(workspace_store.compile().statements.len(), 2);
+        assert_eq!(workspace_store.compile().get_ordered_statements().len(), 2);
         assert_eq!(
-            workspace_store.compile().statements,
+            workspace_store.compile().get_ordered_statements(),
             vec![SymbolNode::leaf_object("a"), SymbolNode::leaf_object("b")]
-        );
-
-        assert_eq!(
-            workspace_store.compile().get_provenance(0),
-            Ok(Provenance::Hypothesis)
-        );
-        // TODO Currently we don't derive the transformation addresses but this assertion should
-        // fail
-        assert_eq!(
-            workspace_store.compile().get_provenance(1),
-            Ok(Provenance::Derived((
-                0,
-                StatementProvenance::Single(0),
-                vec![]
-            )))
-        );
-
-        assert_eq!(
-            workspace_store.compile().get_provenance_lineage(0),
-            Ok(vec![Provenance::Hypothesis])
         );
     }
 
@@ -2299,16 +2242,27 @@ mod test_workspace {
             types.clone(),
             vec![],
             vec![],
-            vec![
-                equality_reflexivity.clone().into(),
-                equality_symmetry.clone().into(),
-            ],
+            TransformationLattice::from_transformations(
+                vec![
+                    equality_reflexivity.clone().into(),
+                    equality_symmetry.clone().into(),
+                ]
+                .into_iter()
+                .collect(),
+            )
+            .unwrap(),
         )
         .unwrap();
 
         assert_eq!(workspace.try_import_context(context.clone()), Ok(()));
         assert_eq!(workspace.types, types);
-        assert_eq!(workspace.transformations.len(), 2);
+        assert_eq!(
+            workspace
+                .transformation_lattice
+                .get_available_transformations()
+                .len(),
+            2
+        );
 
         let mut complex_types = TypeHierarchy::chain(vec![
             "Complex".into(),
@@ -2328,7 +2282,12 @@ mod test_workspace {
             complex_types,
             vec![],
             vec![],
-            vec![equality_reflexivity.into(), equality_symmetry.into()],
+            TransformationLattice::from_transformations(
+                vec![equality_reflexivity.into(), equality_symmetry.into()]
+                    .into_iter()
+                    .collect(),
+            )
+            .unwrap(),
         )
         .unwrap();
 
@@ -2348,10 +2307,22 @@ mod test_workspace {
             ))
         );
 
-        assert_eq!(workspace.transformations.len(), 2);
+        assert_eq!(
+            workspace
+                .transformation_lattice
+                .get_available_transformations()
+                .len(),
+            2
+        );
 
         let inverted_types = TypeHierarchy::chain(vec!["Rational".into(), "Real".into()]).unwrap();
-        let conflicting_context = Context::new(inverted_types, vec![], vec![], vec![]).unwrap();
+        let conflicting_context = Context::new(
+            inverted_types,
+            vec![],
+            vec![],
+            TransformationLattice::empty(),
+        )
+        .unwrap();
 
         assert_eq!(
             workspace.try_import_context(conflicting_context),

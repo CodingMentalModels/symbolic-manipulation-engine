@@ -6,7 +6,7 @@ use crate::{
     parsing::interpretation::Interpretation,
     symbol::{
         symbol_type::{GeneratedType, Type, TypeError, TypeHierarchy},
-        transformation::Transformation,
+        transformation::{Transformation, TransformationLattice},
     },
     workspace::workspace::Workspace,
 };
@@ -16,7 +16,7 @@ pub struct Context {
     types: TypeHierarchy,
     generated_types: Vec<GeneratedType>,
     interpretations: Vec<Interpretation>,
-    transformations: Vec<Transformation>,
+    transformation_lattice: TransformationLattice,
 }
 
 impl Context {
@@ -25,7 +25,7 @@ impl Context {
             types: TypeHierarchy::new(),
             generated_types: vec![],
             interpretations: vec![],
-            transformations: vec![],
+            transformation_lattice: TransformationLattice::empty(),
         }
     }
 
@@ -33,9 +33,10 @@ impl Context {
         types: TypeHierarchy,
         generated_types: Vec<GeneratedType>,
         interpretations: Vec<Interpretation>,
-        transformations: Vec<Transformation>,
+        transformation_lattice: TransformationLattice,
     ) -> Result<Self, ContextError> {
-        match transformations
+        match transformation_lattice
+            .get_available_transformations()
             .iter()
             .map(|transformation| types.binds_transformation_or_error(transformation))
             .next()
@@ -44,18 +45,29 @@ impl Context {
                 types,
                 generated_types,
                 interpretations,
-                transformations,
+                transformation_lattice,
             }),
             Some(Err(e)) => Err(ContextError::from(e)),
         }
     }
 
     pub fn from_workspace(workspace: &Workspace) -> Result<Self, ContextError> {
+        let lattice = TransformationLattice::from_transformations(
+            workspace
+                .get_transformation_lattice()
+                .get_available_transformations()
+                .clone(),
+        )
+        .map_err(|_| {
+            ContextError::InvalidTransformationLattice(
+                workspace.get_transformation_lattice().clone(),
+            )
+        })?;
         Self::new(
             workspace.get_types().clone(),
             workspace.get_generated_types().clone(),
             workspace.get_interpretations().clone(),
-            workspace.get_transformations().clone(),
+            lattice,
         )
     }
 
@@ -71,8 +83,8 @@ impl Context {
         &self.interpretations
     }
 
-    pub fn get_transformations(&self) -> &Vec<Transformation> {
-        &self.transformations
+    pub fn get_transformation_lattice(&self) -> &TransformationLattice {
+        &self.transformation_lattice
     }
 
     pub fn serialize(&self) -> String {
@@ -88,6 +100,7 @@ impl Context {
 pub enum ContextError {
     StatementIncludesTypesNotInHierarchy(HashSet<Type>),
     InvalidTypeErrorTransformation(TypeError),
+    InvalidTransformationLattice(TransformationLattice),
 }
 
 impl From<TypeError> for ContextError {
@@ -114,17 +127,25 @@ mod tests {
     fn test_context_expresses_group_theory() {
         let context = Context::empty();
         assert_eq!(context.get_types(), &TypeHierarchy::new());
-        assert_eq!(context.get_transformations(), &vec![]);
+        assert_eq!(
+            context.get_transformation_lattice(),
+            &TransformationLattice::empty()
+        );
 
-        let mut types = TypeHierarchy::chain(vec!["Group Element".into()]).unwrap();
-        types.add_chain(vec!["Operator".into(), "*".into()]);
-        types.add_chain(vec!["=".into()]);
+        let mut types = TypeHierarchy::chain(vec!["Group Element".into(), "*".into()]).unwrap();
+        types
+            .add_child_to_parent("inv".into(), "Group Element".into())
+            .unwrap();
+        types
+            .add_child_to_parent("1".into(), "Group Element".into())
+            .unwrap();
+        types.add_chain(vec!["=".into()]).unwrap();
 
-        let equals_interpretation = Interpretation::infix_operator("=".into(), 1, "Integer".into());
-        let times_interpretation = Interpretation::infix_operator("*".into(), 3, "Integer".into());
+        let equals_interpretation = Interpretation::infix_operator("=".into(), 1, "=".into());
+        let times_interpretation = Interpretation::infix_operator("*".into(), 3, "*".into());
         let inverse_interpretation = Interpretation::function("inv".into(), 90);
         let g_interpretation = Interpretation::singleton("g", "Group Element".into());
-        let one_interpretation = Interpretation::singleton("1", "Group Element".into());
+        let one_interpretation = Interpretation::singleton("1", "1".into());
 
         let parser = Parser::new(vec![
             equals_interpretation,
@@ -167,14 +188,15 @@ mod tests {
         let transformations = vec![commutativity, associativity, identity, inverse]
             .into_iter()
             .map(|t| t.into())
-            .collect::<Vec<Transformation>>();
+            .collect::<HashSet<Transformation>>();
+        let lattice = TransformationLattice::from_transformations(transformations.clone()).unwrap();
 
-        let context = Context::new(types.clone(), vec![], vec![], transformations.clone());
+        let context = Context::new(types.clone(), vec![], vec![], lattice.clone());
 
         assert_eq!(context.clone().unwrap().get_types(), &types);
         assert_eq!(
-            context.clone().unwrap().get_transformations(),
-            &transformations
+            context.clone().unwrap().get_transformation_lattice(),
+            &lattice.clone()
         );
     }
 
@@ -182,7 +204,10 @@ mod tests {
     fn test_context_initializes() {
         let context = Context::empty();
         assert_eq!(context.get_types(), &TypeHierarchy::new());
-        assert_eq!(context.get_transformations(), &vec![]);
+        assert_eq!(
+            context.get_transformation_lattice(),
+            &TransformationLattice::empty()
+        );
 
         let mut types = TypeHierarchy::chain(vec![
             "Complex".into(),
@@ -234,14 +259,15 @@ mod tests {
         let transformations = vec![additive_commutativity, multiplicative_commutativity]
             .into_iter()
             .map(|t| t.into())
-            .collect::<Vec<Transformation>>();
+            .collect::<HashSet<Transformation>>();
+        let lattice = TransformationLattice::from_transformations(transformations).unwrap();
 
-        let context = Context::new(types.clone(), vec![], vec![], transformations.clone());
+        let context = Context::new(types.clone(), vec![], vec![], lattice.clone());
 
         assert_eq!(context.clone().unwrap().get_types(), &types);
         assert_eq!(
-            context.clone().unwrap().get_transformations(),
-            &transformations
+            context.clone().unwrap().get_transformation_lattice(),
+            &lattice.clone()
         );
     }
 }
