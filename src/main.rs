@@ -20,22 +20,20 @@ fn main() {
     let filesystem = FileSystem::new(current_directory.clone());
     let mut cli = Cli::new(filesystem, CliMode::Production);
 
-    let filesystem = FileSystem::new(current_directory);
-    let mut history = match CommandHistory::load_or_get_new(&filesystem) {
-        Ok(h) => h,
-        Err(e) => {
-            println!("Couldn't load or get new command history: {}", e);
-            return;
-        }
-    };
-
+    let mut include_in_history = true;
     let result = match matches.subcommand() {
         Some(("init", _sub_matches)) => cli.init(),
         Some(("rmws", sub_matches)) => cli.rmws(sub_matches),
-        Some(("ls", _sub_matches)) => cli.ls(),
+        Some(("ls", _sub_matches)) => {
+            include_in_history = false;
+            cli.ls()
+        }
         Some(("import-context", sub_matches)) => cli.import_context(sub_matches),
         Some(("export-context", sub_matches)) => cli.export_context(sub_matches),
-        Some(("ls-contexts", _sub_matches)) => cli.ls_contexts(),
+        Some(("ls-contexts", _sub_matches)) => {
+            include_in_history = false;
+            cli.ls_contexts()
+        }
         Some(("add-interpretation", sub_matches)) => cli.add_interpretation(sub_matches),
         Some(("update-interpretation", sub_matches)) => cli.update_interpretation(sub_matches),
         Some(("duplicate-interpretation", sub_matches)) => {
@@ -48,26 +46,34 @@ fn main() {
         Some(("add-joint-transformation", sub_matches)) => {
             cli.add_joint_transformation(sub_matches)
         }
-        Some(("get-transformations", sub_matches)) => cli.get_transformations(sub_matches),
+        Some(("get-transformations", sub_matches)) => {
+            include_in_history = false;
+            cli.get_transformations(sub_matches)
+        }
         Some(("get-transformations-from", sub_matches)) => {
+            include_in_history = false;
             cli.get_transformations_from(sub_matches)
         }
         Some(("hypothesize", sub_matches)) => cli.hypothesize(sub_matches),
         Some(("derive", sub_matches)) => cli.derive(sub_matches),
         Some(("undo", _sub_matches)) => cli.undo(),
         Some(("redo", _sub_matches)) => cli.redo(),
+        Some(("command-history", _sub_matches)) => cli.get_command_history(),
         _ => Err("No subcommand was provided".to_string()),
     };
 
     match result {
         Ok(message) => {
-            history.add(command_string);
-            match history.update(&filesystem) {
-                Err(e) => eprintln!("{}", e),
-                Ok(_) => {
-                    println!("{}", message);
+            if include_in_history {
+                match cli.update_command_history(command_string) {
+                    Ok(_) => {}
+                    Err(e) => {
+                        eprintln!("{}", e);
+                        return;
+                    }
                 }
-            };
+            }
+            println!("{}", message);
         }
         Err(e) => eprintln!("{}", e),
     }

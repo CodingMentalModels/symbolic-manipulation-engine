@@ -1896,3 +1896,6 @@ name = "15"
 [transactions.items.Derive.children.root.Symbol.evaluates_to_type]
 kind = "namedType"
 value = "15"
+
+[command_history]
+commands = []
