@@ -200,11 +200,7 @@ impl TransformationLattice {
                 .join("\n")
         );
         for (instantiated_transform, arbitrary_transform) in instantiated_transformations {
-            let statements = if instantiated_transform.is_joint_transform() {
-                self.get_statement_pairs()
-            } else {
-                self.get_statements().clone()
-            };
+            let statements = self.get_candidate_statements(&instantiated_transform);
             for statement in statements.into_iter() {
                 match instantiated_transform.try_transform_into(types, &statement, &desired) {
                     Ok(output) => {
@@ -223,6 +219,15 @@ impl TransformationLattice {
             }
         }
         return Err(TransformationError::NoValidTransformationsPossible);
+    }
+
+    fn get_candidate_statements(&mut self, transform: &Transformation) -> HashSet<SymbolNode> {
+        let statements = if transform.is_joint_transform() {
+            self.get_statement_pairs()
+        } else {
+            self.get_statements().clone()
+        };
+        statements
     }
 
     pub fn force_apply_transformation(
