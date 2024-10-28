@@ -1,4 +1,4 @@
-use log::{debug, trace};
+use log::{debug, trace, warn};
 use std::collections::{HashMap, HashSet};
 
 use crate::constants::MAX_ADDITIONAL_VALID_TRANSFORMATION_DEPTH;
@@ -237,6 +237,15 @@ impl TransformationLattice {
         to: SymbolNode,
     ) {
         self.statements.insert(to.clone());
+        if !self.contains_transformation(&transformation) {
+            warn!(
+                "force_apply_transformation was used without the transformation being available."
+            );
+            self.available_transformations
+                .insert(transformation.clone());
+            // TODO Remove the assertion and consider whether we need to catch this upstream
+            assert!(false);
+        }
         self.transformations_from
             .entry(from.clone())
             .or_default()
