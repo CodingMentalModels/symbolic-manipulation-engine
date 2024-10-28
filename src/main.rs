@@ -1,11 +1,13 @@
-use std::env::current_dir;
+use std::env::{self, current_dir};
 use symbolic_manipulation_engine::build_cli;
 
 use symbolic_manipulation_engine::cli::cli::{Cli, CliMode};
 use symbolic_manipulation_engine::cli::filesystem::FileSystem;
+use symbolic_manipulation_engine::cli::history::CommandHistory;
 
 fn main() {
     let matches = build_cli().get_matches();
+    let command_string: String = env::args().collect::<Vec<String>>().join(" ");
 
     let current_directory = match current_dir() {
         Ok(path) => path,
@@ -15,8 +17,17 @@ fn main() {
         }
     };
 
-    let filesystem = FileSystem::new(current_directory);
+    let filesystem = FileSystem::new(current_directory.clone());
     let mut cli = Cli::new(filesystem, CliMode::Production);
+
+    let filesystem = FileSystem::new(current_directory);
+    let mut history = match CommandHistory::load_or_get_new(&filesystem) {
+        Ok(h) => h,
+        Err(e) => {
+            println!("Couldn't load or get new command history: {}", e);
+            return;
+        }
+    };
 
     let result = match matches.subcommand() {
         Some(("init", _sub_matches)) => cli.init(),
@@ -49,7 +60,15 @@ fn main() {
     };
 
     match result {
-        Ok(message) => println!("{}", message),
+        Ok(message) => {
+            history.add(command_string);
+            match history.update(&filesystem) {
+                Err(e) => eprintln!("{}", e),
+                Ok(_) => {
+                    println!("{}", message);
+                }
+            };
+        }
         Err(e) => eprintln!("{}", e),
     }
 }
