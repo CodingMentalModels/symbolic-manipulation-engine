@@ -1,0 +1,270 @@
+next_index = 15
+
+[[transactions]]
+
+[[transactions.items]]
+
+[[transactions.items.AddType]]
+kind = "namedType"
+value = "Real"
+
+[[transactions.items.AddType]]
+kind = "object"
+
+[[transactions]]
+
+[[transactions.items]]
+
+[[transactions.items.AddType]]
+kind = "namedType"
+value = "+"
+
+[[transactions.items.AddType]]
+kind = "namedType"
+value = "Real"
+
+[[transactions]]
+
+[[transactions.items]]
+
+[[transactions.items.AddType]]
+kind = "namedType"
+value = "-"
+
+[[transactions.items.AddType]]
+kind = "namedType"
+value = "Real"
+
+[[transactions]]
+
+[[transactions.items]]
+
+[[transactions.items.AddType]]
+kind = "namedType"
+value = "*"
+
+[[transactions.items.AddType]]
+kind = "namedType"
+value = "Real"
+
+[[transactions]]
+
+[[transactions.items]]
+
+[[transactions.items.AddType]]
+kind = "namedType"
+value = "/"
+
+[[transactions.items.AddType]]
+kind = "namedType"
+value = "Real"
+
+[[transactions]]
+
+[[transactions.items]]
+
+[transactions.items.AddInterpretation]
+expression_precidence = 2
+
+[transactions.items.AddInterpretation.condition]
+kind = "matches"
+
+[transactions.items.AddInterpretation.condition.token]
+kind = "object"
+value = "+"
+
+[transactions.items.AddInterpretation.expression_type]
+kind = "infix"
+
+[transactions.items.AddInterpretation.output_type]
+kind = "type"
+
+[transactions.items.AddInterpretation.output_type.type]
+kind = "namedType"
+value = "+"
+
+[[transactions]]
+
+[[transactions.items]]
+
+[transactions.items.AddInterpretation]
+expression_precidence = 2
+
+[transactions.items.AddInterpretation.condition]
+kind = "matches"
+
+[transactions.items.AddInterpretation.condition.token]
+kind = "object"
+value = "-"
+
+[transactions.items.AddInterpretation.expression_type]
+kind = "infix"
+
+[transactions.items.AddInterpretation.output_type]
+kind = "type"
+
+[transactions.items.AddInterpretation.output_type.type]
+kind = "namedType"
+value = "-"
+
+[[transactions]]
+
+[[transactions.items]]
+
+[transactions.items.AddInterpretation]
+expression_precidence = 3
+
+[transactions.items.AddInterpretation.condition]
+kind = "matches"
+
+[transactions.items.AddInterpretation.condition.token]
+kind = "object"
+value = "*"
+
+[transactions.items.AddInterpretation.expression_type]
+kind = "infix"
+
+[transactions.items.AddInterpretation.output_type]
+kind = "type"
+
+[transactions.items.AddInterpretation.output_type.type]
+kind = "namedType"
+value = "*"
+
+[[transactions]]
+
+[[transactions.items]]
+
+[transactions.items.AddInterpretation]
+expression_precidence = 3
+
+[transactions.items.AddInterpretation.condition]
+kind = "matches"
+
+[transactions.items.AddInterpretation.condition.token]
+kind = "object"
+value = "/"
+
+[transactions.items.AddInterpretation.expression_type]
+kind = "infix"
+
+[transactions.items.AddInterpretation.output_type]
+kind = "type"
+
+[transactions.items.AddInterpretation.output_type.type]
+kind = "namedType"
+value = "/"
+
+[[transactions]]
+
+[[transactions.items]]
+
+[transactions.items.AddInterpretation]
+expression_precidence = 99
+
+[transactions.items.AddInterpretation.condition]
+kind = "isNumeric"
+
+[transactions.items.AddInterpretation.expression_type]
+kind = "singleton"
+
+[transactions.items.AddInterpretation.output_type]
+kind = "sameAsValue"
+
+[[transactions]]
+
+[[transactions.items]]
+
+[transactions.items.AddGeneratedType.condition]
+kind = "isNumeric"
+
+[[transactions.items.AddGeneratedType.parents]]
+kind = "namedType"
+value = "Real"
+
+[[transactions]]
+
+[[transactions.items]]
+
+[transactions.items.AddTransformation.AlgorithmTransformation]
+algorithm_type = "Addition"
+
+[transactions.items.AddTransformation.AlgorithmTransformation.operator]
+name = "+"
+
+[transactions.items.AddTransformation.AlgorithmTransformation.operator.evaluates_to_type]
+kind = "namedType"
+value = "+"
+
+[transactions.items.AddTransformation.AlgorithmTransformation.input_type.condition]
+kind = "isNumeric"
+
+[[transactions.items.AddTransformation.AlgorithmTransformation.input_type.parents]]
+kind = "namedType"
+value = "Real"
+
+[[transactions]]
+
+[[transactions.items]]
+
+[transactions.items.AddTransformation.AlgorithmTransformation]
+algorithm_type = "Subtraction"
+
+[transactions.items.AddTransformation.AlgorithmTransformation.operator]
+name = "-"
+
+[transactions.items.AddTransformation.AlgorithmTransformation.operator.evaluates_to_type]
+kind = "namedType"
+value = "-"
+
+[transactions.items.AddTransformation.AlgorithmTransformation.input_type.condition]
+kind = "isNumeric"
+
+[[transactions.items.AddTransformation.AlgorithmTransformation.input_type.parents]]
+kind = "namedType"
+value = "Real"
+
+[[transactions]]
+
+[[transactions.items]]
+
+[transactions.items.AddTransformation.AlgorithmTransformation]
+algorithm_type = "Multiplication"
+
+[transactions.items.AddTransformation.AlgorithmTransformation.operator]
+name = "*"
+
+[transactions.items.AddTransformation.AlgorithmTransformation.operator.evaluates_to_type]
+kind = "namedType"
+value = "*"
+
+[transactions.items.AddTransformation.AlgorithmTransformation.input_type.condition]
+kind = "isNumeric"
+
+[[transactions.items.AddTransformation.AlgorithmTransformation.input_type.parents]]
+kind = "namedType"
+value = "Real"
+
+[[transactions]]
+
+[[transactions.items]]
+
+[transactions.items.AddTransformation.AlgorithmTransformation]
+algorithm_type = "Division"
+
+[transactions.items.AddTransformation.AlgorithmTransformation.operator]
+name = "/"
+
+[transactions.items.AddTransformation.AlgorithmTransformation.operator.evaluates_to_type]
+kind = "namedType"
+value = "/"
+
+[transactions.items.AddTransformation.AlgorithmTransformation.input_type.condition]
+kind = "isNumeric"
+
+[[transactions.items.AddTransformation.AlgorithmTransformation.input_type.parents]]
+kind = "namedType"
+value = "Real"
+
+[command_history]
+commands = ["symbolic-manipulation-engine init", "symbolic-manipulation-engine add-type -- Real", "symbolic-manipulation-engine add-type -- + Real", "symbolic-manipulation-engine add-type -- - Real", "symbolic-manipulation-engine add-type -- * Real", "symbolic-manipulation-engine add-type -- / Real", "symbolic-manipulation-engine add-interpretation -- Infix 2 + +", "symbolic-manipulation-engine add-interpretation -- Infix 2 - -", "symbolic-manipulation-engine add-interpretation -- Infix 3 * *", "symbolic-manipulation-engine add-interpretation -- Infix 3 / /", "symbolic-manipulation-engine add-interpretation -f -- Singleton 99 Real", "symbolic-manipulation-engine add-algorithm -- Addition + Real", "symbolic-manipulation-engine add-algorithm -- Subtraction - Real", "symbolic-manipulation-engine add-algorithm -- Multiplication * Real", "symbolic-manipulation-engine add-algorithm -- Division / Real"]

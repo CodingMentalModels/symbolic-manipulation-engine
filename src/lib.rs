@@ -132,5 +132,10 @@ pub fn build_cli() -> Command {
             )
         .subcommand(Command::new("undo").about("Undoes the previous command (if possible)."))
         .subcommand(Command::new("redo").about("Redoes the previous undo (if possible)."))
+        .subcommand(Command::new("evaluate").about("Applies available algorithms to the statement provided.")
+            .arg(
+                Arg::new("statement").required(true)
+                )
+            )
         .subcommand(Command::new("command-history").about("Dumps the command history to stdout as a new-line delimited string."))
 }
