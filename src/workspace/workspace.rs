@@ -546,6 +546,7 @@ impl Workspace {
 pub struct WorkspaceTransactionStore {
     transactions: Vec<WorkspaceTransaction>,
     next_index: usize,
+    command_history: CommandHistory,
 }
 
 impl Default for WorkspaceTransactionStore {
@@ -568,6 +569,7 @@ impl WorkspaceTransactionStore {
         Self {
             transactions,
             next_index,
+            command_history: CommandHistory::empty(),
         }
     }
 
@@ -870,6 +872,41 @@ impl WorkspaceTransactionStore {
             .map(|parent| WorkspaceTransactionItem::AddType((t.clone(), parent.clone())))
             .collect();
         items
+    }
+
+    pub fn add_command_to_history(&mut self, command: String) {
+        self.command_history.add(command);
+    }
+
+    pub fn get_command_history_as_string(&self) -> String {
+        self.command_history.to_string()
+    }
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+pub struct CommandHistory {
+    commands: Vec<String>,
+}
+
+impl CommandHistory {
+    pub fn new(commands: Vec<String>) -> Self {
+        Self { commands }
+    }
+
+    pub fn empty() -> Self {
+        Self::new(Vec::new())
+    }
+
+    pub fn add(&mut self, command: String) {
+        self.commands.push(command);
+    }
+
+    pub fn add_commands(&mut self, mut commands: Vec<String>) {
+        self.commands.append(&mut commands);
+    }
+
+    pub fn to_string(&self) -> String {
+        self.commands.join("\n")
     }
 }
 

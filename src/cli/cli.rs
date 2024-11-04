@@ -614,6 +614,16 @@ impl Cli {
         };
     }
 
+    pub fn get_command_history(&self) -> Result<String, String> {
+        Ok(self.load_workspace_store()?.get_command_history_as_string())
+    }
+
+    pub fn update_command_history(&self, command: String) -> Result<(), String> {
+        let mut store = self.load_workspace_store()?;
+        store.add_command_to_history(command);
+        self.update_workspace_store(store)
+    }
+
     fn get_context_filename(name: &str) -> String {
         format!("{}.toml", name).to_string()
     }
