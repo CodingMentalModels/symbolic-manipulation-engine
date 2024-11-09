@@ -9,6 +9,24 @@ use symbolic_manipulation_engine::{
 };
 
 #[test]
+fn test_evaluation_works() {
+    let root_dir = current_dir().unwrap();
+    let dir = root_dir.join(Path::new("tests\\assets\\test_evaluation_works\\"));
+    let filesystem = FileSystem::new(dir);
+    let cli = Cli::new(filesystem, CliMode::Testing);
+    let matches = build_cli().get_matches_from(vec![
+        "symbolic-manipulation-engine",
+        "evaluate",
+        "--",
+        "2+(3-7*5)", // = 2+(3-35) = 5 - 35 = -30
+    ]);
+    let result = cli
+        .evaluate(matches.subcommand_matches("evaluate").unwrap())
+        .unwrap();
+    assert_eq!(result, "-30".to_string());
+}
+
+#[test]
 fn test_add_algorithm() {
     let root_dir = current_dir().unwrap();
     let dir = root_dir.join(Path::new("tests\\assets\\test_add_algorithm_works\\"));

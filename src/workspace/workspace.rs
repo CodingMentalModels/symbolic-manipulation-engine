@@ -81,12 +81,26 @@ pub struct Workspace {
 
 impl Default for Workspace {
     fn default() -> Self {
-        Self::new(TypeHierarchy::new(), vec![], vec![])
+        Self::initialize(TypeHierarchy::new(), vec![], vec![])
     }
 }
 
 impl Workspace {
     pub fn new(
+        types: TypeHierarchy,
+        generated_types: Vec<GeneratedType>,
+        interpretations: Vec<Interpretation>,
+        transformation_lattice: TransformationLattice,
+    ) -> Self {
+        Self {
+            types,
+            generated_types,
+            interpretations,
+            transformation_lattice,
+        }
+    }
+
+    pub fn initialize(
         types: TypeHierarchy,
         generated_types: Vec<GeneratedType>,
         interpretations: Vec<Interpretation>,
@@ -214,6 +228,44 @@ impl Workspace {
         self.interpretations = new_interpretations;
         self.transformation_lattice = context.get_transformation_lattice().clone();
         Ok(())
+    }
+
+    pub fn evaluate_from_string(&self, s: &str) -> Result<SymbolNode, WorkspaceError> {
+        let statement = self.parse_from_string(s)?;
+        self.evaluate(statement)
+    }
+
+    pub fn evaluate(&self, statement: SymbolNode) -> Result<SymbolNode, WorkspaceError> {
+        debug!("evaluate()");
+        let alg_only_workspace = self.copy_with_only_algorithms();
+        let mut to_return = statement;
+        let mut has_changed = true;
+        while has_changed {
+            let before = to_return.clone();
+            let results = alg_only_workspace.get_valid_transformations_from(to_return.clone())?;
+            if results.len() == 0 {
+                return Err(WorkspaceError::NoTransformationsPossible);
+            }
+            debug!("evaluate() results in transformations: {:?}", results);
+            has_changed = false;
+            for result in results {
+                if result != before {
+                    has_changed = true;
+                    to_return = result;
+                }
+            }
+        }
+        Ok(to_return)
+    }
+
+    fn copy_with_only_algorithms(&self) -> Self {
+        let lattice = self.transformation_lattice.copy_with_only_algorithms();
+        Self::new(
+            self.types.clone(),
+            self.generated_types.clone(),
+            self.interpretations.clone(),
+            lattice,
+        )
     }
 
     fn parse_from_string(&self, s: &str) -> Result<SymbolNode, WorkspaceError> {
@@ -1370,7 +1422,7 @@ mod test_workspace {
 
         store.add(WorkspaceTransactionItem::AddType(("Real".into(), Type::Object)).into());
 
-        let expected_0 = Workspace::new(
+        let expected_0 = Workspace::initialize(
             TypeHierarchy::chain(vec!["Real".into()]).unwrap(),
             Vec::new(),
             Vec::new(),
@@ -1379,7 +1431,7 @@ mod test_workspace {
 
         store.add(WorkspaceTransactionItem::AddType(("Integer".into(), "Real".into())).into());
 
-        let expected_1 = Workspace::new(
+        let expected_1 = Workspace::initialize(
             TypeHierarchy::chain(vec!["Real".into(), "Integer".into()]).unwrap(),
             Vec::new(),
             Vec::new(),
@@ -1416,7 +1468,7 @@ mod test_workspace {
             Interpretation::arbitrary_functional("Any".into(), 99, "Boolean".into()),
         ];
 
-        let workspace = Workspace::new(types.clone(), vec![], interpretations.clone());
+        let workspace = Workspace::initialize(types.clone(), vec![], interpretations.clone());
         let mut workspace_store = WorkspaceTransactionStore::snapshot(workspace);
 
         workspace_store
@@ -1468,7 +1520,7 @@ mod test_workspace {
 
         let real_interpretation = GeneratedType::new_numeric("Real".into());
 
-        let workspace = Workspace::new(
+        let workspace = Workspace::initialize(
             types.clone(),
             vec![real_interpretation],
             interpretations.clone(),
@@ -1546,7 +1598,7 @@ mod test_workspace {
 
         let real_interpretation = GeneratedType::new_numeric("Real".into());
 
-        let workspace = Workspace::new(
+        let workspace = Workspace::initialize(
             types.clone(),
             vec![real_interpretation],
             interpretations.clone(),
@@ -1600,7 +1652,7 @@ mod test_workspace {
                 .join("\n"),
         );
 
-        let workspace = Workspace::new(types.clone(), vec![], interpretations.clone());
+        let workspace = Workspace::initialize(types.clone(), vec![], interpretations.clone());
         let mut workspace_store = WorkspaceTransactionStore::snapshot(workspace);
 
         workspace_store
@@ -1662,7 +1714,7 @@ mod test_workspace {
             Interpretation::arbitrary_functional("Any".into(), 99, "Boolean".into()),
         ];
 
-        let workspace = Workspace::new(types.clone(), vec![], interpretations.clone());
+        let workspace = Workspace::initialize(types.clone(), vec![], interpretations.clone());
         let mut workspace_store = WorkspaceTransactionStore::snapshot(workspace);
         assert!(workspace_store.add_parsed_hypothesis("Any(p)").is_err(),);
         assert!(workspace_store.add_parsed_hypothesis("Any(p)=q").is_err());
@@ -1703,7 +1755,7 @@ mod test_workspace {
             Interpretation::singleton("s".into(), "Proposition".into()),
             Interpretation::singleton("s".into(), "Proposition".into()),
         ];
-        let workspace = Workspace::new(types.clone(), vec![], interpretations.clone());
+        let workspace = Workspace::initialize(types.clone(), vec![], interpretations.clone());
         let mut workspace_store = WorkspaceTransactionStore::snapshot(workspace);
 
         workspace_store
@@ -1748,7 +1800,7 @@ mod test_workspace {
             .get_statements()
             .contains(&expected));
 
-        let workspace = Workspace::new(types.clone(), vec![], interpretations.clone());
+        let workspace = Workspace::initialize(types.clone(), vec![], interpretations.clone());
         let mut workspace_store = WorkspaceTransactionStore::snapshot(workspace);
         workspace_store
             .add_parsed_transformation(false, "a+b", "b+a")
@@ -1770,7 +1822,7 @@ mod test_workspace {
             .get_statements()
             .contains(&expected));
 
-        let workspace = Workspace::new(types.clone(), vec![], interpretations.clone());
+        let workspace = Workspace::initialize(types.clone(), vec![], interpretations.clone());
         let mut workspace_store = WorkspaceTransactionStore::snapshot(workspace);
         workspace_store
             .add_parsed_joint_transformation("p", "q", "p^q")
@@ -1834,7 +1886,7 @@ mod test_workspace {
             Interpretation::singleton("s".into(), "Proposition".into()),
             Interpretation::arbitrary_functional("Any".into(), 98, "Proposition".into()),
         ];
-        let workspace = Workspace::new(types.clone(), vec![], interpretations.clone());
+        let workspace = Workspace::initialize(types.clone(), vec![], interpretations.clone());
         let mut workspace_store = WorkspaceTransactionStore::snapshot(workspace);
         workspace_store
             .add_parsed_transformation(false, "a+b", "b+a")
@@ -1947,7 +1999,7 @@ mod test_workspace {
             Interpretation::singleton("s".into(), "Proposition".into()),
             Interpretation::arbitrary_functional("Any".into(), 98, "Proposition".into()),
         ];
-        let workspace = Workspace::new(types.clone(), vec![], interpretations.clone());
+        let workspace = Workspace::initialize(types.clone(), vec![], interpretations.clone());
         let mut workspace_store = WorkspaceTransactionStore::snapshot(workspace.clone());
         workspace_store
             .add_parsed_transformation(false, "a+b", "b+a")
@@ -1990,7 +2042,7 @@ mod test_workspace {
             vec![expected]
         );
 
-        let workspace = Workspace::new(types.clone(), vec![], interpretations.clone());
+        let workspace = Workspace::initialize(types.clone(), vec![], interpretations.clone());
         let mut workspace_store = WorkspaceTransactionStore::snapshot(workspace);
         workspace_store
             .add_parsed_transformation(false, "a+b", "b+a")
@@ -2009,7 +2061,7 @@ mod test_workspace {
             vec![expected]
         );
 
-        let workspace = Workspace::new(types.clone(), vec![], interpretations.clone());
+        let workspace = Workspace::initialize(types.clone(), vec![], interpretations.clone());
         let mut workspace_store = WorkspaceTransactionStore::snapshot(workspace);
         workspace_store
             .add_parsed_joint_transformation("p", "q", "p^q")
@@ -2036,7 +2088,7 @@ mod test_workspace {
             vec![expected]
         );
 
-        let workspace = Workspace::new(types.clone(), vec![], interpretations.clone());
+        let workspace = Workspace::initialize(types.clone(), vec![], interpretations.clone());
         let mut workspace_store = WorkspaceTransactionStore::snapshot(workspace);
         workspace_store.add_parsed_hypothesis("p=q").unwrap();
         workspace_store
@@ -2055,7 +2107,7 @@ mod test_workspace {
             vec![expected]
         );
 
-        let workspace = Workspace::new(types.clone(), vec![], interpretations.clone());
+        let workspace = Workspace::initialize(types.clone(), vec![], interpretations.clone());
         let mut workspace_store = WorkspaceTransactionStore::snapshot(workspace);
         workspace_store.add_parsed_hypothesis("r=s").unwrap();
         workspace_store
@@ -2078,7 +2130,7 @@ mod test_workspace {
     #[test]
     fn test_workspace_adds_hypotheses() {
         let types = TypeHierarchy::new();
-        let mut workspace = Workspace::new(types, vec![], vec![]);
+        let mut workspace = Workspace::initialize(types, vec![], vec![]);
         let statement = SymbolNode::leaf_object("a");
         workspace.add_hypothesis(statement).unwrap();
         assert_eq!(workspace.get_ordered_statements().len(), 1);
@@ -2101,7 +2153,7 @@ mod test_workspace {
 
         let mut types = TypeHierarchy::chain(vec!["Real".into(), "Integer".into()]).unwrap();
         types.add_chain(vec!["+".into()]).unwrap();
-        let workspace = Workspace::new(
+        let workspace = Workspace::initialize(
             types,
             vec![integer_generated_type],
             vec![plus, integer_interpretation],
@@ -2148,7 +2200,7 @@ mod test_workspace {
             divides_interpretation,
             real_interpretation,
         ];
-        let workspace = Workspace::new(types, generated_types, interpretations);
+        let workspace = Workspace::initialize(types, generated_types, interpretations);
 
         let mut workspace_store = WorkspaceTransactionStore::snapshot(workspace);
 
@@ -2222,7 +2274,7 @@ mod test_workspace {
     #[test]
     fn test_workspace_transforms_statement() {
         let types = TypeHierarchy::new();
-        let workspace = Workspace::new(types, vec![], vec![]);
+        let workspace = Workspace::initialize(types, vec![], vec![]);
         let mut workspace_store = WorkspaceTransactionStore::snapshot(workspace);
         assert!(workspace_store.add_parsed_hypothesis("a").is_ok());
         assert_eq!(workspace_store.compile().get_ordered_statements().len(), 1);
@@ -2250,7 +2302,7 @@ mod test_workspace {
     #[test]
     fn test_workspace_imports_context() {
         let types = TypeHierarchy::new();
-        let mut workspace = Workspace::new(types, vec![], vec![]);
+        let mut workspace = Workspace::initialize(types, vec![], vec![]);
 
         let mut types =
             TypeHierarchy::chain(vec!["Real".into(), "Rational".into(), "Integer".into()]).unwrap();

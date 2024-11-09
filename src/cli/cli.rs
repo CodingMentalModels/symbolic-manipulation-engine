@@ -505,6 +505,19 @@ impl Cli {
         }
     }
 
+    pub fn evaluate(&self, sub_matches: &ArgMatches) -> Result<String, String> {
+        let workspace_store = self.load_workspace_store()?;
+        let statement = match sub_matches.get_one::<String>("statement") {
+            None => return Err("No statement provided.".to_string()),
+            Some(s) => s,
+        };
+        let workspace = workspace_store.compile();
+        workspace
+            .evaluate_from_string(statement)
+            .map(|s| s.to_interpreted_string(workspace.get_interpretations()))
+            .map_err(|e| format!("Error evaluating: {:?}", e))
+    }
+
     pub fn export_context(&self, sub_matches: &ArgMatches) -> Result<String, String> {
         let workspace_store = self.load_workspace_store()?;
         let context = Context::from_workspace(&workspace_store.compile())

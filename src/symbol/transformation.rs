@@ -51,6 +51,19 @@ impl TransformationLattice {
         Ok(to_return)
     }
 
+    pub fn copy_with_only_algorithms(&self) -> Self {
+        Self::new(
+            HashSet::new(),
+            self.available_transformations
+                .iter()
+                .filter(|t| t.is_algorithm())
+                .cloned()
+                .collect(),
+            HashMap::new(),
+            HashMap::new(),
+        )
+    }
+
     pub fn get_statements(&self) -> &HashSet<SymbolNode> {
         &self.statements
     }
@@ -422,6 +435,13 @@ impl Transformation {
 
         let reversed = right.clone().join(left.clone());
         self.transform(hierarchy, &reversed)
+    }
+
+    pub fn is_algorithm(&self) -> bool {
+        match self {
+            Transformation::AlgorithmTransformation(_) => true,
+            _ => false,
+        }
     }
 
     pub fn try_transform_into(
