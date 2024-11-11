@@ -460,7 +460,7 @@ impl Transformation {
                 to.clone(),
             ));
         }
-        let valid_transformations = self.get_valid_transformations(hierarchy, from);
+        let valid_transformations = self.get_valid_transformations(hierarchy, from, Some(to));
         if valid_transformations.contains(to) {
             Ok(to.clone())
         } else {
@@ -471,7 +471,8 @@ impl Transformation {
     pub fn get_valid_transformations(
         &self,
         hierarchy: &TypeHierarchy,
-        statement: &SymbolNode,
+        from_statement: &SymbolNode,
+        maybe_to_statement: Option<&SymbolNode>,
     ) -> HashSet<SymbolNode> {
         // Getting valid transformations can recurse indefinitely, so we use
         // MAX_ADDITIONAL_VALID_TRANSFORMATION_DEPTH to limit.
@@ -479,14 +480,14 @@ impl Transformation {
         // inspect the contents
         debug!(
             "get_valid_transformations({})",
-            statement.to_symbol_string()
+            from_statement.to_symbol_string()
         );
-        let mut call_stack = vec![(statement.clone(), true, false, 0)];
+        let mut call_stack = vec![(from_statement.clone(), true, false, 0)];
         let mut already_processed: HashSet<SymbolNode> = HashSet::new();
         let mut child_to_valid_transformations: HashMap<SymbolNode, HashSet<SymbolNode>> =
             HashMap::new();
         let mut to_return = HashSet::new();
-        let max_depth = statement.get_depth() + MAX_ADDITIONAL_VALID_TRANSFORMATION_DEPTH;
+        let max_depth = from_statement.get_depth() + MAX_ADDITIONAL_VALID_TRANSFORMATION_DEPTH;
 
         while let Some((current_statement, should_return, are_children_processed, depth)) =
             call_stack.pop()
@@ -553,7 +554,16 @@ impl Transformation {
                         None,
                     );
                     if should_return {
-                        to_return.extend(result.clone());
+                        match maybe_to_statement {
+                            None => {
+                                to_return.extend(result.clone());
+                            }
+                            Some(to_statement) => {
+                                if result.contains(to_statement) {
+                                    return vec![to_statement.clone()].into_iter().collect();
+                                }
+                            }
+                        }
                     }
 
                     // Log the child transformations as valid
@@ -1568,7 +1578,7 @@ mod test_transformation {
             .unwrap();
 
         assert_eq!(
-            irrelevant_transform.get_valid_transformations(&hierarchy, &x_equals_y),
+            irrelevant_transform.get_valid_transformations(&hierarchy, &x_equals_y, None),
             vec![x_equals_y.clone()].into_iter().collect()
         );
         let transformation: Transformation = ExplicitTransformation::commutivity(
@@ -1586,7 +1596,7 @@ mod test_transformation {
             Ok(y_equals_x.clone())
         );
         assert_eq!(
-            transformation.get_valid_transformations(&hierarchy, &x_equals_y),
+            transformation.get_valid_transformations(&hierarchy, &x_equals_y, None),
             vec![x_equals_y.clone(), y_equals_x.clone()]
                 .into_iter()
                 .collect()
@@ -1633,7 +1643,7 @@ mod test_transformation {
                 .unwrap(),
         ];
         assert_eq!(
-            transformation.get_valid_transformations(&hierarchy, &x_equals_y_equals_z),
+            transformation.get_valid_transformations(&hierarchy, &x_equals_y_equals_z, None),
             expected.into_iter().collect()
         );
 
@@ -1657,7 +1667,7 @@ mod test_transformation {
                 .unwrap(),
         ];
 
-        let actual = transformation.get_valid_transformations(&hierarchy, &x_equals_y);
+        let actual = transformation.get_valid_transformations(&hierarchy, &x_equals_y, None);
 
         assert_eq!(actual, expected.into_iter().collect());
 
@@ -1678,7 +1688,8 @@ mod test_transformation {
                 .unwrap(),
         ];
 
-        let actual = transformation.get_valid_transformations(&hierarchy, &x_equals_y_equals_z);
+        let actual =
+            transformation.get_valid_transformations(&hierarchy, &x_equals_y_equals_z, None);
 
         assert_eq!(actual, expected.into_iter().collect());
 

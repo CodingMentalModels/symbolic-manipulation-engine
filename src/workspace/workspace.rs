@@ -463,7 +463,7 @@ impl Workspace {
             };
             for statement in statements {
                 let valid_transformations =
-                    instantiated.get_valid_transformations(self.get_types(), &statement);
+                    instantiated.get_valid_transformations(self.get_types(), &statement, None);
                 if valid_transformations.contains(&desired)
                     && !self.get_statements().contains(&desired)
                 {
@@ -504,7 +504,7 @@ impl Workspace {
             };
             for statement in statements {
                 let valid_transformations =
-                    transformation.get_valid_transformations(self.get_types(), &statement);
+                    transformation.get_valid_transformations(self.get_types(), &statement, None);
                 to_return.extend(valid_transformations);
             }
         }
