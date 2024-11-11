@@ -20,7 +20,7 @@ fn test_substitutes_large_expression() {
         "symbolic-manipulation-engine",
         "derive",
         "--",
-        "(0=(((a*(x_0^2))+(b*((Negative(b)+((b^2)-((4*a)*c)))/(2*a)))))+c)",
+        "a*(x_0)^2+b*(x_0)+c=a*(x_0)^2+b*((Negative(b)+(b^2-4*a*c))/(2*a))+c",
     ]);
     let result = cli
         .derive(matches.subcommand_matches("derive").unwrap())
