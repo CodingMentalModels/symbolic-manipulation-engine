@@ -217,7 +217,7 @@ impl TransformationLattice {
             for statement in statements.into_iter() {
                 match instantiated_transform.try_transform_into(types, &statement, &desired) {
                     Ok(output) => {
-                        // TODO Derive the appropriate transform addresses
+                        // TODO Log the instantiated transform too and show it in the front end
                         self.force_apply_transformation(
                             statement.clone(),
                             arbitrary_transform.clone(),
@@ -401,6 +401,20 @@ impl Transformation {
         }
     }
 
+    pub fn can_produce_type(&self, hierarchy: &TypeHierarchy, t: &Type) -> bool {
+        match self {
+            Self::ExplicitTransformation(transformation) => {
+                transformation.can_produce_type(hierarchy, t)
+            }
+            Self::AlgorithmTransformation(transformation) => {
+                transformation.can_produce_type(hierarchy, t)
+            }
+            Self::ApplyToBothSidesTransformation(transformation) => {
+                transformation.can_produce_type(hierarchy, t)
+            }
+        }
+    }
+
     pub fn transform(
         &self,
         hierarchy: &TypeHierarchy,
@@ -482,6 +496,18 @@ impl Transformation {
             "get_valid_transformations({})",
             from_statement.to_symbol_string()
         );
+        let can_produce_correct_type = |statement: &SymbolNode| {
+            if let Some(to_statement) = maybe_to_statement {
+                self.can_produce_type(hierarchy, &to_statement.get_evaluates_to_type())
+                    || statement.get_evaluates_to_type() == to_statement.get_evaluates_to_type()
+            } else {
+                true
+            }
+        };
+        if !can_produce_correct_type(from_statement) {
+            return HashSet::new();
+        }
+
         let mut call_stack = vec![(from_statement.clone(), true, false, 0)];
         let mut already_processed: HashSet<SymbolNode> = HashSet::new();
         let mut child_to_valid_transformations: HashMap<SymbolNode, HashSet<SymbolNode>> =
@@ -507,8 +533,10 @@ impl Transformation {
 
                 // Push the children on to be processed first and don't return them
                 for child in current_statement.get_children() {
-                    if !already_processed.contains(&child) {
+                    if !already_processed.contains(&child) && can_produce_correct_type(&child) {
                         call_stack.push((child.clone(), false, false, depth + 1));
+                    } else {
+                        debug!("Child already processed or can't produce the correct type!");
                     }
                 }
             } else {
@@ -535,10 +563,12 @@ impl Transformation {
                                 });
 
                             // Push the result onto the call stack for further processing
-                            if !already_processed.contains(&result) {
+                            if !already_processed.contains(&result)
+                                && can_produce_correct_type(&result)
+                            {
                                 call_stack.push((result.clone(), should_return, false, depth));
                             } else {
-                                debug!("Already processed!");
+                                debug!("Already processed or can't produce the correct type!");
                             }
                         } else {
                             debug!("Max depth reached!");
@@ -723,6 +753,17 @@ impl AlgorithmTransformation {
         )
     }
 
+    pub fn can_produce_type(&self, hierarchy: &TypeHierarchy, t: &Type) -> bool {
+        self.input_type
+            .get_parents()
+            .iter()
+            .all(|transform_parent| {
+                hierarchy
+                    .is_subtype_of(transform_parent, t)
+                    .unwrap_or(false)
+            })
+    }
+
     pub fn get_operator(&self) -> Symbol {
         self.operator.clone()
     }
@@ -817,6 +858,12 @@ impl ApplyToBothSidesTransformation {
         self.symbol.get_evaluates_to_type()
     }
 
+    pub fn can_produce_type(&self, hierarchy: &TypeHierarchy, t: &Type) -> bool {
+        hierarchy
+            .is_subtype_of(&self.get_symbol_type(), t)
+            .unwrap_or(false)
+    }
+
     pub fn get_transformation(&self) -> &ExplicitTransformation {
         &self.transformation
     }
@@ -905,6 +952,12 @@ impl ExplicitTransformation {
 
     pub fn get_to(&self) -> &SymbolNode {
         &self.to
+    }
+
+    pub fn can_produce_type(&self, hierarchy: &TypeHierarchy, t: &Type) -> bool {
+        hierarchy
+            .is_subtype_of(t, &self.get_to().get_evaluates_to_type())
+            .unwrap_or(false)
     }
 
     pub fn reflexivity(
