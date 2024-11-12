@@ -22,7 +22,7 @@ fn test_substitutes_large_expression() {
         "--",
         "a*(x_0)^2+b*(x_0)+c=a*(x_0)^2+b*((Negative(b)+(b^2-4*a*c))/(2*a))+c",
     ]);
-    let result = cli
+    let _result = cli
         .derive(matches.subcommand_matches("derive").unwrap())
         .unwrap();
 }

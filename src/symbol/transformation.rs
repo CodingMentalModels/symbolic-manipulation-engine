@@ -503,9 +503,14 @@ impl Transformation {
             "get_valid_transformations({})",
             from_statement.to_symbol_string()
         );
+
+        // Optimization if we know the desired type:
+        // either the statement must already have it or the transformation must be able to produce
+        // it
         let might_produce_correct_type = |statement: &SymbolNode| {
             if let Some(to_statement) = maybe_to_statement {
-                self.might_produce_type(hierarchy, &to_statement.get_evaluates_to_type())
+                let desired_type = to_statement.get_evaluates_to_type();
+                self.might_produce_type(hierarchy, &desired_type)
                     || hierarchy
                         .is_subtype_of(
                             &to_statement.get_evaluates_to_type(),
@@ -554,8 +559,6 @@ impl Transformation {
                 for child in current_statement.get_children() {
                     if already_processed.contains(&child) {
                         debug!("Child already processed!");
-                    } else if !might_produce_correct_type(&child) {
-                        debug!("Child can't produce the correct type!");
                     } else {
                         call_stack.push((child.clone(), false, false, depth + 1));
                     }
@@ -586,8 +589,6 @@ impl Transformation {
                             // Push the result onto the call stack for further processing
                             if already_processed.contains(&result) {
                                 debug!("Already processed!");
-                            } else if !might_produce_correct_type(&result) {
-                                debug!("Can't produce the correct type.");
                             } else {
                                 call_stack.push((result.clone(), should_return, false, depth));
                             }
@@ -777,11 +778,6 @@ impl AlgorithmTransformation {
     pub fn might_produce_type(&self, hierarchy: &TypeHierarchy, t: &Type) -> bool {
         let generated_transform_parents = self.input_type.get_parents();
         let t_parents_result = hierarchy.get_parents(t);
-        trace!(
-            "generated_transform_parents: {:?}",
-            generated_transform_parents
-        );
-        trace!("t_parents: {:?}", t_parents_result);
         match t_parents_result {
             Err(e) => {
                 warn!("Type error returning from get_parents: {:?}", e);
