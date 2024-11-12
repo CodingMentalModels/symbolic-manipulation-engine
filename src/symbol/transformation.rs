@@ -504,31 +504,8 @@ impl Transformation {
             from_statement.to_symbol_string()
         );
 
-        // Optimization if we know the desired type:
-        // either the statement must already have it or the transformation must be able to produce
-        // it
-        let might_produce_correct_type = |statement: &SymbolNode| {
-            if let Some(to_statement) = maybe_to_statement {
-                let desired_type = to_statement.get_evaluates_to_type();
-                self.might_produce_type(hierarchy, &desired_type)
-                    || hierarchy
-                        .is_subtype_of(
-                            &to_statement.get_evaluates_to_type(),
-                            &statement.get_evaluates_to_type(),
-                        )
-                        .unwrap_or(false)
-            } else {
-                true
-            }
-        };
-        if !might_produce_correct_type(from_statement) {
-            debug!(
-                "from_statement can't produce the correct type: {}\nTransformation: {:?}\nDesired: {}\nHierarchy: {:?}",
-                from_statement.to_symbol_string(),
-                self,
-                maybe_to_statement.unwrap().to_symbol_string(),
-                hierarchy,
-            );
+        // Optimize away this function if the transformation cant possibly work
+        if self.cant_possibly_transform_into(hierarchy, from_statement, maybe_to_statement) {
             return HashSet::new();
         }
 
@@ -748,6 +725,62 @@ impl Transformation {
                 .map(|t| Self::ApplyToBothSidesTransformation(t))
                 .collect()),
         }
+    }
+
+    fn cant_possibly_transform_into(
+        &self,
+        hierarchy: &TypeHierarchy,
+        from_statement: &SymbolNode,
+        maybe_to_statement: Option<&SymbolNode>,
+    ) -> bool {
+        match self {
+            Self::ExplicitTransformation(t) => {
+                let type_to_transform = t.get_from().get_evaluates_to_type();
+                // If none of the from statements' types are subtypes of the root of what we're
+                // trying to transform, then the transform won't apply
+                if !from_statement
+                    .get_types()
+                    .iter()
+                    .any(|type_to_be_transformed| {
+                        hierarchy
+                            .is_subtype_of(&type_to_be_transformed, &type_to_transform)
+                            .unwrap_or(false)
+                    })
+                {
+                    return true;
+                }
+            }
+            _ => {}
+        };
+
+        // Optimization if we know the desired type:
+        // either the statement must already have it or the transformation must be able to produce
+        // it
+        let might_produce_correct_type = if let Some(to_statement) = maybe_to_statement {
+            let desired_type = to_statement.get_evaluates_to_type();
+            self.might_produce_type(hierarchy, &desired_type)
+                || hierarchy
+                    .is_subtype_of(
+                        &to_statement.get_evaluates_to_type(),
+                        &from_statement.get_evaluates_to_type(),
+                    )
+                    .unwrap_or(false)
+        } else {
+            trace!("We might produce the correct type.");
+            true
+        };
+        if !might_produce_correct_type {
+            debug!(
+                "from_statement can't produce the correct type: {}\nTransformation: {:?}\nDesired: {}\nHierarchy: {:?}",
+                from_statement.to_symbol_string(),
+                self,
+                maybe_to_statement.unwrap().to_symbol_string(),
+                hierarchy,
+            );
+            return true;
+        }
+
+        return false;
     }
 }
 
