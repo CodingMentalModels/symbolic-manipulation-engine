@@ -871,8 +871,13 @@ impl WorkspaceTransactionStore {
         desired: SymbolNode,
     ) -> Result<SymbolNode, WorkspaceError> {
         let mut transaction = self.get_generated_types_transaction(&desired)?;
+
+        // Ensures that the type hierarchy we pass around includes any generated types without
+        // mucking up the transaction we eventually apply
+        let type_hierarchy = self.get_type_hierarchy_with_transaction_applied(&transaction)?;
+
         let mut workspace = self.compile();
-        let type_hierarchy = workspace.get_types().clone();
+
         let (from_statement, transformation, to_statement) = workspace
             .transformation_lattice
             .try_transform_into(&type_hierarchy, desired.clone())?;
@@ -883,6 +888,16 @@ impl WorkspaceTransactionStore {
         )));
         self.add(transaction)?;
         Ok(desired)
+    }
+
+    fn get_type_hierarchy_with_transaction_applied(
+        &mut self,
+        transaction: &WorkspaceTransaction,
+    ) -> Result<TypeHierarchy, WorkspaceError> {
+        let mut self_cloned = self.clone();
+        self_cloned.add(transaction.clone())?;
+        let type_hierarchy = self_cloned.compile().get_types().clone();
+        Ok(type_hierarchy)
     }
 
     fn get_generated_types_transaction(

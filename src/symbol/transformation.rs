@@ -401,18 +401,25 @@ impl Transformation {
         }
     }
 
-    pub fn can_produce_type(&self, hierarchy: &TypeHierarchy, t: &Type) -> bool {
-        match self {
+    pub fn might_produce_type(&self, hierarchy: &TypeHierarchy, t: &Type) -> bool {
+        let result = match self {
             Self::ExplicitTransformation(transformation) => {
-                transformation.can_produce_type(hierarchy, t)
+                transformation.might_produce_type(hierarchy, t)
             }
             Self::AlgorithmTransformation(transformation) => {
-                transformation.can_produce_type(hierarchy, t)
+                transformation.might_produce_type(hierarchy, t)
             }
             Self::ApplyToBothSidesTransformation(transformation) => {
-                transformation.can_produce_type(hierarchy, t)
+                transformation.might_produce_type(hierarchy, t)
             }
-        }
+        };
+        trace!(
+            "might_produce_type:\ntransformation: {:?}\ntype: {:?}\nresult: {}",
+            self,
+            t,
+            result
+        );
+        result
     }
 
     pub fn transform(
@@ -496,15 +503,27 @@ impl Transformation {
             "get_valid_transformations({})",
             from_statement.to_symbol_string()
         );
-        let can_produce_correct_type = |statement: &SymbolNode| {
+        let might_produce_correct_type = |statement: &SymbolNode| {
             if let Some(to_statement) = maybe_to_statement {
-                self.can_produce_type(hierarchy, &to_statement.get_evaluates_to_type())
-                    || statement.get_evaluates_to_type() == to_statement.get_evaluates_to_type()
+                self.might_produce_type(hierarchy, &to_statement.get_evaluates_to_type())
+                    || hierarchy
+                        .is_subtype_of(
+                            &to_statement.get_evaluates_to_type(),
+                            &statement.get_evaluates_to_type(),
+                        )
+                        .unwrap_or(false)
             } else {
                 true
             }
         };
-        if !can_produce_correct_type(from_statement) {
+        if !might_produce_correct_type(from_statement) {
+            debug!(
+                "from_statement can't produce the correct type: {}\nTransformation: {:?}\nDesired: {}\nHierarchy: {:?}",
+                from_statement.to_symbol_string(),
+                self,
+                maybe_to_statement.unwrap().to_symbol_string(),
+                hierarchy,
+            );
             return HashSet::new();
         }
 
@@ -533,10 +552,12 @@ impl Transformation {
 
                 // Push the children on to be processed first and don't return them
                 for child in current_statement.get_children() {
-                    if !already_processed.contains(&child) && can_produce_correct_type(&child) {
-                        call_stack.push((child.clone(), false, false, depth + 1));
+                    if already_processed.contains(&child) {
+                        debug!("Child already processed!");
+                    } else if !might_produce_correct_type(&child) {
+                        debug!("Child can't produce the correct type!");
                     } else {
-                        debug!("Child already processed or can't produce the correct type!");
+                        call_stack.push((child.clone(), false, false, depth + 1));
                     }
                 }
             } else {
@@ -563,12 +584,12 @@ impl Transformation {
                                 });
 
                             // Push the result onto the call stack for further processing
-                            if !already_processed.contains(&result)
-                                && can_produce_correct_type(&result)
-                            {
-                                call_stack.push((result.clone(), should_return, false, depth));
+                            if already_processed.contains(&result) {
+                                debug!("Already processed!");
+                            } else if !might_produce_correct_type(&result) {
+                                debug!("Can't produce the correct type.");
                             } else {
-                                debug!("Already processed or can't produce the correct type!");
+                                call_stack.push((result.clone(), should_return, false, depth));
                             }
                         } else {
                             debug!("Max depth reached!");
@@ -753,15 +774,21 @@ impl AlgorithmTransformation {
         )
     }
 
-    pub fn can_produce_type(&self, hierarchy: &TypeHierarchy, t: &Type) -> bool {
-        self.input_type
-            .get_parents()
-            .iter()
-            .all(|transform_parent| {
-                hierarchy
-                    .is_subtype_of(transform_parent, t)
-                    .unwrap_or(false)
-            })
+    pub fn might_produce_type(&self, hierarchy: &TypeHierarchy, t: &Type) -> bool {
+        let generated_transform_parents = self.input_type.get_parents();
+        let t_parents_result = hierarchy.get_parents(t);
+        trace!(
+            "generated_transform_parents: {:?}",
+            generated_transform_parents
+        );
+        trace!("t_parents: {:?}", t_parents_result);
+        match t_parents_result {
+            Err(e) => {
+                warn!("Type error returning from get_parents: {:?}", e);
+                true
+            }
+            Ok(t_parents) => generated_transform_parents == &t_parents,
+        }
     }
 
     pub fn get_operator(&self) -> Symbol {
@@ -858,7 +885,7 @@ impl ApplyToBothSidesTransformation {
         self.symbol.get_evaluates_to_type()
     }
 
-    pub fn can_produce_type(&self, hierarchy: &TypeHierarchy, t: &Type) -> bool {
+    pub fn might_produce_type(&self, hierarchy: &TypeHierarchy, t: &Type) -> bool {
         hierarchy
             .is_subtype_of(&self.get_symbol_type(), t)
             .unwrap_or(false)
@@ -954,7 +981,7 @@ impl ExplicitTransformation {
         &self.to
     }
 
-    pub fn can_produce_type(&self, hierarchy: &TypeHierarchy, t: &Type) -> bool {
+    pub fn might_produce_type(&self, hierarchy: &TypeHierarchy, t: &Type) -> bool {
         hierarchy
             .is_subtype_of(t, &self.get_to().get_evaluates_to_type())
             .unwrap_or(false)

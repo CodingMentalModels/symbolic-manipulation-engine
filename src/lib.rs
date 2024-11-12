@@ -17,7 +17,7 @@ fn initialize_logger() {
         .is_test(true)
         .filter_level(LevelFilter::Off)
         //.filter_level(LevelFilter::Debug)
-        //.filter_level(LevelFilter::Trace)
+        // .filter_level(LevelFilter::Trace)
         .init();
 }
 

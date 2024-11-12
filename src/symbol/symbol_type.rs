@@ -189,7 +189,7 @@ impl TypeHierarchy {
         if pairs.len() == 0 {
             return Err(TypeError::InvalidType(child.clone()));
         }
-        Ok(pairs.into_iter().map(|pair| pair.1.clone()).collect())
+        Ok(pairs.into_iter().map(|pair| pair.0.clone()).collect())
     }
 
     pub fn instantiate(
