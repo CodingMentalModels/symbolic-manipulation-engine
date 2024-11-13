@@ -205,7 +205,9 @@ impl SymbolNode {
         for substatement in self.get_substatements() {
             // Substatements may occur multiple times in which case we need to replace every
             // combination of occurances
-            let substatement_locations = self.find_node(&substatement);
+            let mut substatement_locations: Vec<_> =
+                self.find_node(&substatement).into_iter().collect();
+            substatement_locations.sort();
             let n_subsets = 1 << substatement_locations.len();
             let mut self_for_predicate = self.clone();
             let new_label =

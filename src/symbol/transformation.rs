@@ -1428,7 +1428,7 @@ mod test_transformation {
         let q = parse("q");
         let f_of_p = parse("F(p)");
         let p_equals_p = parse("p=p");
-        let p_equals_p_0 = parse("p=p_0");
+        let p_0_equals_p = parse("p_0=p");
         let p_equals_0_p = parse("p=_0p");
         let p_0_equals_0_p_0 = parse("p_0=_0p_0");
         let reflexivity = ExplicitTransformation::new(f_of_p.clone(), p_equals_p.clone());
@@ -1438,7 +1438,7 @@ mod test_transformation {
             .collect::<HashSet<_>>();
         let expected: HashSet<_> = vec![
             ExplicitTransformation::new(p.clone(), p_equals_p.clone()),
-            ExplicitTransformation::new(p_equals_p_0.clone(), p_0_equals_0_p_0.clone()),
+            ExplicitTransformation::new(p_0_equals_p.clone(), p_0_equals_0_p_0.clone()),
             ExplicitTransformation::new(p_equals_p.clone(), p_equals_0_p.clone()),
         ]
         .into_iter()
