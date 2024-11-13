@@ -207,6 +207,8 @@ impl SymbolNode {
             // combination of occurances
             let mut substatement_locations: Vec<_> =
                 self.find_node(&substatement).into_iter().collect();
+
+            // TODO This sort is probably slow, probably better to make find functions return vecs
             substatement_locations.sort();
             let n_subsets = 1 << substatement_locations.len();
             let mut self_for_predicate = self.clone();
