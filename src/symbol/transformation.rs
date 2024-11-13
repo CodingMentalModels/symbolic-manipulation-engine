@@ -506,7 +506,7 @@ impl Transformation {
 
         // Optimize away this function if the transformation cant possibly work
         if self.cant_possibly_transform_into(hierarchy, from_statement, maybe_to_statement) {
-            return HashSet::new();
+            return vec![from_statement.clone()].into_iter().collect();
         }
 
         let mut call_stack = vec![(from_statement.clone(), true, false, 0)];
@@ -747,6 +747,7 @@ impl Transformation {
                             .unwrap_or(false)
                     })
                 {
+                    trace!("None of the from_statement's types are subtypes of the root of what we're trying to transform.\nfrom_statement: {:?}\ntransformation: {:?}", from_statement, self);
                     return true;
                 }
             }
