@@ -1407,7 +1407,9 @@ mod test_transformation {
             Interpretation::infix_operator("&".into(), 2, "&".into()),
             Interpretation::outfix_operator(("|".into(), "|".into()), 2, "Integer".into()),
             Interpretation::singleton("p", "Boolean".into()),
+            Interpretation::singleton("p_0", "Boolean".into()), // Disambiguation
             Interpretation::singleton("q", "Boolean".into()),
+            Interpretation::singleton("q_0", "Boolean".into()), // Disambiguation
             Interpretation::arbitrary_functional("F".into(), 99, "Boolean".into()),
         ];
 
@@ -1426,7 +1428,9 @@ mod test_transformation {
         let q = parse("q");
         let f_of_p = parse("F(p)");
         let p_equals_p = parse("p=p");
+        let p_equals_p_0 = parse("p=p_0");
         let p_equals_0_p = parse("p=_0p");
+        let p_0_equals_0_p_0 = parse("p_0=_0p_0");
         let reflexivity = ExplicitTransformation::new(f_of_p.clone(), p_equals_p.clone());
 
         let substatements = vec![p.clone(), q.clone(), p_equals_p.clone()]
@@ -1434,6 +1438,7 @@ mod test_transformation {
             .collect::<HashSet<_>>();
         let expected: HashSet<_> = vec![
             ExplicitTransformation::new(p.clone(), p_equals_p.clone()),
+            ExplicitTransformation::new(p_equals_p_0.clone(), p_0_equals_0_p_0.clone()),
             ExplicitTransformation::new(p_equals_p.clone(), p_equals_0_p.clone()),
         ]
         .into_iter()

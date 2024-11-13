@@ -1435,7 +1435,9 @@ mod test_workspace {
         let mut store = WorkspaceTransactionStore::empty();
         assert_eq!(store.compile(), Workspace::default());
 
-        store.add(WorkspaceTransactionItem::AddType(("Real".into(), Type::Object)).into());
+        store
+            .add(WorkspaceTransactionItem::AddType(("Real".into(), Type::Object)).into())
+            .unwrap();
 
         let expected_0 = Workspace::initialize(
             TypeHierarchy::chain(vec!["Real".into()]).unwrap(),
@@ -1444,7 +1446,9 @@ mod test_workspace {
         );
         assert_eq!(store.compile(), expected_0);
 
-        store.add(WorkspaceTransactionItem::AddType(("Integer".into(), "Real".into())).into());
+        store
+            .add(WorkspaceTransactionItem::AddType(("Integer".into(), "Real".into())).into())
+            .unwrap();
 
         let expected_1 = Workspace::initialize(
             TypeHierarchy::chain(vec!["Real".into(), "Integer".into()]).unwrap(),
@@ -1472,10 +1476,14 @@ mod test_workspace {
         types
             .add_child_to_parent("^".into(), "Boolean".into())
             .unwrap();
+        types
+            .add_child_to_parent("+".into(), "Boolean".into())
+            .unwrap();
 
         let interpretations = vec![
             Interpretation::infix_operator("=".into(), 1, "=".into()),
             Interpretation::infix_operator("^".into(), 2, "^".into()),
+            Interpretation::infix_operator("+".into(), 3, "^".into()),
             Interpretation::singleton("p".into(), "Boolean".into()),
             Interpretation::singleton("q".into(), "Boolean".into()),
             Interpretation::singleton("r".into(), "Boolean".into()),
@@ -1506,6 +1514,16 @@ mod test_workspace {
             .compile()
             .get_statements()
             .contains(&expected));
+
+        let actual = workspace_store
+            .try_transform_into_parsed("p+q^s=q+q^s")
+            .unwrap();
+
+        let expected = workspace_store
+            .compile()
+            .parse_from_string("p+q^s=q+q^s")
+            .unwrap();
+        assert_eq!(actual, expected);
     }
 
     #[test]

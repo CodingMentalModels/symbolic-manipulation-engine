@@ -201,10 +201,31 @@ impl SymbolNode {
     }
 
     pub fn get_predicates(&self) -> HashSet<Predicate> {
-        self.get_substatements()
-            .into_iter()
-            .map(|n| Predicate::new(self.clone(), n))
-            .collect()
+        let mut to_return = HashSet::new();
+        for substatement in self.get_substatements() {
+            // Substatements may occur multiple times in which case we need to replace every
+            // combination of occurances
+            let substatement_locations = self.find_node(&substatement);
+            let n_subsets = 1 << substatement_locations.len();
+            let mut self_for_predicate = self.clone();
+            let new_label =
+                self_for_predicate.get_unused_symbol_name_like(&substatement.get_root_as_string());
+            let new_node = Symbol::new(new_label, substatement.get_evaluates_to_type()).into();
+            // Start going through the bitmask at 1 since we don't want to have the unpredicate
+            // included
+            for bitmask in 1..n_subsets {
+                for (i, substatement_location) in substatement_locations.iter().enumerate() {
+                    let should_replace_ith_location = bitmask & (1 << i) != 0;
+                    if should_replace_ith_location {
+                        self_for_predicate = self_for_predicate
+                            .replace_node(substatement_location, &new_node)
+                            .expect("We got the address from the statement.");
+                    }
+                }
+                to_return.insert(Predicate::new(self_for_predicate.clone(), new_node.clone()));
+            }
+        }
+        to_return
     }
 
     pub fn get_arbitrary_nodes(&self) -> HashSet<Self> {
@@ -517,6 +538,10 @@ impl SymbolNode {
         Ok(Self::new(self.root.clone(), new_children))
     }
 
+    pub fn find_node(&self, node: &SymbolNode) -> HashSet<SymbolNodeAddress> {
+        self.find_where(&|n| &n == node)
+    }
+
     pub fn find_where(&self, condition: &dyn Fn(Self) -> bool) -> HashSet<SymbolNodeAddress> {
         let mut result = HashSet::new();
         if condition(self.clone()) {
@@ -742,16 +767,18 @@ impl SymbolNode {
     pub fn relabel_to_avoid(&self, symbol_names_to_avoid: &HashSet<String>) -> Self {
         let mut relabelling = HashSet::new();
         for symbol_name in symbol_names_to_avoid {
-            let mut subscript = 0;
-            while self.contains_symbol_name(&format!("{}_{}", symbol_name, subscript)) {
-                subscript += 1;
-            }
-            relabelling.insert((
-                symbol_name.to_string(),
-                format!("{}_{}", symbol_name, subscript),
-            ));
+            let new_name = self.get_unused_symbol_name_like(symbol_name);
+            relabelling.insert((symbol_name.to_string(), new_name));
         }
         self.relabel_all(&relabelling)
+    }
+
+    fn get_unused_symbol_name_like(&self, symbol_name: &str) -> String {
+        let mut subscript = 0;
+        while self.contains_symbol_name(&format!("{}_{}", symbol_name, subscript)) {
+            subscript += 1;
+        }
+        format!("{}_{}", symbol_name, subscript)
     }
 
     pub fn relabel_all(&self, relabelling: &HashSet<(String, String)>) -> Self {
