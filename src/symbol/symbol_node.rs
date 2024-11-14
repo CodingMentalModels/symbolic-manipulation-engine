@@ -4,6 +4,7 @@ use std::{
     fmt::Debug,
 };
 
+use log::trace;
 use serde::{Deserialize, Serialize};
 
 use crate::{
@@ -201,6 +202,7 @@ impl SymbolNode {
     }
 
     pub fn get_predicates(&self) -> HashSet<Predicate> {
+        trace!("get_predicates({})", self.to_symbol_string());
         let mut to_return = HashSet::new();
         for substatement in self.get_substatements() {
             // Substatements may occur multiple times in which case we need to replace every
@@ -211,6 +213,7 @@ impl SymbolNode {
             // TODO This sort is probably slow, probably better to make find functions return vecs
             substatement_locations.sort();
             let n_subsets = 1 << substatement_locations.len();
+            trace!("{} subsets", n_subsets);
             let mut self_for_predicate = self.clone();
             let new_label =
                 self_for_predicate.get_unused_symbol_name_like(&substatement.get_root_as_string());
@@ -218,15 +221,20 @@ impl SymbolNode {
             // Start going through the bitmask at 1 since we don't want to have the unpredicate
             // included
             for bitmask in 1..n_subsets {
+                self_for_predicate = self.clone();
+                trace!("bitmask: {:#018b}", bitmask);
                 for (i, substatement_location) in substatement_locations.iter().enumerate() {
                     let should_replace_ith_location = bitmask & (1 << i) != 0;
                     if should_replace_ith_location {
+                        trace!("Replacing at {:?}", substatement_location);
                         self_for_predicate = self_for_predicate
                             .replace_node(substatement_location, &new_node)
                             .expect("We got the address from the statement.");
                     }
                 }
-                to_return.insert(Predicate::new(self_for_predicate.clone(), new_node.clone()));
+                let predicate = Predicate::new(self_for_predicate.clone(), new_node.clone());
+                trace!("Predicate: {:?}", predicate);
+                to_return.insert(predicate);
             }
         }
         to_return
@@ -1217,6 +1225,7 @@ mod test_statement {
             Interpretation::prefix_operator("-".into(), 4, "Integer".into()),
             Interpretation::function("f".into(), 99),
             Interpretation::singleton("a", "Integer".into()),
+            Interpretation::singleton("a_0", "Integer".into()), // Disambiguation
             Interpretation::singleton("b", "Integer".into()),
             Interpretation::singleton("x", "Integer".into()),
             Interpretation::singleton("y", "Integer".into()),
@@ -1248,6 +1257,29 @@ mod test_statement {
             ]
             .into_iter()
             .collect()
+        );
+
+        let a_equals_a = parse("a=a");
+        let a_0 = parse("a_0");
+        let a_0_equals_a = parse("a_0=a");
+        let a_equals_a_0 = parse("a=a_0");
+
+        let actual = a_equals_a.get_predicates();
+        let expected = vec![
+            Predicate::new(a.clone(), a.clone()),
+            Predicate::new(a_equals_a.clone(), a.clone()),
+            Predicate::new(a_0_equals_a.clone(), a_0.clone()),
+            Predicate::new(a_equals_a_0.clone(), a_0.clone()),
+        ]
+        .into_iter()
+        .collect();
+
+        assert_eq!(
+            actual,
+            expected,
+            "actual.len() = {}\nexpected.len() = {}",
+            actual.len(),
+            expected.len()
         );
     }
 

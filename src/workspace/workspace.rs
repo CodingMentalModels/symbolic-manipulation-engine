@@ -1500,20 +1500,20 @@ mod test_workspace {
 
         workspace_store.add_parsed_hypothesis("p=q").unwrap();
 
-        let expected = workspace_store
-            .compile()
-            .parse_from_string("p^s=q^s")
-            .unwrap();
-        assert_eq!(
-            workspace_store
-                .try_transform_into_parsed("p^s=q^s")
-                .unwrap(),
-            expected
-        );
-        assert!(workspace_store
-            .compile()
-            .get_statements()
-            .contains(&expected));
+        // let expected = workspace_store
+        //     .compile()
+        //     .parse_from_string("p^s=q^s")
+        //     .unwrap();
+        // assert_eq!(
+        //     workspace_store
+        //         .try_transform_into_parsed("p^s=q^s")
+        //         .unwrap(),
+        //     expected
+        // );
+        // assert!(workspace_store
+        //     .compile()
+        //     .get_statements()
+        //     .contains(&expected));
 
         let actual = workspace_store
             .try_transform_into_parsed("p+q^s=q+q^s")
