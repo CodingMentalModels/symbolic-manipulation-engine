@@ -195,6 +195,14 @@ impl SymbolNode {
             .any(|child| child.contains_arbitrary_nodes())
     }
 
+    pub fn contains_substatement(&self, substatement: &SymbolNode) -> bool {
+        self == substatement
+            || self
+                .children
+                .iter()
+                .any(|child| child.contains_substatement(substatement))
+    }
+
     pub fn get_substatements(&self) -> HashSet<Self> {
         let mut to_return = self.children.clone();
         to_return.push(self.clone());

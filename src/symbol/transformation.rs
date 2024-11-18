@@ -551,8 +551,19 @@ impl Transformation {
                         // Also push the transformed statement on so that it gets processed
                         valid_roots.insert(result.clone());
 
-                        // Bail out if we've gotten too deep
-                        if result.get_depth() <= final_max_depth {
+                        let to_statement_might_contain = |substatement: &SymbolNode| {
+                            maybe_to_statement.map_or(true, |to_statement| {
+                                to_statement.contains_substatement(substatement)
+                            })
+                        };
+
+                        // Bail out if we've gotten too deep or the substatement doesn't contain
+                        // the result
+                        if result.get_depth() > final_max_depth {
+                            debug!("Max depth reached!");
+                        } else if !to_statement_might_contain(&result) {
+                            debug!("to_statement_might_contain = false");
+                        } else {
                             // Log the transformation as a valid one
                             child_to_valid_transformations
                                 .entry(current_statement.clone())
@@ -569,17 +580,15 @@ impl Transformation {
                             } else {
                                 call_stack.push((result.clone(), should_return, false, depth));
                             }
-                        } else {
-                            debug!("Max depth reached!");
                         }
                     }
                     _ => {}
                 };
 
-                for to_apply in valid_roots {
+                for statement_to_apply_to in valid_roots {
                     let result = self.apply_valid_transformations_to_children(
                         &child_to_valid_transformations,
-                        &to_apply,
+                        &statement_to_apply_to,
                         None,
                     );
                     if should_return {
@@ -597,7 +606,7 @@ impl Transformation {
 
                     // Log the child transformations as valid
                     child_to_valid_transformations
-                        .entry(to_apply.clone())
+                        .entry(statement_to_apply_to.clone())
                         .and_modify(|value| {
                             value.extend(result.clone());
                         })
