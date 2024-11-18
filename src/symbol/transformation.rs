@@ -414,7 +414,7 @@ impl Transformation {
             }
         };
         trace!(
-            "might_produce_type:\ntransformation: {:?}\ntype: {:?}\nresult: {}",
+            "might_produce_type:\ntransformation: {:#?}\ntype: {:#?}\nresult: {}",
             self,
             t,
             result
@@ -756,7 +756,7 @@ impl Transformation {
                             .unwrap_or(false)
                     })
                 {
-                    trace!("None of the from_statement's types are subtypes of the root of what we're trying to transform.\nfrom_statement: {:?}\ntransformation: {:?}", from_statement, self);
+                    trace!("None of the from_statement's types are subtypes of the root of what we're trying to transform.\nfrom_statement: {:#?}\ntransformation: {:#?}", from_statement, self);
                     return true;
                 }
             }
@@ -781,7 +781,7 @@ impl Transformation {
         };
         if !might_produce_correct_type {
             debug!(
-                "from_statement can't produce the correct type: {}\nTransformation: {:?}\nDesired: {}\nHierarchy: {:?}",
+                "from_statement can't produce the correct type: {}\nTransformation: {:#?}\nDesired: {}\nHierarchy: {:#?}",
                 from_statement.to_symbol_string(),
                 self,
                 maybe_to_statement.unwrap().to_symbol_string(),
@@ -790,7 +790,7 @@ impl Transformation {
             return true;
         }
 
-        trace!("Passed cant_possibly_transform_into.\nTransformation: {:?}\nDesired: {}\nHierarchy: {:?}", self, maybe_to_statement.map_or("None".to_string(), |s| s.to_symbol_string()), hierarchy);
+        trace!("Passed cant_possibly_transform_into.\nTransformation: {:#?}\nDesired: {}\nHierarchy: {:#?}", self, maybe_to_statement.map_or("None".to_string(), |s| s.to_symbol_string()), hierarchy);
         return false;
     }
 }
@@ -824,7 +824,7 @@ impl AlgorithmTransformation {
         let t_parents_result = hierarchy.get_parents(t);
         match t_parents_result {
             Err(e) => {
-                warn!("Type error returning from get_parents: {:?}", e);
+                warn!("Type error returning from get_parents: {:#?}", e);
                 true
             }
             Ok(t_parents) => generated_transform_parents == &t_parents,
@@ -1135,7 +1135,7 @@ impl ExplicitTransformation {
 
         let mut to_return = HashSet::new();
         for arbitrary_node in self.get_arbitrary_nodes() {
-            trace!("arbitrary_node: {:?}", arbitrary_node);
+            trace!("arbitrary_node: {:#?}", arbitrary_node);
             let substatement_predicates = substatements
                 .iter()
                 .filter_map(|s| {
