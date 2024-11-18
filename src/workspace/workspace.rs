@@ -1471,6 +1471,78 @@ mod test_workspace {
     }
 
     #[test]
+    fn test_workspace_try_transform_into_with_substitution() {
+        let mut types = TypeHierarchy::chain(vec!["Boolean".into(), "=".into()]).unwrap();
+        types.add_chain(vec!["Real".into(), "+".into()]).unwrap();
+        types
+            .add_child_to_parent("-".into(), "Real".into())
+            .unwrap();
+        types
+            .add_child_to_parent("*".into(), "Real".into())
+            .unwrap();
+        types
+            .add_child_to_parent("/".into(), "Real".into())
+            .unwrap();
+        types
+            .add_child_to_parent("^".into(), "Real".into())
+            .unwrap();
+        types
+            .add_child_to_parent("Negative".into(), "Real".into())
+            .unwrap();
+
+        let interpretations = vec![
+            Interpretation::infix_operator("=".into(), 1, "=".into()),
+            Interpretation::infix_operator("+".into(), 2, "+".into()),
+            Interpretation::infix_operator("-".into(), 2, "-".into()),
+            Interpretation::infix_operator("*".into(), 3, "*".into()),
+            Interpretation::infix_operator("/".into(), 3, "/".into()),
+            Interpretation::infix_operator("^".into(), 4, "^".into()),
+            Interpretation::singleton("p".into(), "Boolean".into()),
+            Interpretation::singleton("q".into(), "Boolean".into()),
+            Interpretation::singleton("r".into(), "Boolean".into()),
+            Interpretation::singleton("s".into(), "Boolean".into()),
+            Interpretation::singleton("x".into(), "Real".into()),
+            Interpretation::singleton("y".into(), "Real".into()),
+            Interpretation::singleton("x".into(), "Real".into()),
+            Interpretation::singleton("a".into(), "Real".into()),
+            Interpretation::singleton("b".into(), "Real".into()),
+            Interpretation::singleton("c".into(), "Real".into()),
+            Interpretation::function("Negative".into(), 99),
+            Interpretation::arbitrary_functional("Any".into(), 99, "Real".into()),
+        ];
+
+        let real_interpretation = GeneratedType::new_numeric("Real".into());
+
+        let workspace = Workspace::initialize(
+            types.clone(),
+            vec![real_interpretation],
+            interpretations.clone(),
+        );
+
+        let mut workspace_store = WorkspaceTransactionStore::snapshot(workspace.clone());
+
+        workspace_store
+            .add_parsed_transformation(false, "x=y", "Any(x)=Any(y)")
+            .unwrap();
+        workspace_store
+            .add_parsed_hypothesis("0=a*x^2+b*x+c")
+            .unwrap();
+        workspace_store
+            .add_parsed_hypothesis("x=((Negative(b)+(b^2 - 4*a*c)^(1/2))/(2*a))")
+            .unwrap();
+
+        let desired = "a*x^2+b*x+c=a*x^2+b*(((Negative(b)+(b^2 - 4*a*c)^(1/2))/(2*a)))+c";
+        let expected = workspace_store
+            .compile()
+            .parse_from_string(desired)
+            .unwrap();
+        assert_eq!(
+            workspace_store.try_transform_into_parsed(desired).unwrap(),
+            expected
+        );
+    }
+
+    #[test]
     fn test_workspace_try_transform_into_with_arbitrary() {
         let mut types = TypeHierarchy::chain(vec!["Boolean".into(), "=".into()]).unwrap();
         types
