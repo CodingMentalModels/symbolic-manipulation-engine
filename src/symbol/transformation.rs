@@ -781,7 +781,7 @@ impl Transformation {
             return true;
         }
 
-        trace!("Passed cant_possibly_transform_into.\nTransformation: {:?}\nDesired: {}\nHierarchy: {:?}", self, maybe_to_statement.to_symbol_string(), hierarchy);
+        trace!("Passed cant_possibly_transform_into.\nTransformation: {:?}\nDesired: {}\nHierarchy: {:?}", self, maybe_to_statement.map_or("None".to_string(), |s| s.to_symbol_string()), hierarchy);
         return false;
     }
 }
