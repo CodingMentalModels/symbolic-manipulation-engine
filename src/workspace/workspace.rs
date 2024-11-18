@@ -1610,8 +1610,8 @@ mod test_workspace {
 
         let interpretations = vec![
             Interpretation::infix_operator("=".into(), 1, "=".into()),
-            Interpretation::infix_operator("^".into(), 2, "^".into()),
-            Interpretation::infix_operator("+".into(), 3, "+".into()),
+            Interpretation::infix_operator("+".into(), 2, "+".into()),
+            Interpretation::infix_operator("^".into(), 3, "^".into()),
             Interpretation::singleton("p".into(), "Boolean".into()),
             Interpretation::singleton("q".into(), "Boolean".into()),
             Interpretation::singleton("r".into(), "Boolean".into()),
@@ -1687,8 +1687,8 @@ mod test_workspace {
         let interpretations = vec![
             Interpretation::infix_operator("=_0".into(), 1, "=".into()),
             Interpretation::infix_operator("=".into(), 1, "=".into()),
-            Interpretation::infix_operator("^".into(), 2, "^".into()),
-            Interpretation::infix_operator("+".into(), 3, "+".into()),
+            Interpretation::infix_operator("+".into(), 2, "+".into()),
+            Interpretation::infix_operator("^".into(), 3, "^".into()),
             Interpretation::singleton("p_0".into(), "Boolean".into()),
             Interpretation::singleton("p".into(), "Boolean".into()),
             Interpretation::singleton("q_0".into(), "Boolean".into()),
