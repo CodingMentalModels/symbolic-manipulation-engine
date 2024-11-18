@@ -504,7 +504,7 @@ impl Transformation {
             from_statement.to_symbol_string()
         );
 
-        // Optimize away this function if the transformation cant possibly work
+        // Optimize away this function if the transformation can't possibly work
         if self.cant_possibly_transform_into(hierarchy, from_statement, maybe_to_statement) {
             return vec![from_statement.clone()].into_iter().collect();
         }
@@ -781,6 +781,7 @@ impl Transformation {
             return true;
         }
 
+        trace!("Passed cant_possibly_transform_into.\nTransformation: {:?}\nDesired: {}\nHierarchy: {:?}", self, maybe_to_statement.to_symbol_string(), hierarchy);
         return false;
     }
 }
