@@ -1135,7 +1135,9 @@ impl ExplicitTransformation {
 
         let mut to_return = HashSet::new();
         for arbitrary_node in self.get_arbitrary_nodes() {
+            trace!("substatements: {:#?}", substatements);
             trace!("arbitrary_node: {:#?}", arbitrary_node);
+            trace!("hierarchy: {:#?}", hierarchy);
             let substatement_predicates = substatements
                 .iter()
                 .filter_map(|s| {
@@ -1149,6 +1151,7 @@ impl ExplicitTransformation {
                 })
                 .flatten()
                 .collect::<HashSet<_>>();
+            trace!("substatement_predicates: {:#?}", substatement_predicates);
             for predicate in substatement_predicates {
                 trace!("predicate: {}", predicate.to_symbol_string());
                 let predicate_symbol_names = predicate.get_symbol_names();

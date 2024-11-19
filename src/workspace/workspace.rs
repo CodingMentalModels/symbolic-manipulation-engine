@@ -1513,33 +1513,53 @@ mod test_workspace {
 
         let real_interpretation = GeneratedType::new_numeric("Real".into());
 
-        let workspace = Workspace::initialize(
-            types.clone(),
-            vec![real_interpretation],
-            interpretations.clone(),
-        );
+        let setup_and_transform = |hypotheses, transformations, desired| {
+            let workspace = Workspace::initialize(
+                types.clone(),
+                vec![real_interpretation],
+                interpretations.clone(),
+            );
 
-        let mut workspace_store = WorkspaceTransactionStore::snapshot(workspace.clone());
+            let mut workspace_store = WorkspaceTransactionStore::snapshot(workspace.clone());
 
-        workspace_store
-            .add_parsed_transformation(false, "x=y", "Any(x)=Any(y)")
-            .unwrap();
-        workspace_store
-            .add_parsed_hypothesis("0=a*x^2+b*x+c")
-            .unwrap();
-        workspace_store
-            .add_parsed_hypothesis("x=((Negative(b)+(b^2 - 4*a*c)^(1/2))/(2*a))")
-            .unwrap();
+            for hypothesis in hypotheses {
+                workspace_store.add_parsed_hypothesis(hypothesis).unwrap();
+            }
+
+            for (from, to) in transformations {
+                workspace_store
+                    .add_parsed_transformation(false, from, to)
+                    .unwrap();
+            }
+
+            let actual = workspace_store.try_transform_into_parsed(desired).unwrap();
+            let expected = workspace_store
+                .compile()
+                .parse_from_string(desired)
+                .unwrap();
+            return (actual, expected);
+        };
+
+        let hypotheses = vec!["0=a*x+b", "x=b+c"];
+
+        let transformations = vec![("x=y", "Any(x)=Any(y)")];
+
+        let desired = "a*x+b=a*(b+c)+b";
+
+        let (actual, expected) = setup_and_transform.clone()(hypotheses, transformations, desired);
+        assert_eq!(actual, expected);
+
+        let hypotheses = vec![
+            "0=a*x^2+b*x+c",
+            "x=((Negative(b)+(b^2 - 4*a*c)^(1/2))/(2*a))",
+        ];
+
+        let transformations = vec![("x=y", "Any(x)=Any(y)")];
 
         let desired = "a*x^2+b*x+c=a*x^2+b*(((Negative(b)+(b^2 - 4*a*c)^(1/2))/(2*a)))+c";
-        let expected = workspace_store
-            .compile()
-            .parse_from_string(desired)
-            .unwrap();
-        assert_eq!(
-            workspace_store.try_transform_into_parsed(desired).unwrap(),
-            expected
-        );
+
+        let (actual, expected) = setup_and_transform.clone()(hypotheses, transformations, desired);
+        assert_eq!(actual, expected);
     }
 
     #[test]

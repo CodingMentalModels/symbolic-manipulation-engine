@@ -1228,9 +1228,12 @@ mod test_statement {
     fn test_symbol_node_gets_predicates() {
         let interpretations = vec![
             Interpretation::infix_operator("=".into(), 1, "Integer".into()),
+            Interpretation::infix_operator("+".into(), 2, "Integer".into()),
+            Interpretation::infix_operator("-".into(), 2, "Integer".into()),
+            Interpretation::infix_operator("*".into(), 3, "Integer".into()),
+            Interpretation::infix_operator("/".into(), 3, "Integer".into()),
             Interpretation::outfix_operator(("|".into(), "|".into()), 2, "Integer".into()),
             Interpretation::postfix_operator("!".into(), 3, "Integer".into()),
-            Interpretation::prefix_operator("-".into(), 4, "Integer".into()),
             Interpretation::function("f".into(), 99),
             Interpretation::singleton("a", "Integer".into()),
             Interpretation::singleton("a_0", "Integer".into()), // Disambiguation
@@ -1238,6 +1241,7 @@ mod test_statement {
             Interpretation::singleton("x", "Integer".into()),
             Interpretation::singleton("y", "Integer".into()),
             Interpretation::singleton("z", "Integer".into()),
+            Interpretation::singleton("0", "Integer".into()),
         ];
 
         let trivial = SymbolNode::leaf_object("a");
@@ -1249,7 +1253,14 @@ mod test_statement {
         );
 
         let parser = Parser::new(interpretations.clone());
-        let custom_tokens = vec!["=".to_string(), "|".to_string()];
+        let custom_tokens = vec![
+            "=".to_string(),
+            "|".to_string(),
+            "+".to_string(),
+            "-".to_string(),
+            "*".to_string(),
+            "/".to_string(),
+        ];
 
         let parse = |s: &str| parser.parse_from_string(custom_tokens.clone(), s).unwrap();
 
