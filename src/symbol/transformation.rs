@@ -1,5 +1,6 @@
 use log::{debug, trace, warn};
 use std::collections::{HashMap, HashSet};
+use std::isize;
 
 use crate::constants::MAX_ADDITIONAL_VALID_TRANSFORMATION_DEPTH;
 use crate::parsing::interpretation::Interpretation;
@@ -754,31 +755,64 @@ impl Transformation {
             _ => {}
         };
 
-        // Optimization if we know the desired type:
-        // either the statement must already have it or the transformation must be able to produce
-        // it
-        let might_produce_correct_type = if let Some(to_statement) = maybe_to_statement {
-            let desired_type = to_statement.get_evaluates_to_type();
-            self.might_produce_type(hierarchy, &desired_type)
-                || hierarchy
-                    .is_subtype_of(
-                        &to_statement.get_evaluates_to_type(),
-                        &from_statement.get_evaluates_to_type(),
-                    )
-                    .unwrap_or(false)
-        } else {
-            trace!("We might produce the correct type.");
-            true
-        };
-        if !might_produce_correct_type {
-            debug!(
+        if let Some(to_statement) = maybe_to_statement {
+            // Optimization if we know the desired type:
+            // either the statement must already have it or the transformation must be able to produce
+            // it
+            let might_produce_correct_type = {
+                let desired_type = to_statement.get_evaluates_to_type();
+                self.might_produce_type(hierarchy, &desired_type)
+                    || hierarchy
+                        .is_subtype_of(
+                            &to_statement.get_evaluates_to_type(),
+                            &from_statement.get_evaluates_to_type(),
+                        )
+                        .unwrap_or(false)
+            };
+            if !might_produce_correct_type {
+                debug!(
                 "from_statement can't produce the correct type: {}\nTransformation: {:#?}\nDesired: {}\nHierarchy: {:#?}",
                 from_statement.to_symbol_string(),
                 self,
                 maybe_to_statement.unwrap().to_symbol_string(),
                 hierarchy,
             );
-            return true;
+                return true;
+            }
+
+            // Look at the node deltas of the transformation and check if N applications of t can
+            // produce the desired result
+            match self {
+                Self::ExplicitTransformation(t) => {
+                    trace!("node_delta optimization:\ntransformation: {}\nnode_delta: {}\nfrom_statement: {}\nto_statement: {}", t.to_symbol_string(), t.get_node_delta(), from_statement.to_symbol_string(), to_statement.to_symbol_string());
+                    let node_delta = t.get_node_delta();
+                    if node_delta == 0 {
+                        if from_statement.len() != to_statement.len() {
+                            debug!(
+                                "node_delta = 0 but from and to statements are different lengths."
+                            );
+                            return true;
+                        }
+                    } else if node_delta > 0 {
+                        if from_statement.len() >= to_statement.len() {
+                            debug!("node_delta > 0 meaning the statement will get longer but it needs to shrink.");
+                            return true;
+                        }
+                    } else if node_delta < 0 {
+                        if from_statement.len() <= to_statement.len() {
+                            debug!("node_delta < 0 meaning the statement will shrink but it needs to get longer.");
+                            return true;
+                        }
+                    } else {
+                        unreachable!();
+                    }
+                }
+                _ => {
+                    trace!("Not an explicit transform, so can't perform certain optimizations.");
+                }
+            }
+        } else {
+            trace!("maybe_to_statement.is_none() so we can't perform certain optimizations.");
         }
 
         trace!("Passed cant_possibly_transform_into.\nTransformation: {:#?}\nDesired: {}\nHierarchy: {:#?}", self, maybe_to_statement.map_or("None".to_string(), |s| s.to_symbol_string()), hierarchy);
@@ -1099,6 +1133,10 @@ impl ExplicitTransformation {
         let mut variables = self.from.get_symbols();
         variables.extend(self.to.get_symbols());
         variables.into_iter().map(|s| s.get_name()).collect()
+    }
+
+    pub fn get_node_delta(&self) -> isize {
+        (self.to.len() as isize) - (self.from.len() as isize)
     }
 
     pub fn contains_arbitrary_nodes(&self) -> bool {

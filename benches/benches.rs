@@ -36,7 +36,7 @@ fn benchmark_test_substitutes_large_expression(c: &mut Criterion) {
 
 criterion_group! {
     name = benches;
-    config = Criterion::default().sample_size(10);
+    config = Criterion::default().sample_size(100);
     targets = benchmark_test_substitutes_large_expression
 }
 criterion_main!(benches);
