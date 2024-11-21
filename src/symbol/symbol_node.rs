@@ -1153,7 +1153,6 @@ impl Symbol {
 
 #[cfg(test)]
 mod test_statement {
-    use std::mem::zeroed;
 
     use crate::{
         parsing::{interpretation::Interpretation, parser::Parser},
