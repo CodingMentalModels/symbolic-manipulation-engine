@@ -49,10 +49,15 @@ impl Predicate {
 
     fn normalize(node: SymbolNode, arbitrary: SymbolNode) -> (SymbolNode, SymbolNode) {
         let symbols = arbitrary.get_symbols_in_order();
+        let max_ambiguous_symbol: usize = symbols
+            .iter()
+            .filter_map(|s| s.get_name().parse().ok())
+            .max()
+            .unwrap_or(0);
         let symbol_map = symbols
             .into_iter()
             .enumerate()
-            .map(|(i, symbol)| (symbol, i.to_string()))
+            .map(|(i, symbol)| (symbol, (max_ambiguous_symbol + 1 + i).to_string()))
             .collect::<Vec<_>>();
         let (mut node_to_return, mut arbitrary_to_return) = (node.clone(), arbitrary.clone());
         for (symbol, replacement) in symbol_map {
@@ -204,7 +209,12 @@ impl SymbolNode {
     }
 
     pub fn get_substatements(&self) -> HashSet<Self> {
-        let mut to_return = self.children.clone();
+        let mut to_return: Vec<_> = self
+            .children
+            .iter()
+            .map(|child| child.get_substatements())
+            .flatten()
+            .collect();
         to_return.push(self.clone());
         to_return.into_iter().collect()
     }
@@ -213,6 +223,7 @@ impl SymbolNode {
         trace!("get_predicates({})", self.to_symbol_string());
         let mut to_return = HashSet::new();
         for substatement in self.get_substatements() {
+            trace!("substatement: {}", substatement.to_symbol_string());
             // Substatements may occur multiple times in which case we need to replace every
             // combination of occurances
             let mut substatement_locations: Vec<_> =
@@ -221,7 +232,10 @@ impl SymbolNode {
             // TODO This sort is probably slow, probably better to make find functions return vecs
             substatement_locations.sort();
             let n_subsets = 1 << substatement_locations.len();
-            trace!("{} subsets", n_subsets);
+            trace!(
+                "{} subsets (includes the trivial subset which we skip)",
+                n_subsets
+            );
             let mut self_for_predicate = self.clone();
             let new_label =
                 self_for_predicate.get_unused_symbol_name_like(&substatement.get_root_as_string());
@@ -1139,6 +1153,8 @@ impl Symbol {
 
 #[cfg(test)]
 mod test_statement {
+    use std::mem::zeroed;
+
     use crate::{
         parsing::{interpretation::Interpretation, parser::Parser},
         symbol::symbol_type::GeneratedTypeCondition,
@@ -1300,6 +1316,21 @@ mod test_statement {
             actual.len(),
             expected.len()
         );
+
+        let slope_is_zero = parse("0=a*x+b");
+
+        let actual = slope_is_zero.get_predicates();
+
+        assert_eq!(
+            actual.len(),
+            slope_is_zero.get_substatements().len(),
+            "actual:\n{}",
+            actual
+                .iter()
+                .map(|p| p.to_symbol_string())
+                .collect::<Vec<_>>()
+                .join("\n"),
+        );
     }
 
     #[test]
@@ -1315,6 +1346,7 @@ mod test_statement {
             Interpretation::singleton("x", "Integer".into()),
             Interpretation::singleton("y", "Integer".into()),
             Interpretation::singleton("z", "Integer".into()),
+            Interpretation::singleton("0", "Integer".into()),
             Interpretation::parentheses_like(
                 Token::Object("{".to_string()),
                 Token::Object("}".to_string()),
@@ -1345,6 +1377,15 @@ mod test_statement {
         let b_equals_b_on_b = Predicate::new(parse("b=b"), parse("b"));
 
         assert_eq!(a_equals_a_on_a, b_equals_b_on_b);
+
+        let zero_equals_zero_on_zero = Predicate::new(parse("0=0"), parse("0"));
+        assert_eq!(zero_equals_zero_on_zero, b_equals_b_on_b);
+        assert_ne!(a_equals_b_on_a, zero_equals_zero_on_zero);
+
+        let zero_equals_a_on_a = Predicate::new(parse("0=a"), parse("a"));
+        let zero_equals_b_on_b = Predicate::new(parse("0=b"), parse("b"));
+        assert_ne!(zero_equals_a_on_a, zero_equals_zero_on_zero);
+        assert_eq!(zero_equals_a_on_a, zero_equals_b_on_b);
     }
 
     #[test]
