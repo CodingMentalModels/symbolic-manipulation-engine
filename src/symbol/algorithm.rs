@@ -14,6 +14,7 @@ pub enum AlgorithmType {
     Subtraction,
     Multiplication,
     Division,
+    Exponentiation,
 }
 
 impl AlgorithmType {
@@ -23,6 +24,7 @@ impl AlgorithmType {
             Self::Subtraction,
             Self::Multiplication,
             Self::Division,
+            Self::Exponentiation,
         ]
         .into_iter()
         .collect()
@@ -34,6 +36,7 @@ impl AlgorithmType {
             Self::Subtraction => "Subtraction",
             Self::Multiplication => "Multiplication",
             Self::Division => "Division",
+            Self::Exponentiation => "Exponentiation",
         }
         .to_string()
     }
@@ -44,6 +47,7 @@ impl AlgorithmType {
             "subtraction" => Ok(Self::Subtraction),
             "multiplication" => Ok(Self::Multiplication),
             "division" => Ok(Self::Division),
+            "exponentiation" => Ok(Self::Exponentiation),
             &_ => Err(TransformationError::UnableToParse(s.to_string())),
         }
     }
@@ -57,6 +61,7 @@ impl AlgorithmType {
             Self::Subtraction => left_value - right_value,
             Self::Multiplication => left_value * right_value,
             Self::Division => left_value / right_value,
+            Self::Exponentiation => left_value.pow(right_value),
         };
         debug!("final_value: {:?}", final_value);
         Ok(final_value.to_string())
@@ -113,5 +118,9 @@ impl Rational {
 
     pub fn to_string(&self) -> String {
         self.internal.to_string()
+    }
+
+    pub fn pow(self, rhs: Self) -> Self {
+        Self::new(self.internal.powf(rhs.internal))
     }
 }

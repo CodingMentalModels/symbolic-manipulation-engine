@@ -217,7 +217,7 @@ impl TransformationLattice {
             for statement in statements.into_iter() {
                 match instantiated_transform.try_transform_into(types, &statement, &desired) {
                     Ok(output) => {
-                        // TODO Derive the appropriate transform addresses
+                        // TODO Log the instantiated transform too and show it in the front end
                         self.force_apply_transformation(
                             statement.clone(),
                             arbitrary_transform.clone(),
@@ -401,6 +401,27 @@ impl Transformation {
         }
     }
 
+    pub fn might_produce_type(&self, hierarchy: &TypeHierarchy, t: &Type) -> bool {
+        let result = match self {
+            Self::ExplicitTransformation(transformation) => {
+                transformation.might_produce_type(hierarchy, t)
+            }
+            Self::AlgorithmTransformation(transformation) => {
+                transformation.might_produce_type(hierarchy, t)
+            }
+            Self::ApplyToBothSidesTransformation(transformation) => {
+                transformation.might_produce_type(hierarchy, t)
+            }
+        };
+        trace!(
+            "might_produce_type:\ntransformation: {:#?}\ntype: {:#?}\nresult: {}",
+            self,
+            t,
+            result
+        );
+        result
+    }
+
     pub fn transform(
         &self,
         hierarchy: &TypeHierarchy,
@@ -460,7 +481,7 @@ impl Transformation {
                 to.clone(),
             ));
         }
-        let valid_transformations = self.get_valid_transformations(hierarchy, from);
+        let valid_transformations = self.get_valid_transformations(hierarchy, from, Some(to));
         if valid_transformations.contains(to) {
             Ok(to.clone())
         } else {
@@ -471,7 +492,8 @@ impl Transformation {
     pub fn get_valid_transformations(
         &self,
         hierarchy: &TypeHierarchy,
-        statement: &SymbolNode,
+        from_statement: &SymbolNode,
+        maybe_to_statement: Option<&SymbolNode>,
     ) -> HashSet<SymbolNode> {
         // Getting valid transformations can recurse indefinitely, so we use
         // MAX_ADDITIONAL_VALID_TRANSFORMATION_DEPTH to limit.
@@ -479,14 +501,20 @@ impl Transformation {
         // inspect the contents
         debug!(
             "get_valid_transformations({})",
-            statement.to_symbol_string()
+            from_statement.to_symbol_string()
         );
-        let mut call_stack = vec![(statement.clone(), true, false, 0)];
+
+        // Optimize away this function if the transformation can't possibly work
+        if self.cant_possibly_transform_into(hierarchy, from_statement, maybe_to_statement) {
+            return vec![from_statement.clone()].into_iter().collect();
+        }
+
+        let mut call_stack = vec![(from_statement.clone(), true, false, 0)];
         let mut already_processed: HashSet<SymbolNode> = HashSet::new();
         let mut child_to_valid_transformations: HashMap<SymbolNode, HashSet<SymbolNode>> =
             HashMap::new();
         let mut to_return = HashSet::new();
-        let max_depth = statement.get_depth() + MAX_ADDITIONAL_VALID_TRANSFORMATION_DEPTH;
+        let max_depth = from_statement.get_depth() + MAX_ADDITIONAL_VALID_TRANSFORMATION_DEPTH;
 
         while let Some((current_statement, should_return, are_children_processed, depth)) =
             call_stack.pop()
@@ -506,7 +534,9 @@ impl Transformation {
 
                 // Push the children on to be processed first and don't return them
                 for child in current_statement.get_children() {
-                    if !already_processed.contains(&child) {
+                    if already_processed.contains(&child) {
+                        debug!("Child already processed!");
+                    } else {
                         call_stack.push((child.clone(), false, false, depth + 1));
                     }
                 }
@@ -521,8 +551,19 @@ impl Transformation {
                         // Also push the transformed statement on so that it gets processed
                         valid_roots.insert(result.clone());
 
-                        // Bail out if we've gotten too deep
-                        if result.get_depth() <= final_max_depth {
+                        let to_statement_might_contain = |substatement: &SymbolNode| {
+                            maybe_to_statement.map_or(true, |to_statement| {
+                                to_statement.contains_substatement(substatement)
+                            })
+                        };
+
+                        // Bail out if we've gotten too deep or the substatement doesn't contain
+                        // the result
+                        if result.get_depth() > final_max_depth {
+                            debug!("Max depth reached!");
+                        } else if !to_statement_might_contain(&result) {
+                            debug!("to_statement_might_contain = false");
+                        } else {
                             // Log the transformation as a valid one
                             child_to_valid_transformations
                                 .entry(current_statement.clone())
@@ -534,31 +575,38 @@ impl Transformation {
                                 });
 
                             // Push the result onto the call stack for further processing
-                            if !already_processed.contains(&result) {
-                                call_stack.push((result.clone(), should_return, false, depth));
-                            } else {
+                            if already_processed.contains(&result) {
                                 debug!("Already processed!");
+                            } else {
+                                call_stack.push((result.clone(), should_return, false, depth));
                             }
-                        } else {
-                            debug!("Max depth reached!");
                         }
                     }
                     _ => {}
                 };
 
-                for to_apply in valid_roots {
+                for statement_to_apply_to in valid_roots {
                     let result = self.apply_valid_transformations_to_children(
                         &child_to_valid_transformations,
-                        &to_apply,
+                        &statement_to_apply_to,
                         None,
                     );
                     if should_return {
-                        to_return.extend(result.clone());
+                        match maybe_to_statement {
+                            None => {
+                                to_return.extend(result.clone());
+                            }
+                            Some(to_statement) => {
+                                if result.contains(to_statement) {
+                                    return vec![to_statement.clone()].into_iter().collect();
+                                }
+                            }
+                        }
                     }
 
                     // Log the child transformations as valid
                     child_to_valid_transformations
-                        .entry(to_apply.clone())
+                        .entry(statement_to_apply_to.clone())
                         .and_modify(|value| {
                             value.extend(result.clone());
                         })
@@ -687,6 +735,64 @@ impl Transformation {
                 .collect()),
         }
     }
+
+    fn cant_possibly_transform_into(
+        &self,
+        hierarchy: &TypeHierarchy,
+        from_statement: &SymbolNode,
+        maybe_to_statement: Option<&SymbolNode>,
+    ) -> bool {
+        match self {
+            Self::ExplicitTransformation(t) => {
+                let type_to_transform = t.get_from().get_evaluates_to_type();
+                // If none of the from statements' types are subtypes of the root of what we're
+                // trying to transform, then the transform won't apply
+                if !from_statement
+                    .get_types()
+                    .iter()
+                    .any(|type_to_be_transformed| {
+                        hierarchy
+                            .is_subtype_of(&type_to_be_transformed, &type_to_transform)
+                            .unwrap_or(false)
+                    })
+                {
+                    trace!("None of the from_statement's types are subtypes of the root of what we're trying to transform.\nfrom_statement: {:#?}\ntransformation: {:#?}", from_statement, self);
+                    return true;
+                }
+            }
+            _ => {}
+        };
+
+        // Optimization if we know the desired type:
+        // either the statement must already have it or the transformation must be able to produce
+        // it
+        let might_produce_correct_type = if let Some(to_statement) = maybe_to_statement {
+            let desired_type = to_statement.get_evaluates_to_type();
+            self.might_produce_type(hierarchy, &desired_type)
+                || hierarchy
+                    .is_subtype_of(
+                        &to_statement.get_evaluates_to_type(),
+                        &from_statement.get_evaluates_to_type(),
+                    )
+                    .unwrap_or(false)
+        } else {
+            trace!("We might produce the correct type.");
+            true
+        };
+        if !might_produce_correct_type {
+            debug!(
+                "from_statement can't produce the correct type: {}\nTransformation: {:#?}\nDesired: {}\nHierarchy: {:#?}",
+                from_statement.to_symbol_string(),
+                self,
+                maybe_to_statement.unwrap().to_symbol_string(),
+                hierarchy,
+            );
+            return true;
+        }
+
+        trace!("Passed cant_possibly_transform_into.\nTransformation: {:#?}\nDesired: {}\nHierarchy: {:#?}", self, maybe_to_statement.map_or("None".to_string(), |s| s.to_symbol_string()), hierarchy);
+        return false;
+    }
 }
 
 #[derive(Clone, Debug, Hash, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
@@ -711,6 +817,18 @@ impl AlgorithmTransformation {
             self.algorithm_type.to_string(),
             self.operator.to_string()
         )
+    }
+
+    pub fn might_produce_type(&self, hierarchy: &TypeHierarchy, t: &Type) -> bool {
+        let generated_transform_parents = self.input_type.get_parents();
+        let t_parents_result = hierarchy.get_parents(t);
+        match t_parents_result {
+            Err(e) => {
+                warn!("Type error returning from get_parents: {:#?}", e);
+                true
+            }
+            Ok(t_parents) => generated_transform_parents == &t_parents,
+        }
     }
 
     pub fn get_operator(&self) -> Symbol {
@@ -807,6 +925,12 @@ impl ApplyToBothSidesTransformation {
         self.symbol.get_evaluates_to_type()
     }
 
+    pub fn might_produce_type(&self, hierarchy: &TypeHierarchy, t: &Type) -> bool {
+        hierarchy
+            .is_subtype_of(&self.get_symbol_type(), t)
+            .unwrap_or(false)
+    }
+
     pub fn get_transformation(&self) -> &ExplicitTransformation {
         &self.transformation
     }
@@ -895,6 +1019,12 @@ impl ExplicitTransformation {
 
     pub fn get_to(&self) -> &SymbolNode {
         &self.to
+    }
+
+    pub fn might_produce_type(&self, hierarchy: &TypeHierarchy, t: &Type) -> bool {
+        hierarchy
+            .is_subtype_of(t, &self.get_to().get_evaluates_to_type())
+            .unwrap_or(false)
     }
 
     pub fn reflexivity(
@@ -1005,7 +1135,9 @@ impl ExplicitTransformation {
 
         let mut to_return = HashSet::new();
         for arbitrary_node in self.get_arbitrary_nodes() {
-            trace!("arbitrary_node: {:?}", arbitrary_node);
+            trace!("substatements: {:#?}", substatements);
+            trace!("arbitrary_node: {:#?}", arbitrary_node);
+            trace!("hierarchy: {:#?}", hierarchy);
             let substatement_predicates = substatements
                 .iter()
                 .filter_map(|s| {
@@ -1019,6 +1151,7 @@ impl ExplicitTransformation {
                 })
                 .flatten()
                 .collect::<HashSet<_>>();
+            trace!("substatement_predicates: {:#?}", substatement_predicates);
             for predicate in substatement_predicates {
                 trace!("predicate: {}", predicate.to_symbol_string());
                 let predicate_symbol_names = predicate.get_symbol_names();
@@ -1287,7 +1420,9 @@ mod test_transformation {
             Interpretation::infix_operator("&".into(), 2, "&".into()),
             Interpretation::outfix_operator(("|".into(), "|".into()), 2, "Integer".into()),
             Interpretation::singleton("p", "Boolean".into()),
+            Interpretation::singleton("p_0", "Boolean".into()), // Disambiguation
             Interpretation::singleton("q", "Boolean".into()),
+            Interpretation::singleton("q_0", "Boolean".into()), // Disambiguation
             Interpretation::arbitrary_functional("F".into(), 99, "Boolean".into()),
         ];
 
@@ -1306,7 +1441,10 @@ mod test_transformation {
         let q = parse("q");
         let f_of_p = parse("F(p)");
         let p_equals_p = parse("p=p");
+        let p_0_equals_p = parse("p_0=p");
+        let p_equals_p_0 = parse("p=p_0");
         let p_equals_0_p = parse("p=_0p");
+        let p_0_equals_0_p_0 = parse("p_0=_0p_0");
         let reflexivity = ExplicitTransformation::new(f_of_p.clone(), p_equals_p.clone());
 
         let substatements = vec![p.clone(), q.clone(), p_equals_p.clone()]
@@ -1314,6 +1452,8 @@ mod test_transformation {
             .collect::<HashSet<_>>();
         let expected: HashSet<_> = vec![
             ExplicitTransformation::new(p.clone(), p_equals_p.clone()),
+            ExplicitTransformation::new(p_0_equals_p.clone(), p_0_equals_0_p_0.clone()),
+            ExplicitTransformation::new(p_equals_p_0.clone(), p_0_equals_0_p_0.clone()),
             ExplicitTransformation::new(p_equals_p.clone(), p_equals_0_p.clone()),
         ]
         .into_iter()
@@ -1568,7 +1708,7 @@ mod test_transformation {
             .unwrap();
 
         assert_eq!(
-            irrelevant_transform.get_valid_transformations(&hierarchy, &x_equals_y),
+            irrelevant_transform.get_valid_transformations(&hierarchy, &x_equals_y, None),
             vec![x_equals_y.clone()].into_iter().collect()
         );
         let transformation: Transformation = ExplicitTransformation::commutivity(
@@ -1586,7 +1726,7 @@ mod test_transformation {
             Ok(y_equals_x.clone())
         );
         assert_eq!(
-            transformation.get_valid_transformations(&hierarchy, &x_equals_y),
+            transformation.get_valid_transformations(&hierarchy, &x_equals_y, None),
             vec![x_equals_y.clone(), y_equals_x.clone()]
                 .into_iter()
                 .collect()
@@ -1633,7 +1773,7 @@ mod test_transformation {
                 .unwrap(),
         ];
         assert_eq!(
-            transformation.get_valid_transformations(&hierarchy, &x_equals_y_equals_z),
+            transformation.get_valid_transformations(&hierarchy, &x_equals_y_equals_z, None),
             expected.into_iter().collect()
         );
 
@@ -1657,7 +1797,7 @@ mod test_transformation {
                 .unwrap(),
         ];
 
-        let actual = transformation.get_valid_transformations(&hierarchy, &x_equals_y);
+        let actual = transformation.get_valid_transformations(&hierarchy, &x_equals_y, None);
 
         assert_eq!(actual, expected.into_iter().collect());
 
@@ -1678,7 +1818,8 @@ mod test_transformation {
                 .unwrap(),
         ];
 
-        let actual = transformation.get_valid_transformations(&hierarchy, &x_equals_y_equals_z);
+        let actual =
+            transformation.get_valid_transformations(&hierarchy, &x_equals_y_equals_z, None);
 
         assert_eq!(actual, expected.into_iter().collect());
 

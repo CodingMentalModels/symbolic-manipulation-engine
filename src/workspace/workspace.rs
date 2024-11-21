@@ -463,7 +463,7 @@ impl Workspace {
             };
             for statement in statements {
                 let valid_transformations =
-                    instantiated.get_valid_transformations(self.get_types(), &statement);
+                    instantiated.get_valid_transformations(self.get_types(), &statement, None);
                 if valid_transformations.contains(&desired)
                     && !self.get_statements().contains(&desired)
                 {
@@ -504,7 +504,7 @@ impl Workspace {
             };
             for statement in statements {
                 let valid_transformations =
-                    transformation.get_valid_transformations(self.get_types(), &statement);
+                    transformation.get_valid_transformations(self.get_types(), &statement, None);
                 to_return.extend(valid_transformations);
             }
         }
@@ -871,8 +871,13 @@ impl WorkspaceTransactionStore {
         desired: SymbolNode,
     ) -> Result<SymbolNode, WorkspaceError> {
         let mut transaction = self.get_generated_types_transaction(&desired)?;
+
+        // Ensures that the type hierarchy we pass around includes any generated types without
+        // mucking up the transaction we eventually apply
+        let type_hierarchy = self.get_type_hierarchy_with_transaction_applied(&transaction)?;
+
         let mut workspace = self.compile();
-        let type_hierarchy = workspace.get_types().clone();
+
         let (from_statement, transformation, to_statement) = workspace
             .transformation_lattice
             .try_transform_into(&type_hierarchy, desired.clone())?;
@@ -883,6 +888,16 @@ impl WorkspaceTransactionStore {
         )));
         self.add(transaction)?;
         Ok(desired)
+    }
+
+    fn get_type_hierarchy_with_transaction_applied(
+        &mut self,
+        transaction: &WorkspaceTransaction,
+    ) -> Result<TypeHierarchy, WorkspaceError> {
+        let mut self_cloned = self.clone();
+        self_cloned.add(transaction.clone())?;
+        let type_hierarchy = self_cloned.compile().get_types().clone();
+        Ok(type_hierarchy)
     }
 
     fn get_generated_types_transaction(
@@ -1420,7 +1435,9 @@ mod test_workspace {
         let mut store = WorkspaceTransactionStore::empty();
         assert_eq!(store.compile(), Workspace::default());
 
-        store.add(WorkspaceTransactionItem::AddType(("Real".into(), Type::Object)).into());
+        store
+            .add(WorkspaceTransactionItem::AddType(("Real".into(), Type::Object)).into())
+            .unwrap();
 
         let expected_0 = Workspace::initialize(
             TypeHierarchy::chain(vec!["Real".into()]).unwrap(),
@@ -1429,7 +1446,9 @@ mod test_workspace {
         );
         assert_eq!(store.compile(), expected_0);
 
-        store.add(WorkspaceTransactionItem::AddType(("Integer".into(), "Real".into())).into());
+        store
+            .add(WorkspaceTransactionItem::AddType(("Integer".into(), "Real".into())).into())
+            .unwrap();
 
         let expected_1 = Workspace::initialize(
             TypeHierarchy::chain(vec!["Real".into(), "Integer".into()]).unwrap(),
@@ -1452,15 +1471,111 @@ mod test_workspace {
     }
 
     #[test]
+    fn test_workspace_try_transform_into_with_substitution() {
+        let mut types = TypeHierarchy::chain(vec!["Boolean".into(), "=".into()]).unwrap();
+        types.add_chain(vec!["Real".into(), "+".into()]).unwrap();
+        types
+            .add_child_to_parent("-".into(), "Real".into())
+            .unwrap();
+        types
+            .add_child_to_parent("*".into(), "Real".into())
+            .unwrap();
+        types
+            .add_child_to_parent("/".into(), "Real".into())
+            .unwrap();
+        types
+            .add_child_to_parent("^".into(), "Real".into())
+            .unwrap();
+        types
+            .add_child_to_parent("Negative".into(), "Real".into())
+            .unwrap();
+
+        let interpretations = vec![
+            Interpretation::infix_operator("=".into(), 1, "=".into()),
+            Interpretation::infix_operator("+".into(), 2, "+".into()),
+            Interpretation::infix_operator("-".into(), 2, "-".into()),
+            Interpretation::infix_operator("*".into(), 3, "*".into()),
+            Interpretation::infix_operator("/".into(), 3, "/".into()),
+            Interpretation::infix_operator("^".into(), 4, "^".into()),
+            Interpretation::singleton("p".into(), "Boolean".into()),
+            Interpretation::singleton("q".into(), "Boolean".into()),
+            Interpretation::singleton("r".into(), "Boolean".into()),
+            Interpretation::singleton("s".into(), "Boolean".into()),
+            Interpretation::singleton("x".into(), "Real".into()),
+            Interpretation::singleton("y".into(), "Real".into()),
+            Interpretation::singleton("x".into(), "Real".into()),
+            Interpretation::singleton("a".into(), "Real".into()),
+            Interpretation::singleton("b".into(), "Real".into()),
+            Interpretation::singleton("c".into(), "Real".into()),
+            Interpretation::function("Negative".into(), 99),
+            Interpretation::arbitrary_functional("Any".into(), 99, "Real".into()),
+        ];
+
+        let real_interpretation = GeneratedType::new_numeric("Real".into());
+
+        let setup_and_transform = |hypotheses, transformations, desired| {
+            let workspace = Workspace::initialize(
+                types.clone(),
+                vec![real_interpretation],
+                interpretations.clone(),
+            );
+
+            let mut workspace_store = WorkspaceTransactionStore::snapshot(workspace.clone());
+
+            for hypothesis in hypotheses {
+                workspace_store.add_parsed_hypothesis(hypothesis).unwrap();
+            }
+
+            for (from, to) in transformations {
+                workspace_store
+                    .add_parsed_transformation(false, from, to)
+                    .unwrap();
+            }
+
+            let actual = workspace_store.try_transform_into_parsed(desired).unwrap();
+            let expected = workspace_store
+                .compile()
+                .parse_from_string(desired)
+                .unwrap();
+            return (actual, expected);
+        };
+
+        let hypotheses = vec!["0=a*x+b", "x=b+c"];
+
+        let transformations = vec![("x=y", "Any(x)=Any(y)")];
+
+        let desired = "a*x+b=a*(b+c)+b";
+
+        let (actual, expected) = setup_and_transform.clone()(hypotheses, transformations, desired);
+        assert_eq!(actual, expected);
+
+        let hypotheses = vec![
+            "0=a*x^2+b*x+c",
+            "x=((Negative(b)+(b^2 - 4*a*c)^(1/2))/(2*a))",
+        ];
+
+        let transformations = vec![("x=y", "Any(x)=Any(y)")];
+
+        let desired = "a*x^2+b*x+c=a*x^2+b*(((Negative(b)+(b^2 - 4*a*c)^(1/2))/(2*a)))+c";
+
+        let (actual, expected) = setup_and_transform.clone()(hypotheses, transformations, desired);
+        assert_eq!(actual, expected);
+    }
+
+    #[test]
     fn test_workspace_try_transform_into_with_arbitrary() {
         let mut types = TypeHierarchy::chain(vec!["Boolean".into(), "=".into()]).unwrap();
         types
             .add_child_to_parent("^".into(), "Boolean".into())
             .unwrap();
+        types
+            .add_child_to_parent("+".into(), "Boolean".into())
+            .unwrap();
 
         let interpretations = vec![
             Interpretation::infix_operator("=".into(), 1, "=".into()),
-            Interpretation::infix_operator("^".into(), 2, "^".into()),
+            Interpretation::infix_operator("+".into(), 2, "+".into()),
+            Interpretation::infix_operator("^".into(), 3, "^".into()),
             Interpretation::singleton("p".into(), "Boolean".into()),
             Interpretation::singleton("q".into(), "Boolean".into()),
             Interpretation::singleton("r".into(), "Boolean".into()),
@@ -1491,6 +1606,16 @@ mod test_workspace {
             .compile()
             .get_statements()
             .contains(&expected));
+
+        let actual = workspace_store
+            .try_transform_into_parsed("p+q^s=q+q^s")
+            .unwrap();
+
+        let expected = workspace_store
+            .compile()
+            .parse_from_string("p+q^s=q+q^s")
+            .unwrap();
+        assert_eq!(actual, expected);
     }
 
     #[test]
@@ -1505,8 +1630,8 @@ mod test_workspace {
 
         let interpretations = vec![
             Interpretation::infix_operator("=".into(), 1, "=".into()),
-            Interpretation::infix_operator("^".into(), 2, "^".into()),
-            Interpretation::infix_operator("+".into(), 3, "+".into()),
+            Interpretation::infix_operator("+".into(), 2, "+".into()),
+            Interpretation::infix_operator("^".into(), 3, "^".into()),
             Interpretation::singleton("p".into(), "Boolean".into()),
             Interpretation::singleton("q".into(), "Boolean".into()),
             Interpretation::singleton("r".into(), "Boolean".into()),
@@ -1582,8 +1707,8 @@ mod test_workspace {
         let interpretations = vec![
             Interpretation::infix_operator("=_0".into(), 1, "=".into()),
             Interpretation::infix_operator("=".into(), 1, "=".into()),
-            Interpretation::infix_operator("^".into(), 2, "^".into()),
-            Interpretation::infix_operator("+".into(), 3, "+".into()),
+            Interpretation::infix_operator("+".into(), 2, "+".into()),
+            Interpretation::infix_operator("^".into(), 3, "^".into()),
             Interpretation::singleton("p_0".into(), "Boolean".into()),
             Interpretation::singleton("p".into(), "Boolean".into()),
             Interpretation::singleton("q_0".into(), "Boolean".into()),

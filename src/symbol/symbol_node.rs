@@ -4,6 +4,7 @@ use std::{
     fmt::Debug,
 };
 
+use log::trace;
 use serde::{Deserialize, Serialize};
 
 use crate::{
@@ -48,10 +49,15 @@ impl Predicate {
 
     fn normalize(node: SymbolNode, arbitrary: SymbolNode) -> (SymbolNode, SymbolNode) {
         let symbols = arbitrary.get_symbols_in_order();
+        let max_ambiguous_symbol: usize = symbols
+            .iter()
+            .filter_map(|s| s.get_name().parse().ok())
+            .max()
+            .unwrap_or(0);
         let symbol_map = symbols
             .into_iter()
             .enumerate()
-            .map(|(i, symbol)| (symbol, i.to_string()))
+            .map(|(i, symbol)| (symbol, (max_ambiguous_symbol + 1 + i).to_string()))
             .collect::<Vec<_>>();
         let (mut node_to_return, mut arbitrary_to_return) = (node.clone(), arbitrary.clone());
         for (symbol, replacement) in symbol_map {
@@ -194,17 +200,66 @@ impl SymbolNode {
             .any(|child| child.contains_arbitrary_nodes())
     }
 
+    pub fn contains_substatement(&self, substatement: &SymbolNode) -> bool {
+        self == substatement
+            || self
+                .children
+                .iter()
+                .any(|child| child.contains_substatement(substatement))
+    }
+
     pub fn get_substatements(&self) -> HashSet<Self> {
-        let mut to_return = self.children.clone();
+        let mut to_return: Vec<_> = self
+            .children
+            .iter()
+            .map(|child| child.get_substatements())
+            .flatten()
+            .collect();
         to_return.push(self.clone());
         to_return.into_iter().collect()
     }
 
     pub fn get_predicates(&self) -> HashSet<Predicate> {
-        self.get_substatements()
-            .into_iter()
-            .map(|n| Predicate::new(self.clone(), n))
-            .collect()
+        trace!("get_predicates({})", self.to_symbol_string());
+        let mut to_return = HashSet::new();
+        for substatement in self.get_substatements() {
+            trace!("substatement: {}", substatement.to_symbol_string());
+            // Substatements may occur multiple times in which case we need to replace every
+            // combination of occurances
+            let mut substatement_locations: Vec<_> =
+                self.find_node(&substatement).into_iter().collect();
+
+            // TODO This sort is probably slow, probably better to make find functions return vecs
+            substatement_locations.sort();
+            let n_subsets = 1 << substatement_locations.len();
+            trace!(
+                "{} subsets (includes the trivial subset which we skip)",
+                n_subsets
+            );
+            let mut self_for_predicate = self.clone();
+            let new_label =
+                self_for_predicate.get_unused_symbol_name_like(&substatement.get_root_as_string());
+            let new_node = Symbol::new(new_label, substatement.get_evaluates_to_type()).into();
+            // Start going through the bitmask at 1 since we don't want to have the unpredicate
+            // included
+            for bitmask in 1..n_subsets {
+                self_for_predicate = self.clone();
+                trace!("bitmask: {:#018b}", bitmask);
+                for (i, substatement_location) in substatement_locations.iter().enumerate() {
+                    let should_replace_ith_location = bitmask & (1 << i) != 0;
+                    if should_replace_ith_location {
+                        trace!("Replacing at {:?}", substatement_location);
+                        self_for_predicate = self_for_predicate
+                            .replace_node(substatement_location, &new_node)
+                            .expect("We got the address from the statement.");
+                    }
+                }
+                let predicate = Predicate::new(self_for_predicate.clone(), new_node.clone());
+                trace!("Predicate: {:?}", predicate);
+                to_return.insert(predicate);
+            }
+        }
+        to_return
     }
 
     pub fn get_arbitrary_nodes(&self) -> HashSet<Self> {
@@ -517,6 +572,10 @@ impl SymbolNode {
         Ok(Self::new(self.root.clone(), new_children))
     }
 
+    pub fn find_node(&self, node: &SymbolNode) -> HashSet<SymbolNodeAddress> {
+        self.find_where(&|n| &n == node)
+    }
+
     pub fn find_where(&self, condition: &dyn Fn(Self) -> bool) -> HashSet<SymbolNodeAddress> {
         let mut result = HashSet::new();
         if condition(self.clone()) {
@@ -742,16 +801,18 @@ impl SymbolNode {
     pub fn relabel_to_avoid(&self, symbol_names_to_avoid: &HashSet<String>) -> Self {
         let mut relabelling = HashSet::new();
         for symbol_name in symbol_names_to_avoid {
-            let mut subscript = 0;
-            while self.contains_symbol_name(&format!("{}_{}", symbol_name, subscript)) {
-                subscript += 1;
-            }
-            relabelling.insert((
-                symbol_name.to_string(),
-                format!("{}_{}", symbol_name, subscript),
-            ));
+            let new_name = self.get_unused_symbol_name_like(symbol_name);
+            relabelling.insert((symbol_name.to_string(), new_name));
         }
         self.relabel_all(&relabelling)
+    }
+
+    fn get_unused_symbol_name_like(&self, symbol_name: &str) -> String {
+        let mut subscript = 0;
+        while self.contains_symbol_name(&format!("{}_{}", symbol_name, subscript)) {
+            subscript += 1;
+        }
+        format!("{}_{}", symbol_name, subscript)
     }
 
     pub fn relabel_all(&self, relabelling: &HashSet<(String, String)>) -> Self {
@@ -1092,6 +1153,7 @@ impl Symbol {
 
 #[cfg(test)]
 mod test_statement {
+
     use crate::{
         parsing::{interpretation::Interpretation, parser::Parser},
         symbol::symbol_type::GeneratedTypeCondition,
@@ -1181,15 +1243,20 @@ mod test_statement {
     fn test_symbol_node_gets_predicates() {
         let interpretations = vec![
             Interpretation::infix_operator("=".into(), 1, "Integer".into()),
+            Interpretation::infix_operator("+".into(), 2, "Integer".into()),
+            Interpretation::infix_operator("-".into(), 2, "Integer".into()),
+            Interpretation::infix_operator("*".into(), 3, "Integer".into()),
+            Interpretation::infix_operator("/".into(), 3, "Integer".into()),
             Interpretation::outfix_operator(("|".into(), "|".into()), 2, "Integer".into()),
             Interpretation::postfix_operator("!".into(), 3, "Integer".into()),
-            Interpretation::prefix_operator("-".into(), 4, "Integer".into()),
             Interpretation::function("f".into(), 99),
             Interpretation::singleton("a", "Integer".into()),
+            Interpretation::singleton("a_0", "Integer".into()), // Disambiguation
             Interpretation::singleton("b", "Integer".into()),
             Interpretation::singleton("x", "Integer".into()),
             Interpretation::singleton("y", "Integer".into()),
             Interpretation::singleton("z", "Integer".into()),
+            Interpretation::singleton("0", "Integer".into()),
         ];
 
         let trivial = SymbolNode::leaf_object("a");
@@ -1201,7 +1268,14 @@ mod test_statement {
         );
 
         let parser = Parser::new(interpretations.clone());
-        let custom_tokens = vec!["=".to_string(), "|".to_string()];
+        let custom_tokens = vec![
+            "=".to_string(),
+            "|".to_string(),
+            "+".to_string(),
+            "-".to_string(),
+            "*".to_string(),
+            "/".to_string(),
+        ];
 
         let parse = |s: &str| parser.parse_from_string(custom_tokens.clone(), s).unwrap();
 
@@ -1218,6 +1292,44 @@ mod test_statement {
             .into_iter()
             .collect()
         );
+
+        let a_equals_a = parse("a=a");
+        let a_0 = parse("a_0");
+        let a_0_equals_a = parse("a_0=a");
+        let a_equals_a_0 = parse("a=a_0");
+
+        let actual = a_equals_a.get_predicates();
+        let expected = vec![
+            Predicate::new(a.clone(), a.clone()),
+            Predicate::new(a_equals_a.clone(), a.clone()),
+            Predicate::new(a_0_equals_a.clone(), a_0.clone()),
+            Predicate::new(a_equals_a_0.clone(), a_0.clone()),
+        ]
+        .into_iter()
+        .collect();
+
+        assert_eq!(
+            actual,
+            expected,
+            "actual.len() = {}\nexpected.len() = {}",
+            actual.len(),
+            expected.len()
+        );
+
+        let slope_is_zero = parse("0=a*x+b");
+
+        let actual = slope_is_zero.get_predicates();
+
+        assert_eq!(
+            actual.len(),
+            slope_is_zero.get_substatements().len(),
+            "actual:\n{}",
+            actual
+                .iter()
+                .map(|p| p.to_symbol_string())
+                .collect::<Vec<_>>()
+                .join("\n"),
+        );
     }
 
     #[test]
@@ -1233,6 +1345,7 @@ mod test_statement {
             Interpretation::singleton("x", "Integer".into()),
             Interpretation::singleton("y", "Integer".into()),
             Interpretation::singleton("z", "Integer".into()),
+            Interpretation::singleton("0", "Integer".into()),
             Interpretation::parentheses_like(
                 Token::Object("{".to_string()),
                 Token::Object("}".to_string()),
@@ -1263,6 +1376,15 @@ mod test_statement {
         let b_equals_b_on_b = Predicate::new(parse("b=b"), parse("b"));
 
         assert_eq!(a_equals_a_on_a, b_equals_b_on_b);
+
+        let zero_equals_zero_on_zero = Predicate::new(parse("0=0"), parse("0"));
+        assert_eq!(zero_equals_zero_on_zero, b_equals_b_on_b);
+        assert_ne!(a_equals_b_on_a, zero_equals_zero_on_zero);
+
+        let zero_equals_a_on_a = Predicate::new(parse("0=a"), parse("a"));
+        let zero_equals_b_on_b = Predicate::new(parse("0=b"), parse("b"));
+        assert_ne!(zero_equals_a_on_a, zero_equals_zero_on_zero);
+        assert_eq!(zero_equals_a_on_a, zero_equals_b_on_b);
     }
 
     #[test]

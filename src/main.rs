@@ -57,8 +57,14 @@ fn main() {
         Some(("derive", sub_matches)) => cli.derive(sub_matches),
         Some(("undo", _sub_matches)) => cli.undo(),
         Some(("redo", _sub_matches)) => cli.redo(),
-        Some(("evaluate", sub_matches)) => cli.evaluate(sub_matches),
-        Some(("command-history", _sub_matches)) => cli.get_command_history(),
+        Some(("evaluate", sub_matches)) => {
+            include_in_history = false;
+            cli.evaluate(sub_matches)
+        }
+        Some(("command-history", _sub_matches)) => {
+            include_in_history = false;
+            cli.get_command_history()
+        }
         _ => Err("No subcommand was provided".to_string()),
     };
 
