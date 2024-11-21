@@ -270,10 +270,7 @@ impl TransformationLattice {
         &self,
         types: &TypeHierarchy,
         maybe_desired: Option<SymbolNode>,
-    ) -> Result<HashSet<(Transformation, Transformation)>, TransformationError> {
-        // TODO Desired should probably wind up at the top of what we test, but this vec
-        // doesn't stay ordered.  If we pass it down the dependency chain, we could ensure that
-        // it's checked first
+    ) -> Result<Vec<(Transformation, Transformation)>, TransformationError> {
         let statements = if let Some(desired) = maybe_desired {
             let mut statements = vec![desired];
             statements.append(&mut self.get_ordered_statements().clone());
@@ -296,30 +293,24 @@ impl TransformationLattice {
                 .collect::<Vec<_>>()
                 .join("\n")
         );
-        let mut to_return = HashSet::new();
+        let mut to_return = Vec::new();
         for arbitrary_transform in self.get_arbitrary_transformations() {
-            to_return = to_return
-                .union(
-                    &arbitrary_transform
-                        .instantiate_arbitrary_nodes(types, &substatements)?
-                        .into_iter()
-                        .map(|instantiated| (instantiated, arbitrary_transform.clone()))
-                        .collect(),
-                )
-                .cloned()
-                .collect();
+            to_return.append(
+                &mut arbitrary_transform
+                    .instantiate_arbitrary_nodes(types, &substatements)?
+                    .into_iter()
+                    .map(|instantiated| (instantiated, arbitrary_transform.clone()))
+                    .collect(),
+            );
         }
 
-        to_return = to_return
-            .union(
-                &self
-                    .get_non_arbitrary_transformations()
-                    .into_iter()
-                    .map(|t| (t.clone(), t)) // Instantiated == Arbitrary for non-arbitrary
-                    .collect::<HashSet<_>>(),
-            )
-            .cloned()
-            .collect();
+        to_return.append(
+            &mut self
+                .get_non_arbitrary_transformations()
+                .into_iter()
+                .map(|t| (t.clone(), t)) // Instantiated == Arbitrary for non-arbitrary
+                .collect(),
+        );
 
         return Ok(to_return);
     }
