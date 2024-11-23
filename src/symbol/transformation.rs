@@ -798,9 +798,23 @@ impl Transformation {
                             debug!("node_delta > 0 meaning the statement will get longer but it needs to shrink.");
                             return true;
                         }
+                        let desired_shrink = to_statement.len() - from_statement.len();
+                        if desired_shrink % isize::unsigned_abs(node_delta) != 0 {
+                            // If each application of the transform diffs by node_delta than
+                            // the desired change must be divisible by node_delta
+                            debug!("desired_shrink % node_delta != 0");
+                            return true;
+                        }
                     } else if node_delta < 0 {
                         if from_statement.len() <= to_statement.len() {
                             debug!("node_delta < 0 meaning the statement will shrink but it needs to get longer.");
+                            return true;
+                        }
+                        let desired_growth = from_statement.len() - to_statement.len();
+                        if desired_growth % isize::unsigned_abs(node_delta) != 0 {
+                            // If each application of the transform diffs by node_delta than
+                            // the desired change must be divisible by node_delta
+                            debug!("desired_shrink % node_delta != 0");
                             return true;
                         }
                     } else {
