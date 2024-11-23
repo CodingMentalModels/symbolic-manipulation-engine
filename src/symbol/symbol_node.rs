@@ -190,6 +190,11 @@ impl SymbolNode {
         Self::new(SymbolNodeRoot::Arbitrary(symbol), vec![child])
     }
 
+    pub fn len(&self) -> usize {
+        let children_size: usize = self.children.iter().map(|child| child.len()).sum();
+        children_size + 1
+    }
+
     pub fn contains_arbitrary_nodes(&self) -> bool {
         if let SymbolNodeRoot::Arbitrary(_) = self.root {
             return true;
@@ -2326,6 +2331,23 @@ mod test_statement {
             Some(&0)
         );
         assert!(!x_plus_y_equals_a_plus_b_plus_c.has_conflicting_arities());
+    }
+
+    #[test]
+    fn test_symbol_node_length() {
+        let trivial = SymbolNode::leaf_object("x".into());
+        assert_eq!(trivial.len(), 1);
+
+        let mut node = trivial.clone();
+        node.children = vec![trivial.clone()];
+        assert_eq!(node.len(), 2);
+
+        node.children = vec![trivial.clone(), trivial.clone(), trivial.clone()];
+        assert_eq!(node.len(), 4);
+
+        let mut parent = trivial.clone();
+        parent.children = vec![trivial, node];
+        assert_eq!(parent.len(), 6);
     }
 
     #[test]

@@ -1471,7 +1471,7 @@ mod test_workspace {
     }
 
     #[test]
-    fn test_workspace_try_transform_into_with_substitution() {
+    pub fn test_workspace_try_transform_into_with_substitution() {
         let mut types = TypeHierarchy::chain(vec!["Boolean".into(), "=".into()]).unwrap();
         types.add_chain(vec!["Real".into(), "+".into()]).unwrap();
         types
