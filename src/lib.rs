@@ -123,12 +123,18 @@ pub fn build_cli() -> Command {
             )
         .subcommand(Command::new("get-transformations-from").about("Takes a statement index and gets all valid transformations from that index.")
             .arg(
-                Arg::new("statement-index").help("Statement index (0-indexed) to get valid transformations from.")
+                Arg::new("statement").help("Statement to get valid transformations from.")
                 )
             )
-        .subcommand(Command::new("derive").about("Checks if the provided statement is valid and adds it to the Workspace if so.").arg(
-                Arg::new("statement").required(true)
+        .subcommand(Command::new("derive").about("Checks if the provided statement is valid and adds it to the Workspace if so.")
+                .arg(
+                    Arg::new("statement").help("Statement to derive.").required(true)
+                ).arg(
+                    Arg::new("statements-in-scope").help("A JSON array of the statements that are in scope to be used while deriving. If absent, all statements are in scope.").required(false)
+                ).arg(
+                    Arg::new("transformations-in-scope").help("A JSON array of the transformations that are in scope to be used while deriving. If absent, all transformations are in scope.").required(false)
                 )
+
             )
         .subcommand(Command::new("undo").about("Undoes the previous command (if possible)."))
         .subcommand(Command::new("redo").about("Redoes the previous undo (if possible)."))

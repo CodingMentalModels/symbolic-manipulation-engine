@@ -65,6 +65,48 @@ impl TransformationLattice {
         )
     }
 
+    pub fn scope_down(
+        &self,
+        maybe_scoped_statements: Option<HashSet<SymbolNode>>,
+        maybe_scoped_transformations: Option<HashSet<Transformation>>,
+    ) -> Result<Self, TransformationError> {
+        let scoped_statements = match maybe_scoped_statements {
+            None => self.statements.clone(),
+            Some(statements) => self.verify_statements(statements)?,
+        };
+        let scoped_available_transformations = match maybe_scoped_transformations {
+            None => self.available_transformations.clone(),
+            Some(available_transformations) => {
+                self.verify_available_transformations(available_transformations)?
+            }
+        };
+        Ok(Self::new(
+            scoped_statements,
+            scoped_available_transformations,
+            HashMap::new(),
+            HashMap::new(),
+        ))
+    }
+
+    pub fn verify_statements(
+        &self,
+        to_verify: HashSet<SymbolNode>,
+    ) -> Result<HashSet<SymbolNode>, TransformationError> {
+        let missing_statements: Vec<&SymbolNode> = to_verify
+            .iter()
+            .filter(|s| !self.statements.contains(s))
+            .collect();
+        if missing_statements.len() == 0 {
+            Ok(to_verify.clone())
+        } else {
+            Err(
+                TransformationError::MissingStatementsInTransformationLattice(
+                    missing_statements.into_iter().cloned().collect(),
+                ),
+            )
+        }
+    }
+
     pub fn get_statements(&self) -> &HashSet<SymbolNode> {
         &self.statements
     }
@@ -81,6 +123,25 @@ impl TransformationLattice {
 
     pub fn get_available_transformations(&self) -> &HashSet<Transformation> {
         &self.available_transformations
+    }
+
+    pub fn verify_available_transformations(
+        &self,
+        to_verify: HashSet<Transformation>,
+    ) -> Result<HashSet<Transformation>, TransformationError> {
+        let missing_transformation: Vec<&Transformation> = to_verify
+            .iter()
+            .filter(|t| !self.available_transformations.contains(t))
+            .collect();
+        if missing_transformation.len() == 0 {
+            Ok(to_verify.clone())
+        } else {
+            Err(
+                TransformationError::MissingTransformationsInTransformationLattice(
+                    missing_transformation.into_iter().cloned().collect(),
+                ),
+            )
+        }
     }
 
     pub fn get_ordered_available_transformations(&self) -> Vec<Transformation> {
@@ -1411,6 +1472,8 @@ pub enum TransformationError {
     SymbolDoesntMatch(Symbol),
     ApplyToBothSidesCalledOnNChildren(usize),
     StatementTypesDoNotMatch,
+    MissingStatementsInTransformationLattice(Vec<SymbolNode>),
+    MissingTransformationsInTransformationLattice(Vec<Transformation>),
     NoValidTransformationsPossible,
     GeneratedTypeConditionFailedDuringAlgorithm(Symbol),
     TransformCalledOnArbitrary,

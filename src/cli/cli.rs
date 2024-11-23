@@ -352,26 +352,22 @@ impl Cli {
 
     pub fn get_transformations_from(&self, sub_matches: &ArgMatches) -> Result<String, String> {
         let workspace_store = self.load_workspace_store()?;
-        match sub_matches.get_one::<String>("statement-index") {
-            None => Err("No statement index provided.".to_string()),
-            Some(index_string) => match index_string.parse::<usize>() {
-                Ok(statement_index) => {
-                    let workspace = workspace_store.compile();
-                    let statement = workspace.get_ordered_statements()[statement_index].clone();
-                    let mut result = workspace
-                        .get_valid_transformations_from(statement)
-                        .map_err(|e| format!("Error getting valid transformations: {:?}", e))?
-                        .into_iter()
-                        .map(|n| {
-                            n.to_interpreted_string(workspace_store.compile().get_interpretations())
-                        })
-                        .collect::<Vec<_>>();
-                    result.sort_by(|a, b| a.len().cmp(&b.len()));
-                    let serialized_result = to_string(&result).map_err(|e| e.to_string())?;
-                    Ok(serialized_result)
-                }
-                Err(_) => Err(format!("Unable to parse index: {}", index_string).to_string()),
-            },
+        match sub_matches.get_one::<String>("statement") {
+            None => Err("No statement provided.".to_string()),
+            Some(statement_string) => {
+                let workspace = workspace_store.compile();
+                let mut result = workspace
+                    .parse_and_get_valid_transformations_from(statement_string)
+                    .map_err(|e| format!("Error getting valid transformations: {:?}", e))?
+                    .into_iter()
+                    .map(|n| {
+                        n.to_interpreted_string(workspace_store.compile().get_interpretations())
+                    })
+                    .collect::<Vec<_>>();
+                result.sort_by(|a, b| a.len().cmp(&b.len()));
+                let serialized_result = to_string(&result).map_err(|e| e.to_string())?;
+                Ok(serialized_result)
+            }
         }
     }
 
@@ -468,11 +464,21 @@ impl Cli {
     pub fn derive(&self, sub_matches: &ArgMatches) -> Result<String, String> {
         let mut workspace_store = self.load_workspace_store()?;
         let workspace = workspace_store.compile();
+        let maybe_statement_scope = sub_matches
+            .get_one::<String>("statements-in-scope")
+            .map(|s| workspace.parse_and_verify_statements(s));
+        let maybe_transformation_scope = sub_matches
+            .get_one::<String>("transformations-in-scope")
+            .map(|s| workspace.parse_and_verify_transformations(s));
         match sub_matches.get_one::<String>("statement") {
             None => return Err("No statement provided to derive".to_string()),
             Some(statement) => {
                 let to_return = workspace_store
-                    .try_transform_into_parsed(statement)
+                    .try_transform_into_parsed(
+                        statement,
+                        maybe_statement_scope,
+                        maybe_transformation_scope,
+                    )
                     .map_err(|e| format!("Workspace error: {:?} (Statement: {})", e, statement))
                     .map(|statement| {
                         statement.to_interpreted_string(workspace.get_interpretations())
