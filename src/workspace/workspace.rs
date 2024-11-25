@@ -25,11 +25,12 @@ use crate::{
     },
 };
 
+pub type StatementIndex = usize;
+pub type TransformationIndex = usize;
+pub type InterpretationIndex = usize;
+
 type SymbolNodeString = String;
 type DisplayTransformation = String;
-type StatementIndex = usize;
-type TransformationIndex = usize;
-type InterpretationIndex = usize;
 
 #[derive(Clone, Debug, Serialize, Deserialize, TS)]
 #[serde(rename_all = "camelCase")]
