@@ -454,6 +454,8 @@ impl Workspace {
     pub fn get_valid_transformations(
         &self,
         partial_statement: &str,
+        maybe_statement_scope: Option<HashSet<SymbolNode>>,
+        maybe_transformation_scope: Option<HashSet<Transformation>>,
     ) -> Result<Vec<SymbolNode>, WorkspaceError> {
         // TODO Try to complete partial statements
         let desired = match self.parse_from_string(partial_statement) {
@@ -462,10 +464,11 @@ impl Workspace {
             }
             Ok(s) => s,
         };
-        let instantiated_transformations = self
+        let scoped_ws = self.scope_down(maybe_statement_scope, maybe_transformation_scope)?;
+        let instantiated_transformations = scoped_ws
             .transformation_lattice
             .get_instantiated_transformations_with_arbitrary(
-                self.get_types(),
+                scoped_ws.get_types(),
                 Some(desired.clone()),
             )?;
         debug!(
@@ -483,15 +486,15 @@ impl Workspace {
         );
         for (instantiated, _) in instantiated_transformations {
             let statements = if instantiated.is_joint_transform() {
-                self.transformation_lattice.get_statement_pairs()
+                scoped_ws.transformation_lattice.get_statement_pairs()
             } else {
-                self.transformation_lattice.get_statements().clone()
+                scoped_ws.transformation_lattice.get_statements().clone()
             };
             for statement in statements {
                 let valid_transformations =
-                    instantiated.get_valid_transformations(self.get_types(), &statement, None);
+                    instantiated.get_valid_transformations(scoped_ws.get_types(), &statement, None);
                 if valid_transformations.contains(&desired)
-                    && !self.get_statements().contains(&desired)
+                    && !scoped_ws.get_statements().contains(&desired)
                 {
                     return Ok(vec![desired.clone()]);
                 }
@@ -2187,7 +2190,7 @@ mod test_workspace {
         assert_eq!(
             workspace_store
                 .compile()
-                .get_valid_transformations("y+x")
+                .get_valid_transformations("y+x", None, None)
                 .unwrap(),
             expected,
             "workspace_store:\n{:?}\nworkspace:\n{:?}",
@@ -2201,7 +2204,7 @@ mod test_workspace {
         assert_eq!(
             workspace_store
                 .compile()
-                .get_valid_transformations("k+j")
+                .get_valid_transformations("k+j", None, None)
                 .unwrap(),
             expected
         );
@@ -2214,7 +2217,7 @@ mod test_workspace {
         assert_eq!(
             workspace_store
                 .compile()
-                .get_valid_transformations("(b+c)+a")
+                .get_valid_transformations("(b+c)+a", None, None)
                 .unwrap(),
             vec![expected]
         );
@@ -2233,7 +2236,7 @@ mod test_workspace {
         assert_eq!(
             workspace_store
                 .compile()
-                .get_valid_transformations("a+(c+b)")
+                .get_valid_transformations("a+(c+b)", None, None)
                 .unwrap(),
             vec![expected]
         );
@@ -2251,7 +2254,7 @@ mod test_workspace {
         assert_eq!(
             workspace_store
                 .compile()
-                .get_valid_transformations("r^s")
+                .get_valid_transformations("r^s", None, None)
                 .unwrap(),
             vec![expected]
         );
@@ -2260,7 +2263,7 @@ mod test_workspace {
         assert_eq!(
             workspace_store
                 .compile()
-                .get_valid_transformations("s^r")
+                .get_valid_transformations("s^r", None, None)
                 .unwrap(),
             vec![expected]
         );
@@ -2279,7 +2282,7 @@ mod test_workspace {
         assert_eq!(
             workspace_store
                 .compile()
-                .get_valid_transformations("p^q=q^q")
+                .get_valid_transformations("p^q=q^q", None, None)
                 .unwrap(),
             vec![expected]
         );
@@ -2298,7 +2301,7 @@ mod test_workspace {
         assert_eq!(
             workspace_store
                 .compile()
-                .get_valid_transformations("r^s=s^s")
+                .get_valid_transformations("r^s=s^s", None, None)
                 .unwrap(),
             vec![expected]
         );

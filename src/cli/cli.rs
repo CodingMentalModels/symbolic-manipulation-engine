@@ -332,13 +332,27 @@ impl Cli {
 
     pub fn get_transformations(&self, sub_matches: &ArgMatches) -> Result<String, String> {
         let workspace_store = self.load_workspace_store()?;
+        let workspace = workspace_store.compile();
+        let maybe_statement_scope = match sub_matches.get_one::<String>("statements-in-scope") {
+            None => None,
+            Some(s) => Some(get_statement_scope(&workspace, s)?),
+        };
+        let maybe_transformation_scope =
+            match sub_matches.get_one::<String>("transformations-in-scope") {
+                None => None,
+                Some(s) => Some(get_transformation_scope(&workspace, s)?),
+            };
         match sub_matches.get_one::<String>("partial-statement") {
             None => Err("No partial statement provided.".to_string()),
             Some(partial_statement) => {
                 let workspace = workspace_store.compile();
                 let serialized_result = to_string(
                     &workspace
-                        .get_valid_transformations(partial_statement)
+                        .get_valid_transformations(
+                            partial_statement,
+                            maybe_statement_scope,
+                            maybe_transformation_scope,
+                        )
                         .map_err(|e| format!("Error getting valid transformations: {:?}", e))?
                         .into_iter()
                         .map(|n| {
