@@ -9,6 +9,28 @@ use symbolic_manipulation_engine::{
 };
 
 #[test]
+fn test_gets_valid_transformations_large_expression_scoped() {
+    let root_dir = current_dir().unwrap();
+    let dir = root_dir.join(Path::new(
+        "tests\\assets\\test_gets_valid_transformations_large_expression_scoped\\",
+    ));
+    let filesystem = FileSystem::new(dir);
+    let cli = Cli::new(filesystem, CliMode::Testing);
+    let matches = build_cli().get_matches_from(vec![
+        "symbolic-manipulation-engine",
+        "get-transformations",
+        "--",
+        "(((a*(x_0^2))+(b*x_0))+c)=(((a*(x_0^2))+(b*((Negative(b)+(((b^2)-((4*a)*c))^(1/2)))/(2*a))))+c)",
+        "[0,1]",
+        "[3]",
+    ]);
+    let result = cli
+        .get_transformations(matches.subcommand_matches("get-transformations").unwrap())
+        .unwrap();
+    assert_eq!(result, "(((a*(x_0^2))+(b*x_0))+c)=(((a*(x_0^2))+(b*((Negative(b)+(((b^2)-((4*a)*c))^(1/2)))/(2*a))))+c)");
+}
+
+#[test]
 fn test_substitutes_large_expression() {
     let root_dir = current_dir().unwrap();
     let dir = root_dir.join(Path::new(

@@ -119,6 +119,10 @@ pub fn build_cli() -> Command {
         .subcommand(Command::new("get-transformations").about("Takes a partial statement and gets all valid transformations sorted based on the string.")
                 .arg(
                     Arg::new("partial-statement").help("Partial statement to use to get valid transformations.")
+                ).arg(
+                    Arg::new("statements-in-scope").help("A JSON array of the statement indices that are in scope to be used while deriving. If absent, all statements are in scope.").required(false)
+                ).arg(
+                    Arg::new("transformations-in-scope").help("A JSON array of the transformation indices that are in scope to be used while deriving. If absent, all transformations are in scope.").required(false)
                 )
             )
         .subcommand(Command::new("get-transformations-from").about("Takes a statement index and gets all valid transformations from that index.")
