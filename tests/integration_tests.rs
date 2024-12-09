@@ -20,14 +20,25 @@ fn test_gets_valid_transformations_large_expression_scoped() {
         "symbolic-manipulation-engine",
         "get-transformations",
         "--",
-        "(((a*(x_0^2))+(b*x_0))+c)=(((a*(x_0^2))+(b*((Negative(b)+(((b^2)-((4*a)*c))^(1/2)))/(2*a))))+c)",
+        "((((a*(x_0^2))+(b*x_0))+c)=(((a*(((Negative(b)+(((b^2)-((4*a)*c))^(1/2)))/(2*a))^2))+(b*((Negative(b)+(((b^2)-((4*a)*c))^(1/2)))/(2*a))))+c))",
         "[0,1]",
         "[19]",
     ]);
     let result = cli
         .get_transformations(matches.subcommand_matches("get-transformations").unwrap())
         .unwrap();
-    assert_eq!(result, "[\"((((a*(x_0^2))+(b*x_0))+c)=(((a*(x_0^2))+(b*((Negative(b)+(((b^2)-((4*a)*c))^(1/2)))/(2*a))))+c))\"]");
+    assert_eq!(result, "[\"((((a*(x_0^2))+(b*x_0))+c)=(((a*(((Negative(b)+(((b^2)-((4*a)*c))^(1/2)))/(2*a))^2))+(b*((Negative(b)+(((b^2)-((4*a)*c))^(1/2)))/(2*a))))+c))\"]");
+    let matches = build_cli().get_matches_from(vec![
+        "symbolic-manipulation-engine",
+        "derive",
+        "--",
+        "((((a*(x_0^2))+(b*x_0))+c)=(((a*(((Negative(b)+(((b^2)-((4*a)*c))^(1/2)))/(2*a))^2))+(b*((Negative(b)+(((b^2)-((4*a)*c))^(1/2)))/(2*a))))+c))",
+        "[0,1]",
+        "[19]",
+    ]);
+    let result = cli
+        .derive(matches.subcommand_matches("derive").unwrap())
+        .unwrap();
 }
 
 #[test]
