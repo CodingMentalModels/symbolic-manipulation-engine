@@ -1,4 +1,4 @@
-use log::debug;
+use log::{debug, trace};
 use std::{collections::HashSet, path::PathBuf};
 
 use clap::ArgMatches;
@@ -333,15 +333,8 @@ impl Cli {
     pub fn get_transformations(&self, sub_matches: &ArgMatches) -> Result<String, String> {
         let workspace_store = self.load_workspace_store()?;
         let workspace = workspace_store.compile();
-        let maybe_statement_scope = match sub_matches.get_one::<String>("statements-in-scope") {
-            None => None,
-            Some(s) => Some(get_statement_scope(&workspace, s)?),
-        };
-        let maybe_transformation_scope =
-            match sub_matches.get_one::<String>("transformations-in-scope") {
-                None => None,
-                Some(s) => Some(get_transformation_scope(&workspace, s)?),
-            };
+        let (maybe_statement_scope, maybe_transformation_scope) =
+            extract_scopes(sub_matches, &workspace)?;
         match sub_matches.get_one::<String>("partial-statement") {
             None => Err("No partial statement provided.".to_string()),
             Some(partial_statement) => {
@@ -487,15 +480,8 @@ impl Cli {
     pub fn derive(&self, sub_matches: &ArgMatches) -> Result<String, String> {
         let mut workspace_store = self.load_workspace_store()?;
         let workspace = workspace_store.compile();
-        let maybe_statement_scope = match sub_matches.get_one::<String>("statements-in-scope") {
-            None => None,
-            Some(s) => Some(get_statement_scope(&workspace, s)?),
-        };
-        let maybe_transformation_scope =
-            match sub_matches.get_one::<String>("transformations-in-scope") {
-                None => None,
-                Some(s) => Some(get_transformation_scope(&workspace, s)?),
-            };
+        let (maybe_statement_scope, maybe_transformation_scope) =
+            extract_scopes(sub_matches, &workspace)?;
         match sub_matches.get_one::<String>("statement") {
             None => return Err("No statement provided to derive".to_string()),
             Some(statement) => {
@@ -674,9 +660,46 @@ impl Cli {
     }
 }
 
+fn extract_scopes(
+    sub_matches: &ArgMatches,
+    workspace: &Workspace,
+) -> Result<(Option<HashSet<SymbolNode>>, Option<HashSet<Transformation>>), String> {
+    let maybe_statement_scope = match sub_matches.get_one::<String>("statements-in-scope") {
+        None => None,
+        Some(s) => Some(get_statement_scope(workspace, s)?),
+    };
+    debug!(
+        "maybe_statement_scope: {}",
+        maybe_statement_scope
+            .clone()
+            .map_or("None".to_string(), |scope| scope
+                .iter()
+                .map(|n| n.to_symbol_string())
+                .collect::<Vec<_>>()
+                .join("\n"))
+    );
+    let maybe_transformation_scope = match sub_matches.get_one::<String>("transformations-in-scope")
+    {
+        None => None,
+        Some(s) => Some(get_transformation_scope(workspace, s)?),
+    };
+    debug!(
+        "maybe_transformation_scope: {}",
+        maybe_transformation_scope
+            .clone()
+            .map_or("None".to_string(), |scope| scope
+                .iter()
+                .map(|t| t.to_symbol_string())
+                .collect::<Vec<_>>()
+                .join("\n"))
+    );
+    Ok((maybe_statement_scope, maybe_transformation_scope))
+}
+
 fn get_statement_scope(workspace: &Workspace, s: &String) -> Result<HashSet<SymbolNode>, String> {
     let statement_indices: Vec<StatementIndex> =
         serde_json::from_str(s).map_err(|e| format!("Deserialization error: {:?}", e))?;
+    trace!("statement_indices: {:#?}", statement_indices);
     let mut statement_scope = HashSet::new();
     for i in statement_indices {
         let statement = workspace
@@ -684,6 +707,14 @@ fn get_statement_scope(workspace: &Workspace, s: &String) -> Result<HashSet<Symb
             .map_err(|_| format!("Invalid statement index: {}", i))?;
         statement_scope.insert(statement);
     }
+    trace!(
+        "statement_scope: {}",
+        statement_scope
+            .iter()
+            .map(|s| s.to_symbol_string())
+            .collect::<Vec<_>>()
+            .join("\n")
+    );
     Ok(statement_scope)
 }
 
@@ -693,6 +724,7 @@ fn get_transformation_scope(
 ) -> Result<HashSet<Transformation>, String> {
     let transformation_indices: Vec<TransformationIndex> =
         serde_json::from_str(s).map_err(|e| format!("Deserialization error: {:?}", e))?;
+    trace!("transformation_indices: {:#?}", transformation_indices);
     let mut transformation_scope = HashSet::new();
     for i in transformation_indices {
         let transformation = workspace

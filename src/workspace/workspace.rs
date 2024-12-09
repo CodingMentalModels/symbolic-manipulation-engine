@@ -1,4 +1,4 @@
-use log::debug;
+use log::{debug, trace};
 use std::collections::{HashMap, HashSet};
 
 use serde::{Deserialize, Serialize};
@@ -60,7 +60,7 @@ impl DisplayWorkspace {
                 .collect(),
             statements: workspace.get_display_symbol_nodes()?,
             transformations: workspace
-                .get_available_transformations()
+                .get_ordered_available_transformations()
                 .iter()
                 .map(|t| t.to_interpreted_string(&workspace.interpretations))
                 .collect(),
@@ -346,6 +346,14 @@ impl Workspace {
         if self.transformation_index_is_invalid(index) {
             Err(WorkspaceError::InvalidTransformationIndex(index))
         } else {
+            trace!(
+                "ordered_available_transformations:\n{}",
+                self.get_ordered_available_transformations()
+                    .iter()
+                    .map(|t| t.to_symbol_string())
+                    .collect::<Vec<_>>()
+                    .join("\n")
+            );
             Ok(self.get_ordered_available_transformations()[index].clone())
         }
     }
