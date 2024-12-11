@@ -553,8 +553,10 @@ impl Transformation {
         // We also implement our own call stack to avoid stack overflows and make it easier to
         // inspect the contents
         debug!(
-            "get_valid_transformations({})",
-            from_statement.to_symbol_string()
+            "get_valid_transformations({}, {}) called on {}",
+            from_statement.to_symbol_string(),
+            maybe_to_statement.map_or("None".to_string(), |s| s.to_symbol_string()),
+            self.to_symbol_string(),
         );
 
         // Optimize away this function if the transformation can't possibly work
@@ -651,6 +653,7 @@ impl Transformation {
                             }
                             Some(to_statement) => {
                                 if result.contains(to_statement) {
+                                    debug!("Found result matching to_statement:\nfrom_statement: {}\ntransformation: {}\nresult: {}", from_statement.to_symbol_string(), self.to_symbol_string(), to_statement.to_symbol_string());
                                     return vec![to_statement.clone()].into_iter().collect();
                                 }
                             }
@@ -856,26 +859,12 @@ impl Transformation {
                         }
                     } else if node_delta > 0 {
                         if from_statement.len() >= to_statement.len() {
-                            debug!("node_delta > 0 meaning the statement will get longer but it needs to shrink.");
-                            return true;
-                        }
-                        let desired_shrink = to_statement.len() - from_statement.len();
-                        if desired_shrink % isize::unsigned_abs(node_delta) != 0 {
-                            // If each application of the transform diffs by node_delta than
-                            // the desired change must be divisible by node_delta
-                            debug!("desired_shrink % node_delta != 0");
+                            debug!("node_delta > 0 meaning the statement will grow but it's being asked to shrink.");
                             return true;
                         }
                     } else if node_delta < 0 {
                         if from_statement.len() <= to_statement.len() {
-                            debug!("node_delta < 0 meaning the statement will shrink but it needs to get longer.");
-                            return true;
-                        }
-                        let desired_growth = from_statement.len() - to_statement.len();
-                        if desired_growth % isize::unsigned_abs(node_delta) != 0 {
-                            // If each application of the transform diffs by node_delta than
-                            // the desired change must be divisible by node_delta
-                            debug!("desired_shrink % node_delta != 0");
+                            debug!("node_delta < 0 meaning the statement will shrink but it's being asked to grow.");
                             return true;
                         }
                     } else {
@@ -2336,6 +2325,46 @@ mod test_transformation {
 
         assert_eq!(transformation.from, expected);
         assert_eq!(transformation.to, expected);
+    }
+
+    #[test]
+    fn test_transformation_gets_node_delta() {
+        assert_eq!(
+            ExplicitTransformation::symmetry(
+                "+".to_string(),
+                "Complex".into(),
+                ("x".to_string(), "y".to_string()),
+                "Complex".into()
+            )
+            .get_node_delta(),
+            0
+        );
+
+        let interpretations = vec![
+            Interpretation::infix_operator(Token::Object("+".to_string()), 3, "Complex".into()),
+            Interpretation::singleton("x", "Complex".into()),
+            Interpretation::singleton("y", "Complex".into()),
+            Interpretation::singleton("2", "Complex".into()),
+            Interpretation::singleton("4", "Complex".into()),
+        ];
+        let parser = Parser::new(interpretations);
+
+        let two_plus_two = parser
+            .parse_from_string(vec!["+".to_string()], "2+2")
+            .unwrap();
+
+        let four = parser
+            .parse_from_string(vec!["+".to_string()], "4")
+            .unwrap();
+
+        assert_eq!(
+            ExplicitTransformation::new(two_plus_two.clone(), four.clone()).get_node_delta(),
+            -2
+        );
+        assert_eq!(
+            ExplicitTransformation::new(four.clone(), two_plus_two.clone()).get_node_delta(),
+            2
+        );
     }
 
     #[test]

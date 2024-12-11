@@ -12,18 +12,15 @@ use crate::{
     },
     constants::*,
     context::context::Context,
-    parsing::{
-        interpretation::{
-            ExpressionPrecedence, ExpressionType, Interpretation, InterpretationCondition,
-            InterpretedType,
-        },
-        parser::Parser,
+    parsing::interpretation::{
+        ExpressionPrecedence, ExpressionType, Interpretation, InterpretationCondition,
+        InterpretedType,
     },
     symbol::{
         algorithm::AlgorithmType,
         symbol_node::SymbolNode,
         symbol_type::{GeneratedType, GeneratedTypeCondition, Type},
-        transformation::{ExplicitTransformation, Transformation},
+        transformation::Transformation,
     },
     workspace::workspace::{
         StatementIndex, TransformationIndex, Workspace, WorkspaceTransaction,
