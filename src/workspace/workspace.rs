@@ -473,6 +473,7 @@ impl Workspace {
             Ok(s) => s,
         };
         let scoped_ws = self.scope_down(maybe_statement_scope, maybe_transformation_scope)?;
+        debug!("scoped_down_workspace: {}", scoped_ws.to_json().unwrap());
         let instantiated_transformations = scoped_ws
             .transformation_lattice
             .get_instantiated_transformations_with_arbitrary(
@@ -928,6 +929,7 @@ impl WorkspaceTransactionStore {
         let mut workspace = self
             .compile()
             .scope_down(maybe_statement_scope, maybe_transformation_scope)?;
+        debug!("scoped_down_workspace: {}", workspace.to_json().unwrap());
 
         let (from_statement, transformation, to_statement) = workspace
             .transformation_lattice
