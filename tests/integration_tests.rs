@@ -9,6 +9,32 @@ use symbolic_manipulation_engine::{
 };
 
 #[test]
+fn test_gets_valid_transformations_from_scoped_expression() {
+    let root_dir = current_dir().unwrap();
+    let dir = root_dir.join(Path::new(
+        "tests\\assets\\test_gets_valid_transformations_from_scoped_expression\\",
+    ));
+    let filesystem = FileSystem::new(dir);
+    let cli = Cli::new(filesystem, CliMode::Testing);
+    let matches = build_cli().get_matches_from(vec![
+        "symbolic-manipulation-engine",
+        "get-transformations-from",
+        "--",
+        "0",
+        "[0]",
+        "[4,6,7]",
+    ]);
+    let result = cli
+        .get_transformations_from(
+            matches
+                .subcommand_matches("get-transformations-from")
+                .unwrap(),
+        )
+        .unwrap();
+    assert_eq!(result, "");
+}
+
+#[test]
 fn test_gets_valid_transformations_large_expression_scoped() {
     let root_dir = current_dir().unwrap();
     let dir = root_dir.join(Path::new(
