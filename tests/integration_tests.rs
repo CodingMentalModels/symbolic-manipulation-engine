@@ -31,7 +31,7 @@ fn test_gets_valid_transformations_from_scoped_expression() {
                 .unwrap(),
         )
         .unwrap();
-    assert_eq!(result, "");
+    assert_eq!(result, "[\"((y*x)=z)\"]");
 }
 
 #[test]
