@@ -126,8 +126,12 @@ pub fn build_cli() -> Command {
                 )
             )
         .subcommand(Command::new("get-transformations-from").about("Takes a statement index and gets all valid transformations from that index.")
-            .arg(
-                Arg::new("statement-index").help("Statement index of the statement to get valid transformations from.")
+                .arg(
+                    Arg::new("statement-index").help("Statement index of the statement to get valid transformations from.")
+                ).arg(
+                    Arg::new("statements-in-scope").help("A JSON array of the statement indices that are in scope to be used while deriving. If absent, all statements are in scope.").required(false)
+                ).arg(
+                    Arg::new("transformations-in-scope").help("A JSON array of the transformation indices that are in scope to be used while deriving. If absent, all transformations are in scope.").required(false)
                 )
             )
         .subcommand(Command::new("derive").about("Checks if the provided statement is valid and adds it to the Workspace if so.")

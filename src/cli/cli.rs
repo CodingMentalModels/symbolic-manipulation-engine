@@ -358,17 +358,23 @@ impl Cli {
 
     pub fn get_transformations_from(&self, sub_matches: &ArgMatches) -> Result<String, String> {
         let workspace_store = self.load_workspace_store()?;
+        let workspace = workspace_store.compile();
+        let (maybe_statement_scope, maybe_transformation_scope) =
+            extract_scopes(sub_matches, &workspace)?;
         match sub_matches.get_one::<String>("statement-index") {
             None => Err("No statement index provided.".to_string()),
             Some(index_string) => match index_string.parse::<usize>() {
                 Ok(statement_index) => {
-                    let workspace = workspace_store.compile();
                     let statement = workspace
                         .get_statement(statement_index)
                         .map_err(|e| format!("Workspace error: {:?}", e))?
                         .clone();
                     let mut result = workspace
-                        .get_valid_transformations_from(statement)
+                        .get_valid_transformations_from(
+                            statement,
+                            maybe_statement_scope,
+                            maybe_transformation_scope,
+                        )
                         .map_err(|e| format!("Error getting valid transformations: {:?}", e))?
                         .into_iter()
                         .map(|n| {

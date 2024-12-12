@@ -257,7 +257,8 @@ impl Workspace {
         let mut has_changed = true;
         while has_changed {
             let before = to_return.clone();
-            let results = alg_only_workspace.get_valid_transformations_from(to_return.clone())?;
+            let results =
+                alg_only_workspace.get_valid_transformations_from(to_return.clone(), None, None)?;
             if results.len() == 0 {
                 return Err(WorkspaceError::NoTransformationsPossible);
             }
@@ -512,21 +513,17 @@ impl Workspace {
         return Ok(vec![]);
     }
 
-    pub fn parse_and_get_valid_transformations_from(
-        &self,
-        from_statement: &str,
-    ) -> Result<Vec<SymbolNode>, WorkspaceError> {
-        let parsed = self.parse_from_string(from_statement)?;
-        self.get_valid_transformations_from(parsed)
-    }
-
     pub fn get_valid_transformations_from(
         &self,
         from_statement: SymbolNode,
+        maybe_statement_scope: Option<HashSet<SymbolNode>>,
+        maybe_transformation_scope: Option<HashSet<Transformation>>,
     ) -> Result<Vec<SymbolNode>, WorkspaceError> {
-        let instantiated_transformations = self
+        let scoped_ws = self.scope_down(maybe_statement_scope, maybe_transformation_scope)?;
+        debug!("scoped_down_workspace: {}", scoped_ws.to_json().unwrap());
+        let instantiated_transformations = scoped_ws
             .transformation_lattice
-            .get_instantiated_transformations_with_arbitrary(self.get_types(), None)?;
+            .get_instantiated_transformations_with_arbitrary(scoped_ws.get_types(), None)?;
         debug!(
             "instantiated_transformations:\n{}",
             instantiated_transformations
@@ -543,14 +540,18 @@ impl Workspace {
         let mut to_return = HashSet::new();
         for (transformation, _) in instantiated_transformations {
             let statements = if transformation.is_joint_transform() {
-                self.transformation_lattice
+                scoped_ws
+                    .transformation_lattice
                     .get_statement_pairs_including(Some(&from_statement))
             } else {
                 vec![from_statement.clone()].into_iter().collect()
             };
             for statement in statements {
-                let valid_transformations =
-                    transformation.get_valid_transformations(self.get_types(), &statement, None);
+                let valid_transformations = transformation.get_valid_transformations(
+                    scoped_ws.get_types(),
+                    &statement,
+                    None,
+                );
                 to_return.extend(valid_transformations);
             }
         }
@@ -2085,7 +2086,7 @@ mod test_workspace {
         assert_eq!(
             workspace_store
                 .compile()
-                .get_valid_transformations_from(x_plus_y.clone())
+                .get_valid_transformations_from(x_plus_y.clone(), None, None)
                 .unwrap(),
             expected
         );
@@ -2095,14 +2096,14 @@ mod test_workspace {
         assert_eq!(
             workspace_store
                 .compile()
-                .get_valid_transformations_from(x_plus_y.clone())
+                .get_valid_transformations_from(x_plus_y.clone(), None, None)
                 .unwrap(),
             vec![],
         );
         assert_eq!(
             workspace_store
                 .compile()
-                .get_valid_transformations_from(y_plus_x.clone())
+                .get_valid_transformations_from(y_plus_x.clone(), None, None)
                 .unwrap(),
             vec![],
         );
@@ -2112,7 +2113,7 @@ mod test_workspace {
         assert_eq!(
             workspace_store
                 .compile()
-                .get_valid_transformations_from(x_plus_y.clone())
+                .get_valid_transformations_from(x_plus_y.clone(), None, None)
                 .unwrap(),
             vec![],
         );
@@ -2122,7 +2123,7 @@ mod test_workspace {
         assert_eq!(
             workspace_store
                 .compile()
-                .get_valid_transformations_from(j_plus_k)
+                .get_valid_transformations_from(j_plus_k, None, None)
                 .unwrap(),
             expected
         );
@@ -2147,7 +2148,7 @@ mod test_workspace {
         assert_eq!(
             workspace_store
                 .compile()
-                .get_valid_transformations_from(a_plus_b_plus_c)
+                .get_valid_transformations_from(a_plus_b_plus_c, None, None)
                 .unwrap()
                 .into_iter()
                 .collect::<HashSet<_>>(),
