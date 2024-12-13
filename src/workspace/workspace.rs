@@ -501,8 +501,11 @@ impl Workspace {
                 scoped_ws.transformation_lattice.get_statements().clone()
             };
             for statement in statements {
-                let valid_transformations =
-                    instantiated.get_valid_transformations(scoped_ws.get_types(), &statement, None);
+                let valid_transformations = instantiated.get_valid_transformations(
+                    scoped_ws.get_types(),
+                    &statement,
+                    Some(&desired),
+                );
                 if valid_transformations.contains(&desired)
                     && !scoped_ws.get_statements().contains(&desired)
                 {
