@@ -46,7 +46,7 @@ fn test_gets_valid_transformations_large_expression_scoped() {
         "symbolic-manipulation-engine",
         "get-transformations",
         "--",
-        "((((a*(x_0^2))+(b*x_0))+c)=(((a*(((Negative(b)+(((b^2)-((4*a)*c))^(1/2)))/(2*a))^2))+(b*((Negative(b)+(((b^2)-((4*a)*c))^(1/2)))/(2*a))))+c))",
+        "a*x_0^2+b*x_0+c=a*((Negative(b)+(((b^2)-((4*a)*c))^(1/2)))/(2*a))^2+b*((Negative(b)+(((b^2)-((4*a)*c))^(1/2)))/(2*a))+c",
         "[0,1]",
         "[19]",
     ]);
@@ -222,4 +222,26 @@ fn test_duplicates_interpretations() {
     let workspace_store = cli.load_workspace_store().unwrap();
     let workspace = workspace_store.compile();
     assert_eq!(workspace.get_interpretations().len(), 2);
+}
+
+#[test]
+fn test_gets_valid_transformations_large_expression_scoped_2() {
+    let root_dir = current_dir().unwrap();
+    let dir = root_dir.join(Path::new(
+        "C:\\Users\\cmsdu\\repos\\symbolic-manipulation-engine\\tests\\assets\\test_gets_valid_transformations_large_expression_scoped_2",
+    ));
+    let filesystem = FileSystem::new(dir);
+    let cli = Cli::new(filesystem, CliMode::Testing);
+    let matches = build_cli().get_matches_from(vec![
+        "symbolic-manipulation-engine",
+        "get-transformations",
+        "--",
+        "a*x_0^2+b*x_0+c=a*((Negative(b)+(((b^2)-((4*a)*c))^(1/2)))/(2*a))^2+b*((Negative(b)+(((b^2)-((4*a)*c))^(1/2)))/(2*a))+c",
+        "[0]",
+        "[19]",
+    ]);
+    let result = cli
+        .get_transformations(matches.subcommand_matches("get-transformations").unwrap())
+        .unwrap();
+    assert_eq!(result, "[\"((((a*(x_0^2))+(b*x_0))+c)=(((a*(((Negative(b)+(((b^2)-((4*a)*c))^(1/2)))/(2*a))^2))+(b*((Negative(b)+(((b^2)-((4*a)*c))^(1/2)))/(2*a))))+c))\"]");
 }

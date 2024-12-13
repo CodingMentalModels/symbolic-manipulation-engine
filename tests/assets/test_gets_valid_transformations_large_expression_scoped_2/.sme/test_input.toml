@@ -1,0 +1,2703 @@
+next_index = 13
+
+[[transactions]]
+
+[[transactions.items]]
+
+[transactions.items.Snapshot.types.__join_type_do_not_overload]
+parents = []
+children = []
+
+[transactions.items.Snapshot.types.__join_type_do_not_overload.inner]
+kind = "join"
+
+[transactions.items.Snapshot.types.Real.inner]
+kind = "namedType"
+value = "Real"
+
+[[transactions.items.Snapshot.types.Real.parents]]
+kind = "object"
+
+[[transactions.items.Snapshot.types.Real.children]]
+kind = "namedType"
+value = "1"
+
+[[transactions.items.Snapshot.types.Real.children]]
+kind = "namedType"
+value = "Reciprocal"
+
+[[transactions.items.Snapshot.types.Real.children]]
+kind = "namedType"
+value = "0"
+
+[[transactions.items.Snapshot.types.Real.children]]
+kind = "namedType"
+value = "Negative"
+
+[[transactions.items.Snapshot.types.Real.children]]
+kind = "namedType"
+value = "*"
+
+[[transactions.items.Snapshot.types.Real.children]]
+kind = "namedType"
+value = "-"
+
+[[transactions.items.Snapshot.types.Real.children]]
+kind = "namedType"
+value = "/"
+
+[[transactions.items.Snapshot.types.Real.children]]
+kind = "namedType"
+value = "+"
+
+[transactions.items.Snapshot.types.1]
+children = []
+
+[transactions.items.Snapshot.types.1.inner]
+kind = "namedType"
+value = "1"
+
+[[transactions.items.Snapshot.types.1.parents]]
+kind = "namedType"
+value = "Real"
+
+[transactions.items.Snapshot.types."*"]
+children = []
+
+[transactions.items.Snapshot.types."*".inner]
+kind = "namedType"
+value = "*"
+
+[[transactions.items.Snapshot.types."*".parents]]
+kind = "namedType"
+value = "Real"
+
+[transactions.items.Snapshot.types."+"]
+children = []
+
+[transactions.items.Snapshot.types."+".inner]
+kind = "namedType"
+value = "+"
+
+[[transactions.items.Snapshot.types."+".parents]]
+kind = "namedType"
+value = "Real"
+
+[transactions.items.Snapshot.types.Negative]
+children = []
+
+[transactions.items.Snapshot.types.Negative.inner]
+kind = "namedType"
+value = "Negative"
+
+[[transactions.items.Snapshot.types.Negative.parents]]
+kind = "namedType"
+value = "Real"
+
+[transactions.items.Snapshot.types.Reciprocal]
+children = []
+
+[transactions.items.Snapshot.types.Reciprocal.inner]
+kind = "namedType"
+value = "Reciprocal"
+
+[[transactions.items.Snapshot.types.Reciprocal.parents]]
+kind = "namedType"
+value = "Real"
+
+[transactions.items.Snapshot.types.-]
+children = []
+
+[transactions.items.Snapshot.types.-.inner]
+kind = "namedType"
+value = "-"
+
+[[transactions.items.Snapshot.types.-.parents]]
+kind = "namedType"
+value = "Real"
+
+[transactions.items.Snapshot.types."="]
+children = []
+
+[transactions.items.Snapshot.types."=".inner]
+kind = "namedType"
+value = "="
+
+[[transactions.items.Snapshot.types."=".parents]]
+kind = "namedType"
+value = "Boolean"
+
+[transactions.items.Snapshot.types.0]
+children = []
+
+[transactions.items.Snapshot.types.0.inner]
+kind = "namedType"
+value = "0"
+
+[[transactions.items.Snapshot.types.0.parents]]
+kind = "namedType"
+value = "Real"
+
+[transactions.items.Snapshot.types.Boolean.inner]
+kind = "namedType"
+value = "Boolean"
+
+[[transactions.items.Snapshot.types.Boolean.parents]]
+kind = "object"
+
+[[transactions.items.Snapshot.types.Boolean.children]]
+kind = "namedType"
+value = "="
+
+[transactions.items.Snapshot.types.__object_type_do_not_overload]
+parents = []
+
+[transactions.items.Snapshot.types.__object_type_do_not_overload.inner]
+kind = "object"
+
+[[transactions.items.Snapshot.types.__object_type_do_not_overload.children]]
+kind = "namedType"
+value = "Real"
+
+[[transactions.items.Snapshot.types.__object_type_do_not_overload.children]]
+kind = "namedType"
+value = "Boolean"
+
+[transactions.items.Snapshot.types."/"]
+children = []
+
+[transactions.items.Snapshot.types."/".inner]
+kind = "namedType"
+value = "/"
+
+[[transactions.items.Snapshot.types."/".parents]]
+kind = "namedType"
+value = "Real"
+
+[[transactions.items.Snapshot.generated_types]]
+
+[transactions.items.Snapshot.generated_types.condition]
+kind = "isNumeric"
+
+[[transactions.items.Snapshot.generated_types.parents]]
+kind = "namedType"
+value = "Real"
+
+[[transactions.items.Snapshot.interpretations]]
+expression_precidence = 2
+
+[transactions.items.Snapshot.interpretations.condition]
+kind = "matches"
+
+[transactions.items.Snapshot.interpretations.condition.token]
+kind = "object"
+value = "+"
+
+[transactions.items.Snapshot.interpretations.expression_type]
+kind = "infix"
+
+[transactions.items.Snapshot.interpretations.output_type]
+kind = "type"
+
+[transactions.items.Snapshot.interpretations.output_type.type]
+kind = "namedType"
+value = "+"
+
+[[transactions.items.Snapshot.interpretations]]
+expression_precidence = 2
+
+[transactions.items.Snapshot.interpretations.condition]
+kind = "matches"
+
+[transactions.items.Snapshot.interpretations.condition.token]
+kind = "object"
+value = "-"
+
+[transactions.items.Snapshot.interpretations.expression_type]
+kind = "infix"
+
+[transactions.items.Snapshot.interpretations.output_type]
+kind = "type"
+
+[transactions.items.Snapshot.interpretations.output_type.type]
+kind = "namedType"
+value = "-"
+
+[[transactions.items.Snapshot.interpretations]]
+expression_precidence = 3
+
+[transactions.items.Snapshot.interpretations.condition]
+kind = "matches"
+
+[transactions.items.Snapshot.interpretations.condition.token]
+kind = "object"
+value = "*"
+
+[transactions.items.Snapshot.interpretations.expression_type]
+kind = "infix"
+
+[transactions.items.Snapshot.interpretations.output_type]
+kind = "type"
+
+[transactions.items.Snapshot.interpretations.output_type.type]
+kind = "namedType"
+value = "*"
+
+[[transactions.items.Snapshot.interpretations]]
+expression_precidence = 3
+
+[transactions.items.Snapshot.interpretations.condition]
+kind = "matches"
+
+[transactions.items.Snapshot.interpretations.condition.token]
+kind = "object"
+value = "/"
+
+[transactions.items.Snapshot.interpretations.expression_type]
+kind = "infix"
+
+[transactions.items.Snapshot.interpretations.output_type]
+kind = "type"
+
+[transactions.items.Snapshot.interpretations.output_type.type]
+kind = "namedType"
+value = "/"
+
+[[transactions.items.Snapshot.interpretations]]
+expression_precidence = 99
+
+[transactions.items.Snapshot.interpretations.condition]
+kind = "isNumeric"
+
+[transactions.items.Snapshot.interpretations.expression_type]
+kind = "singleton"
+
+[transactions.items.Snapshot.interpretations.output_type]
+kind = "sameAsValue"
+
+[[transactions.items.Snapshot.interpretations]]
+expression_precidence = 99
+
+[transactions.items.Snapshot.interpretations.condition]
+kind = "matches"
+
+[transactions.items.Snapshot.interpretations.condition.token]
+kind = "object"
+value = "x"
+
+[transactions.items.Snapshot.interpretations.expression_type]
+kind = "singleton"
+
+[transactions.items.Snapshot.interpretations.output_type]
+kind = "type"
+
+[transactions.items.Snapshot.interpretations.output_type.type]
+kind = "namedType"
+value = "Real"
+
+[[transactions.items.Snapshot.interpretations]]
+expression_precidence = 99
+
+[transactions.items.Snapshot.interpretations.condition]
+kind = "matches"
+
+[transactions.items.Snapshot.interpretations.condition.token]
+kind = "object"
+value = "y"
+
+[transactions.items.Snapshot.interpretations.expression_type]
+kind = "singleton"
+
+[transactions.items.Snapshot.interpretations.output_type]
+kind = "type"
+
+[transactions.items.Snapshot.interpretations.output_type.type]
+kind = "namedType"
+value = "Real"
+
+[[transactions.items.Snapshot.interpretations]]
+expression_precidence = 1
+
+[transactions.items.Snapshot.interpretations.condition]
+kind = "matches"
+
+[transactions.items.Snapshot.interpretations.condition.token]
+kind = "object"
+value = "="
+
+[transactions.items.Snapshot.interpretations.expression_type]
+kind = "infix"
+
+[transactions.items.Snapshot.interpretations.output_type]
+kind = "type"
+
+[transactions.items.Snapshot.interpretations.output_type.type]
+kind = "namedType"
+value = "="
+
+[[transactions.items.Snapshot.interpretations]]
+expression_precidence = 99
+
+[transactions.items.Snapshot.interpretations.condition]
+kind = "matches"
+
+[transactions.items.Snapshot.interpretations.condition.token]
+kind = "object"
+value = "p"
+
+[transactions.items.Snapshot.interpretations.expression_type]
+kind = "singleton"
+
+[transactions.items.Snapshot.interpretations.output_type]
+kind = "type"
+
+[transactions.items.Snapshot.interpretations.output_type.type]
+kind = "namedType"
+value = "Boolean"
+
+[[transactions.items.Snapshot.interpretations]]
+expression_precidence = 99
+
+[transactions.items.Snapshot.interpretations.condition]
+kind = "matches"
+
+[transactions.items.Snapshot.interpretations.condition.token]
+kind = "object"
+value = "Any"
+
+[transactions.items.Snapshot.interpretations.expression_type]
+kind = "functional"
+
+[transactions.items.Snapshot.interpretations.output_type]
+kind = "arbitraryReturning"
+
+[transactions.items.Snapshot.interpretations.output_type.type]
+kind = "namedType"
+value = "Real"
+
+[[transactions.items.Snapshot.interpretations]]
+expression_precidence = 99
+
+[transactions.items.Snapshot.interpretations.condition]
+kind = "matches"
+
+[transactions.items.Snapshot.interpretations.condition.token]
+kind = "object"
+value = "z"
+
+[transactions.items.Snapshot.interpretations.expression_type]
+kind = "singleton"
+
+[transactions.items.Snapshot.interpretations.output_type]
+kind = "type"
+
+[transactions.items.Snapshot.interpretations.output_type.type]
+kind = "namedType"
+value = "Real"
+
+[[transactions.items.Snapshot.interpretations]]
+expression_precidence = 99
+
+[transactions.items.Snapshot.interpretations.condition]
+kind = "matches"
+
+[transactions.items.Snapshot.interpretations.condition.token]
+kind = "object"
+value = "Reciprocal"
+
+[transactions.items.Snapshot.interpretations.expression_type]
+kind = "functional"
+
+[transactions.items.Snapshot.interpretations.output_type]
+kind = "type"
+
+[transactions.items.Snapshot.interpretations.output_type.type]
+kind = "namedType"
+value = "Reciprocal"
+
+[[transactions.items.Snapshot.interpretations]]
+expression_precidence = 99
+
+[transactions.items.Snapshot.interpretations.condition]
+kind = "matches"
+
+[transactions.items.Snapshot.interpretations.condition.token]
+kind = "object"
+value = "Negative"
+
+[transactions.items.Snapshot.interpretations.expression_type]
+kind = "functional"
+
+[transactions.items.Snapshot.interpretations.output_type]
+kind = "type"
+
+[transactions.items.Snapshot.interpretations.output_type.type]
+kind = "namedType"
+value = "Negative"
+
+[transactions.items.Snapshot.transformation_lattice]
+statements = []
+
+[[transactions.items.Snapshot.transformation_lattice.available_transformations]]
+
+[transactions.items.Snapshot.transformation_lattice.available_transformations.AlgorithmTransformation]
+algorithm_type = "Division"
+
+[transactions.items.Snapshot.transformation_lattice.available_transformations.AlgorithmTransformation.operator]
+name = "/"
+
+[transactions.items.Snapshot.transformation_lattice.available_transformations.AlgorithmTransformation.operator.evaluates_to_type]
+kind = "namedType"
+value = "/"
+
+[transactions.items.Snapshot.transformation_lattice.available_transformations.AlgorithmTransformation.input_type.condition]
+kind = "isNumeric"
+
+[[transactions.items.Snapshot.transformation_lattice.available_transformations.AlgorithmTransformation.input_type.parents]]
+kind = "namedType"
+value = "Real"
+
+[[transactions.items.Snapshot.transformation_lattice.available_transformations]]
+
+[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.from.root.Symbol]
+name = "+"
+
+[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.from.root.Symbol.evaluates_to_type]
+kind = "namedType"
+value = "+"
+
+[[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.from.children]]
+children = []
+
+[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.from.children.root.Symbol]
+name = "x"
+
+[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.from.children.root.Symbol.evaluates_to_type]
+kind = "namedType"
+value = "Real"
+
+[[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.from.children]]
+children = []
+
+[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.from.children.root.Symbol]
+name = "y"
+
+[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.from.children.root.Symbol.evaluates_to_type]
+kind = "namedType"
+value = "Real"
+
+[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.to.root.Symbol]
+name = "+"
+
+[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.to.root.Symbol.evaluates_to_type]
+kind = "namedType"
+value = "+"
+
+[[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.to.children]]
+children = []
+
+[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.to.children.root.Symbol]
+name = "y"
+
+[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.to.children.root.Symbol.evaluates_to_type]
+kind = "namedType"
+value = "Real"
+
+[[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.to.children]]
+children = []
+
+[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.to.children.root.Symbol]
+name = "x"
+
+[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.to.children.root.Symbol.evaluates_to_type]
+kind = "namedType"
+value = "Real"
+
+[[transactions.items.Snapshot.transformation_lattice.available_transformations]]
+
+[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.from]
+children = []
+
+[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.from.root.Symbol]
+name = "1"
+
+[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.from.root.Symbol.evaluates_to_type]
+kind = "namedType"
+value = "1"
+
+[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.to.root.Symbol]
+name = "*"
+
+[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.to.root.Symbol.evaluates_to_type]
+kind = "namedType"
+value = "*"
+
+[[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.to.children]]
+children = []
+
+[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.to.children.root.Symbol]
+name = "x"
+
+[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.to.children.root.Symbol.evaluates_to_type]
+kind = "namedType"
+value = "Real"
+
+[[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.to.children]]
+
+[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.to.children.root.Symbol]
+name = "Reciprocal"
+
+[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.to.children.root.Symbol.evaluates_to_type]
+kind = "namedType"
+value = "Reciprocal"
+
+[[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.to.children.children]]
+children = []
+
+[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.to.children.children.root.Symbol]
+name = "x"
+
+[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.to.children.children.root.Symbol.evaluates_to_type]
+kind = "namedType"
+value = "Real"
+
+[[transactions.items.Snapshot.transformation_lattice.available_transformations]]
+
+[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.from.root.Symbol]
+name = "*"
+
+[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.from.root.Symbol.evaluates_to_type]
+kind = "namedType"
+value = "*"
+
+[[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.from.children]]
+children = []
+
+[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.from.children.root.Symbol]
+name = "x"
+
+[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.from.children.root.Symbol.evaluates_to_type]
+kind = "namedType"
+value = "Real"
+
+[[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.from.children]]
+children = []
+
+[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.from.children.root.Symbol]
+name = "y"
+
+[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.from.children.root.Symbol.evaluates_to_type]
+kind = "namedType"
+value = "Real"
+
+[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.to.root.Symbol]
+name = "*"
+
+[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.to.root.Symbol.evaluates_to_type]
+kind = "namedType"
+value = "*"
+
+[[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.to.children]]
+children = []
+
+[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.to.children.root.Symbol]
+name = "y"
+
+[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.to.children.root.Symbol.evaluates_to_type]
+kind = "namedType"
+value = "Real"
+
+[[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.to.children]]
+children = []
+
+[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.to.children.root.Symbol]
+name = "x"
+
+[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.to.children.root.Symbol.evaluates_to_type]
+kind = "namedType"
+value = "Real"
+
+[[transactions.items.Snapshot.transformation_lattice.available_transformations]]
+
+[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.from.root.Symbol]
+name = "*"
+
+[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.from.root.Symbol.evaluates_to_type]
+kind = "namedType"
+value = "*"
+
+[[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.from.children]]
+children = []
+
+[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.from.children.root.Symbol]
+name = "x"
+
+[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.from.children.root.Symbol.evaluates_to_type]
+kind = "namedType"
+value = "Real"
+
+[[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.from.children]]
+
+[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.from.children.root.Symbol]
+name = "+"
+
+[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.from.children.root.Symbol.evaluates_to_type]
+kind = "namedType"
+value = "+"
+
+[[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.from.children.children]]
+children = []
+
+[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.from.children.children.root.Symbol]
+name = "y"
+
+[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.from.children.children.root.Symbol.evaluates_to_type]
+kind = "namedType"
+value = "Real"
+
+[[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.from.children.children]]
+children = []
+
+[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.from.children.children.root.Symbol]
+name = "z"
+
+[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.from.children.children.root.Symbol.evaluates_to_type]
+kind = "namedType"
+value = "Real"
+
+[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.to.root.Symbol]
+name = "+"
+
+[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.to.root.Symbol.evaluates_to_type]
+kind = "namedType"
+value = "+"
+
+[[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.to.children]]
+
+[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.to.children.root.Symbol]
+name = "*"
+
+[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.to.children.root.Symbol.evaluates_to_type]
+kind = "namedType"
+value = "*"
+
+[[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.to.children.children]]
+children = []
+
+[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.to.children.children.root.Symbol]
+name = "x"
+
+[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.to.children.children.root.Symbol.evaluates_to_type]
+kind = "namedType"
+value = "Real"
+
+[[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.to.children.children]]
+children = []
+
+[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.to.children.children.root.Symbol]
+name = "y"
+
+[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.to.children.children.root.Symbol.evaluates_to_type]
+kind = "namedType"
+value = "Real"
+
+[[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.to.children]]
+
+[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.to.children.root.Symbol]
+name = "*"
+
+[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.to.children.root.Symbol.evaluates_to_type]
+kind = "namedType"
+value = "*"
+
+[[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.to.children.children]]
+children = []
+
+[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.to.children.children.root.Symbol]
+name = "x"
+
+[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.to.children.children.root.Symbol.evaluates_to_type]
+kind = "namedType"
+value = "Real"
+
+[[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.to.children.children]]
+children = []
+
+[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.to.children.children.root.Symbol]
+name = "z"
+
+[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.to.children.children.root.Symbol.evaluates_to_type]
+kind = "namedType"
+value = "Real"
+
+[[transactions.items.Snapshot.transformation_lattice.available_transformations]]
+
+[transactions.items.Snapshot.transformation_lattice.available_transformations.AlgorithmTransformation]
+algorithm_type = "Addition"
+
+[transactions.items.Snapshot.transformation_lattice.available_transformations.AlgorithmTransformation.operator]
+name = "+"
+
+[transactions.items.Snapshot.transformation_lattice.available_transformations.AlgorithmTransformation.operator.evaluates_to_type]
+kind = "namedType"
+value = "+"
+
+[transactions.items.Snapshot.transformation_lattice.available_transformations.AlgorithmTransformation.input_type.condition]
+kind = "isNumeric"
+
+[[transactions.items.Snapshot.transformation_lattice.available_transformations.AlgorithmTransformation.input_type.parents]]
+kind = "namedType"
+value = "Real"
+
+[[transactions.items.Snapshot.transformation_lattice.available_transformations]]
+
+[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.from.root.Symbol]
+name = "+"
+
+[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.from.root.Symbol.evaluates_to_type]
+kind = "namedType"
+value = "+"
+
+[[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.from.children]]
+children = []
+
+[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.from.children.root.Symbol]
+name = "y"
+
+[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.from.children.root.Symbol.evaluates_to_type]
+kind = "namedType"
+value = "Real"
+
+[[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.from.children]]
+children = []
+
+[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.from.children.root.Symbol]
+name = "x"
+
+[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.from.children.root.Symbol.evaluates_to_type]
+kind = "namedType"
+value = "Real"
+
+[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.to.root.Symbol]
+name = "+"
+
+[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.to.root.Symbol.evaluates_to_type]
+kind = "namedType"
+value = "+"
+
+[[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.to.children]]
+children = []
+
+[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.to.children.root.Symbol]
+name = "x"
+
+[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.to.children.root.Symbol.evaluates_to_type]
+kind = "namedType"
+value = "Real"
+
+[[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.to.children]]
+children = []
+
+[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.to.children.root.Symbol]
+name = "y"
+
+[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.to.children.root.Symbol.evaluates_to_type]
+kind = "namedType"
+value = "Real"
+
+[[transactions.items.Snapshot.transformation_lattice.available_transformations]]
+
+[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.from.root.Symbol]
+name = "Reciprocal"
+
+[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.from.root.Symbol.evaluates_to_type]
+kind = "namedType"
+value = "Reciprocal"
+
+[[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.from.children]]
+children = []
+
+[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.from.children.root.Symbol]
+name = "x"
+
+[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.from.children.root.Symbol.evaluates_to_type]
+kind = "namedType"
+value = "Real"
+
+[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.to.root.Symbol]
+name = "/"
+
+[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.to.root.Symbol.evaluates_to_type]
+kind = "namedType"
+value = "/"
+
+[[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.to.children]]
+children = []
+
+[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.to.children.root.Symbol]
+name = "1"
+
+[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.to.children.root.Symbol.evaluates_to_type]
+kind = "namedType"
+value = "1"
+
+[[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.to.children]]
+children = []
+
+[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.to.children.root.Symbol]
+name = "x"
+
+[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.to.children.root.Symbol.evaluates_to_type]
+kind = "namedType"
+value = "Real"
+
+[[transactions.items.Snapshot.transformation_lattice.available_transformations]]
+
+[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.from.root.Symbol]
+name = "+"
+
+[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.from.root.Symbol.evaluates_to_type]
+kind = "namedType"
+value = "+"
+
+[[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.from.children]]
+children = []
+
+[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.from.children.root.Symbol]
+name = "x"
+
+[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.from.children.root.Symbol.evaluates_to_type]
+kind = "namedType"
+value = "Real"
+
+[[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.from.children]]
+children = []
+
+[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.from.children.root.Symbol]
+name = "0"
+
+[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.from.children.root.Symbol.evaluates_to_type]
+kind = "namedType"
+value = "0"
+
+[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.to]
+children = []
+
+[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.to.root.Symbol]
+name = "x"
+
+[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.to.root.Symbol.evaluates_to_type]
+kind = "namedType"
+value = "Real"
+
+[[transactions.items.Snapshot.transformation_lattice.available_transformations]]
+
+[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.from]
+children = []
+
+[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.from.root.Symbol]
+name = "x"
+
+[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.from.root.Symbol.evaluates_to_type]
+kind = "namedType"
+value = "Real"
+
+[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.to.root.Symbol]
+name = "+"
+
+[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.to.root.Symbol.evaluates_to_type]
+kind = "namedType"
+value = "+"
+
+[[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.to.children]]
+children = []
+
+[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.to.children.root.Symbol]
+name = "x"
+
+[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.to.children.root.Symbol.evaluates_to_type]
+kind = "namedType"
+value = "Real"
+
+[[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.to.children]]
+children = []
+
+[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.to.children.root.Symbol]
+name = "0"
+
+[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.to.children.root.Symbol.evaluates_to_type]
+kind = "namedType"
+value = "0"
+
+[[transactions.items.Snapshot.transformation_lattice.available_transformations]]
+
+[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.from.root.Symbol]
+name = "*"
+
+[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.from.root.Symbol.evaluates_to_type]
+kind = "namedType"
+value = "*"
+
+[[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.from.children]]
+
+[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.from.children.root.Symbol]
+name = "*"
+
+[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.from.children.root.Symbol.evaluates_to_type]
+kind = "namedType"
+value = "*"
+
+[[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.from.children.children]]
+children = []
+
+[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.from.children.children.root.Symbol]
+name = "x"
+
+[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.from.children.children.root.Symbol.evaluates_to_type]
+kind = "namedType"
+value = "Real"
+
+[[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.from.children.children]]
+children = []
+
+[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.from.children.children.root.Symbol]
+name = "y"
+
+[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.from.children.children.root.Symbol.evaluates_to_type]
+kind = "namedType"
+value = "Real"
+
+[[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.from.children]]
+children = []
+
+[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.from.children.root.Symbol]
+name = "z"
+
+[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.from.children.root.Symbol.evaluates_to_type]
+kind = "namedType"
+value = "Real"
+
+[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.to.root.Symbol]
+name = "*"
+
+[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.to.root.Symbol.evaluates_to_type]
+kind = "namedType"
+value = "*"
+
+[[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.to.children]]
+children = []
+
+[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.to.children.root.Symbol]
+name = "x"
+
+[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.to.children.root.Symbol.evaluates_to_type]
+kind = "namedType"
+value = "Real"
+
+[[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.to.children]]
+
+[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.to.children.root.Symbol]
+name = "*"
+
+[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.to.children.root.Symbol.evaluates_to_type]
+kind = "namedType"
+value = "*"
+
+[[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.to.children.children]]
+children = []
+
+[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.to.children.children.root.Symbol]
+name = "y"
+
+[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.to.children.children.root.Symbol.evaluates_to_type]
+kind = "namedType"
+value = "Real"
+
+[[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.to.children.children]]
+children = []
+
+[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.to.children.children.root.Symbol]
+name = "z"
+
+[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.to.children.children.root.Symbol.evaluates_to_type]
+kind = "namedType"
+value = "Real"
+
+[[transactions.items.Snapshot.transformation_lattice.available_transformations]]
+
+[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.from.root.Symbol]
+name = "+"
+
+[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.from.root.Symbol.evaluates_to_type]
+kind = "namedType"
+value = "+"
+
+[[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.from.children]]
+children = []
+
+[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.from.children.root.Symbol]
+name = "x"
+
+[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.from.children.root.Symbol.evaluates_to_type]
+kind = "namedType"
+value = "Real"
+
+[[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.from.children]]
+
+[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.from.children.root.Symbol]
+name = "+"
+
+[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.from.children.root.Symbol.evaluates_to_type]
+kind = "namedType"
+value = "+"
+
+[[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.from.children.children]]
+children = []
+
+[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.from.children.children.root.Symbol]
+name = "y"
+
+[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.from.children.children.root.Symbol.evaluates_to_type]
+kind = "namedType"
+value = "Real"
+
+[[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.from.children.children]]
+children = []
+
+[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.from.children.children.root.Symbol]
+name = "z"
+
+[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.from.children.children.root.Symbol.evaluates_to_type]
+kind = "namedType"
+value = "Real"
+
+[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.to.root.Symbol]
+name = "+"
+
+[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.to.root.Symbol.evaluates_to_type]
+kind = "namedType"
+value = "+"
+
+[[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.to.children]]
+
+[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.to.children.root.Symbol]
+name = "+"
+
+[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.to.children.root.Symbol.evaluates_to_type]
+kind = "namedType"
+value = "+"
+
+[[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.to.children.children]]
+children = []
+
+[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.to.children.children.root.Symbol]
+name = "x"
+
+[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.to.children.children.root.Symbol.evaluates_to_type]
+kind = "namedType"
+value = "Real"
+
+[[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.to.children.children]]
+children = []
+
+[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.to.children.children.root.Symbol]
+name = "y"
+
+[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.to.children.children.root.Symbol.evaluates_to_type]
+kind = "namedType"
+value = "Real"
+
+[[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.to.children]]
+children = []
+
+[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.to.children.root.Symbol]
+name = "z"
+
+[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.to.children.root.Symbol.evaluates_to_type]
+kind = "namedType"
+value = "Real"
+
+[[transactions.items.Snapshot.transformation_lattice.available_transformations]]
+
+[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.from.root.Symbol]
+name = "*"
+
+[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.from.root.Symbol.evaluates_to_type]
+kind = "namedType"
+value = "*"
+
+[[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.from.children]]
+children = []
+
+[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.from.children.root.Symbol]
+name = "x"
+
+[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.from.children.root.Symbol.evaluates_to_type]
+kind = "namedType"
+value = "Real"
+
+[[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.from.children]]
+
+[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.from.children.root.Symbol]
+name = "Reciprocal"
+
+[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.from.children.root.Symbol.evaluates_to_type]
+kind = "namedType"
+value = "Reciprocal"
+
+[[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.from.children.children]]
+children = []
+
+[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.from.children.children.root.Symbol]
+name = "x"
+
+[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.from.children.children.root.Symbol.evaluates_to_type]
+kind = "namedType"
+value = "Real"
+
+[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.to]
+children = []
+
+[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.to.root.Symbol]
+name = "1"
+
+[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.to.root.Symbol.evaluates_to_type]
+kind = "namedType"
+value = "1"
+
+[[transactions.items.Snapshot.transformation_lattice.available_transformations]]
+
+[transactions.items.Snapshot.transformation_lattice.available_transformations.AlgorithmTransformation]
+algorithm_type = "Multiplication"
+
+[transactions.items.Snapshot.transformation_lattice.available_transformations.AlgorithmTransformation.operator]
+name = "*"
+
+[transactions.items.Snapshot.transformation_lattice.available_transformations.AlgorithmTransformation.operator.evaluates_to_type]
+kind = "namedType"
+value = "*"
+
+[transactions.items.Snapshot.transformation_lattice.available_transformations.AlgorithmTransformation.input_type.condition]
+kind = "isNumeric"
+
+[[transactions.items.Snapshot.transformation_lattice.available_transformations.AlgorithmTransformation.input_type.parents]]
+kind = "namedType"
+value = "Real"
+
+[[transactions.items.Snapshot.transformation_lattice.available_transformations]]
+
+[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.from]
+root = "Join"
+
+[[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.from.children]]
+
+[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.from.children.root.Symbol]
+name = "="
+
+[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.from.children.root.Symbol.evaluates_to_type]
+kind = "namedType"
+value = "="
+
+[[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.from.children.children]]
+children = []
+
+[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.from.children.children.root.Symbol]
+name = "x"
+
+[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.from.children.children.root.Symbol.evaluates_to_type]
+kind = "namedType"
+value = "Real"
+
+[[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.from.children.children]]
+children = []
+
+[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.from.children.children.root.Symbol]
+name = "y"
+
+[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.from.children.children.root.Symbol.evaluates_to_type]
+kind = "namedType"
+value = "Real"
+
+[[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.from.children]]
+
+[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.from.children.root.Symbol]
+name = "="
+
+[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.from.children.root.Symbol.evaluates_to_type]
+kind = "namedType"
+value = "="
+
+[[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.from.children.children]]
+children = []
+
+[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.from.children.children.root.Symbol]
+name = "y"
+
+[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.from.children.children.root.Symbol.evaluates_to_type]
+kind = "namedType"
+value = "Real"
+
+[[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.from.children.children]]
+children = []
+
+[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.from.children.children.root.Symbol]
+name = "z"
+
+[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.from.children.children.root.Symbol.evaluates_to_type]
+kind = "namedType"
+value = "Real"
+
+[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.to.root.Symbol]
+name = "="
+
+[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.to.root.Symbol.evaluates_to_type]
+kind = "namedType"
+value = "="
+
+[[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.to.children]]
+children = []
+
+[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.to.children.root.Symbol]
+name = "x"
+
+[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.to.children.root.Symbol.evaluates_to_type]
+kind = "namedType"
+value = "Real"
+
+[[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.to.children]]
+children = []
+
+[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.to.children.root.Symbol]
+name = "z"
+
+[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.to.children.root.Symbol.evaluates_to_type]
+kind = "namedType"
+value = "Real"
+
+[[transactions.items.Snapshot.transformation_lattice.available_transformations]]
+
+[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.from.root.Symbol]
+name = "*"
+
+[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.from.root.Symbol.evaluates_to_type]
+kind = "namedType"
+value = "*"
+
+[[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.from.children]]
+children = []
+
+[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.from.children.root.Symbol]
+name = "x"
+
+[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.from.children.root.Symbol.evaluates_to_type]
+kind = "namedType"
+value = "Real"
+
+[[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.from.children]]
+children = []
+
+[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.from.children.root.Symbol]
+name = "1"
+
+[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.from.children.root.Symbol.evaluates_to_type]
+kind = "namedType"
+value = "1"
+
+[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.to]
+children = []
+
+[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.to.root.Symbol]
+name = "x"
+
+[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.to.root.Symbol.evaluates_to_type]
+kind = "namedType"
+value = "Real"
+
+[[transactions.items.Snapshot.transformation_lattice.available_transformations]]
+
+[transactions.items.Snapshot.transformation_lattice.available_transformations.AlgorithmTransformation]
+algorithm_type = "Subtraction"
+
+[transactions.items.Snapshot.transformation_lattice.available_transformations.AlgorithmTransformation.operator]
+name = "-"
+
+[transactions.items.Snapshot.transformation_lattice.available_transformations.AlgorithmTransformation.operator.evaluates_to_type]
+kind = "namedType"
+value = "-"
+
+[transactions.items.Snapshot.transformation_lattice.available_transformations.AlgorithmTransformation.input_type.condition]
+kind = "isNumeric"
+
+[[transactions.items.Snapshot.transformation_lattice.available_transformations.AlgorithmTransformation.input_type.parents]]
+kind = "namedType"
+value = "Real"
+
+[[transactions.items.Snapshot.transformation_lattice.available_transformations]]
+
+[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.from.root.Symbol]
+name = "*"
+
+[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.from.root.Symbol.evaluates_to_type]
+kind = "namedType"
+value = "*"
+
+[[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.from.children]]
+children = []
+
+[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.from.children.root.Symbol]
+name = "x"
+
+[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.from.children.root.Symbol.evaluates_to_type]
+kind = "namedType"
+value = "Real"
+
+[[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.from.children]]
+
+[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.from.children.root.Symbol]
+name = "*"
+
+[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.from.children.root.Symbol.evaluates_to_type]
+kind = "namedType"
+value = "*"
+
+[[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.from.children.children]]
+children = []
+
+[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.from.children.children.root.Symbol]
+name = "y"
+
+[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.from.children.children.root.Symbol.evaluates_to_type]
+kind = "namedType"
+value = "Real"
+
+[[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.from.children.children]]
+children = []
+
+[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.from.children.children.root.Symbol]
+name = "z"
+
+[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.from.children.children.root.Symbol.evaluates_to_type]
+kind = "namedType"
+value = "Real"
+
+[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.to.root.Symbol]
+name = "*"
+
+[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.to.root.Symbol.evaluates_to_type]
+kind = "namedType"
+value = "*"
+
+[[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.to.children]]
+
+[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.to.children.root.Symbol]
+name = "*"
+
+[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.to.children.root.Symbol.evaluates_to_type]
+kind = "namedType"
+value = "*"
+
+[[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.to.children.children]]
+children = []
+
+[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.to.children.children.root.Symbol]
+name = "x"
+
+[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.to.children.children.root.Symbol.evaluates_to_type]
+kind = "namedType"
+value = "Real"
+
+[[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.to.children.children]]
+children = []
+
+[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.to.children.children.root.Symbol]
+name = "y"
+
+[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.to.children.children.root.Symbol.evaluates_to_type]
+kind = "namedType"
+value = "Real"
+
+[[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.to.children]]
+children = []
+
+[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.to.children.root.Symbol]
+name = "z"
+
+[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.to.children.root.Symbol.evaluates_to_type]
+kind = "namedType"
+value = "Real"
+
+[[transactions.items.Snapshot.transformation_lattice.available_transformations]]
+
+[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.from.root.Symbol]
+name = "/"
+
+[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.from.root.Symbol.evaluates_to_type]
+kind = "namedType"
+value = "/"
+
+[[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.from.children]]
+children = []
+
+[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.from.children.root.Symbol]
+name = "1"
+
+[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.from.children.root.Symbol.evaluates_to_type]
+kind = "namedType"
+value = "1"
+
+[[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.from.children]]
+children = []
+
+[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.from.children.root.Symbol]
+name = "x"
+
+[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.from.children.root.Symbol.evaluates_to_type]
+kind = "namedType"
+value = "Real"
+
+[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.to.root.Symbol]
+name = "Reciprocal"
+
+[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.to.root.Symbol.evaluates_to_type]
+kind = "namedType"
+value = "Reciprocal"
+
+[[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.to.children]]
+children = []
+
+[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.to.children.root.Symbol]
+name = "x"
+
+[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.to.children.root.Symbol.evaluates_to_type]
+kind = "namedType"
+value = "Real"
+
+[[transactions.items.Snapshot.transformation_lattice.available_transformations]]
+
+[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.from.root.Symbol]
+name = "+"
+
+[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.from.root.Symbol.evaluates_to_type]
+kind = "namedType"
+value = "+"
+
+[[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.from.children]]
+children = []
+
+[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.from.children.root.Symbol]
+name = "x"
+
+[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.from.children.root.Symbol.evaluates_to_type]
+kind = "namedType"
+value = "Real"
+
+[[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.from.children]]
+
+[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.from.children.root.Symbol]
+name = "Negative"
+
+[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.from.children.root.Symbol.evaluates_to_type]
+kind = "namedType"
+value = "Negative"
+
+[[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.from.children.children]]
+children = []
+
+[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.from.children.children.root.Symbol]
+name = "y"
+
+[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.from.children.children.root.Symbol.evaluates_to_type]
+kind = "namedType"
+value = "Real"
+
+[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.to.root.Symbol]
+name = "-"
+
+[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.to.root.Symbol.evaluates_to_type]
+kind = "namedType"
+value = "-"
+
+[[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.to.children]]
+children = []
+
+[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.to.children.root.Symbol]
+name = "x"
+
+[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.to.children.root.Symbol.evaluates_to_type]
+kind = "namedType"
+value = "Real"
+
+[[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.to.children]]
+children = []
+
+[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.to.children.root.Symbol]
+name = "y"
+
+[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.to.children.root.Symbol.evaluates_to_type]
+kind = "namedType"
+value = "Real"
+
+[[transactions.items.Snapshot.transformation_lattice.available_transformations]]
+
+[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.from.root.Symbol]
+name = "="
+
+[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.from.root.Symbol.evaluates_to_type]
+kind = "namedType"
+value = "="
+
+[[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.from.children]]
+children = []
+
+[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.from.children.root.Symbol]
+name = "y"
+
+[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.from.children.root.Symbol.evaluates_to_type]
+kind = "namedType"
+value = "Real"
+
+[[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.from.children]]
+children = []
+
+[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.from.children.root.Symbol]
+name = "x"
+
+[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.from.children.root.Symbol.evaluates_to_type]
+kind = "namedType"
+value = "Real"
+
+[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.to.root.Symbol]
+name = "="
+
+[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.to.root.Symbol.evaluates_to_type]
+kind = "namedType"
+value = "="
+
+[[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.to.children]]
+children = []
+
+[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.to.children.root.Symbol]
+name = "x"
+
+[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.to.children.root.Symbol.evaluates_to_type]
+kind = "namedType"
+value = "Real"
+
+[[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.to.children]]
+children = []
+
+[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.to.children.root.Symbol]
+name = "y"
+
+[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.to.children.root.Symbol.evaluates_to_type]
+kind = "namedType"
+value = "Real"
+
+[[transactions.items.Snapshot.transformation_lattice.available_transformations]]
+
+[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.from.root.Symbol]
+name = "+"
+
+[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.from.root.Symbol.evaluates_to_type]
+kind = "namedType"
+value = "+"
+
+[[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.from.children]]
+
+[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.from.children.root.Symbol]
+name = "+"
+
+[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.from.children.root.Symbol.evaluates_to_type]
+kind = "namedType"
+value = "+"
+
+[[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.from.children.children]]
+children = []
+
+[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.from.children.children.root.Symbol]
+name = "x"
+
+[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.from.children.children.root.Symbol.evaluates_to_type]
+kind = "namedType"
+value = "Real"
+
+[[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.from.children.children]]
+children = []
+
+[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.from.children.children.root.Symbol]
+name = "y"
+
+[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.from.children.children.root.Symbol.evaluates_to_type]
+kind = "namedType"
+value = "Real"
+
+[[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.from.children]]
+children = []
+
+[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.from.children.root.Symbol]
+name = "z"
+
+[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.from.children.root.Symbol.evaluates_to_type]
+kind = "namedType"
+value = "Real"
+
+[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.to.root.Symbol]
+name = "+"
+
+[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.to.root.Symbol.evaluates_to_type]
+kind = "namedType"
+value = "+"
+
+[[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.to.children]]
+children = []
+
+[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.to.children.root.Symbol]
+name = "x"
+
+[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.to.children.root.Symbol.evaluates_to_type]
+kind = "namedType"
+value = "Real"
+
+[[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.to.children]]
+
+[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.to.children.root.Symbol]
+name = "+"
+
+[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.to.children.root.Symbol.evaluates_to_type]
+kind = "namedType"
+value = "+"
+
+[[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.to.children.children]]
+children = []
+
+[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.to.children.children.root.Symbol]
+name = "y"
+
+[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.to.children.children.root.Symbol.evaluates_to_type]
+kind = "namedType"
+value = "Real"
+
+[[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.to.children.children]]
+children = []
+
+[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.to.children.children.root.Symbol]
+name = "z"
+
+[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.to.children.children.root.Symbol.evaluates_to_type]
+kind = "namedType"
+value = "Real"
+
+[[transactions.items.Snapshot.transformation_lattice.available_transformations]]
+
+[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.from]
+children = []
+
+[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.from.root.Symbol]
+name = "x"
+
+[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.from.root.Symbol.evaluates_to_type]
+kind = "namedType"
+value = "Real"
+
+[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.to.root.Symbol]
+name = "*"
+
+[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.to.root.Symbol.evaluates_to_type]
+kind = "namedType"
+value = "*"
+
+[[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.to.children]]
+children = []
+
+[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.to.children.root.Symbol]
+name = "x"
+
+[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.to.children.root.Symbol.evaluates_to_type]
+kind = "namedType"
+value = "Real"
+
+[[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.to.children]]
+children = []
+
+[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.to.children.root.Symbol]
+name = "1"
+
+[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.to.children.root.Symbol.evaluates_to_type]
+kind = "namedType"
+value = "1"
+
+[[transactions.items.Snapshot.transformation_lattice.available_transformations]]
+
+[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.from.root.Symbol]
+name = "="
+
+[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.from.root.Symbol.evaluates_to_type]
+kind = "namedType"
+value = "="
+
+[[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.from.children]]
+children = []
+
+[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.from.children.root.Symbol]
+name = "x"
+
+[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.from.children.root.Symbol.evaluates_to_type]
+kind = "namedType"
+value = "Real"
+
+[[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.from.children]]
+children = []
+
+[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.from.children.root.Symbol]
+name = "y"
+
+[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.from.children.root.Symbol.evaluates_to_type]
+kind = "namedType"
+value = "Real"
+
+[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.to.root.Symbol]
+name = "="
+
+[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.to.root.Symbol.evaluates_to_type]
+kind = "namedType"
+value = "="
+
+[[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.to.children]]
+children = []
+
+[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.to.children.root.Symbol]
+name = "y"
+
+[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.to.children.root.Symbol.evaluates_to_type]
+kind = "namedType"
+value = "Real"
+
+[[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.to.children]]
+children = []
+
+[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.to.children.root.Symbol]
+name = "x"
+
+[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.to.children.root.Symbol.evaluates_to_type]
+kind = "namedType"
+value = "Real"
+
+[[transactions.items.Snapshot.transformation_lattice.available_transformations]]
+
+[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.from.root.Symbol]
+name = "*"
+
+[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.from.root.Symbol.evaluates_to_type]
+kind = "namedType"
+value = "*"
+
+[[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.from.children]]
+children = []
+
+[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.from.children.root.Symbol]
+name = "y"
+
+[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.from.children.root.Symbol.evaluates_to_type]
+kind = "namedType"
+value = "Real"
+
+[[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.from.children]]
+children = []
+
+[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.from.children.root.Symbol]
+name = "x"
+
+[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.from.children.root.Symbol.evaluates_to_type]
+kind = "namedType"
+value = "Real"
+
+[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.to.root.Symbol]
+name = "*"
+
+[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.to.root.Symbol.evaluates_to_type]
+kind = "namedType"
+value = "*"
+
+[[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.to.children]]
+children = []
+
+[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.to.children.root.Symbol]
+name = "x"
+
+[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.to.children.root.Symbol.evaluates_to_type]
+kind = "namedType"
+value = "Real"
+
+[[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.to.children]]
+children = []
+
+[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.to.children.root.Symbol]
+name = "y"
+
+[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.to.children.root.Symbol.evaluates_to_type]
+kind = "namedType"
+value = "Real"
+
+[[transactions.items.Snapshot.transformation_lattice.available_transformations]]
+
+[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.from.root.Symbol]
+name = "-"
+
+[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.from.root.Symbol.evaluates_to_type]
+kind = "namedType"
+value = "-"
+
+[[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.from.children]]
+children = []
+
+[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.from.children.root.Symbol]
+name = "x"
+
+[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.from.children.root.Symbol.evaluates_to_type]
+kind = "namedType"
+value = "Real"
+
+[[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.from.children]]
+children = []
+
+[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.from.children.root.Symbol]
+name = "y"
+
+[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.from.children.root.Symbol.evaluates_to_type]
+kind = "namedType"
+value = "Real"
+
+[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.to.root.Symbol]
+name = "+"
+
+[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.to.root.Symbol.evaluates_to_type]
+kind = "namedType"
+value = "+"
+
+[[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.to.children]]
+children = []
+
+[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.to.children.root.Symbol]
+name = "x"
+
+[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.to.children.root.Symbol.evaluates_to_type]
+kind = "namedType"
+value = "Real"
+
+[[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.to.children]]
+
+[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.to.children.root.Symbol]
+name = "Negative"
+
+[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.to.children.root.Symbol.evaluates_to_type]
+kind = "namedType"
+value = "Negative"
+
+[[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.to.children.children]]
+children = []
+
+[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.to.children.children.root.Symbol]
+name = "y"
+
+[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.to.children.children.root.Symbol.evaluates_to_type]
+kind = "namedType"
+value = "Real"
+
+[[transactions.items.Snapshot.transformation_lattice.available_transformations]]
+
+[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.from.root.Symbol]
+name = "+"
+
+[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.from.root.Symbol.evaluates_to_type]
+kind = "namedType"
+value = "+"
+
+[[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.from.children]]
+
+[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.from.children.root.Symbol]
+name = "*"
+
+[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.from.children.root.Symbol.evaluates_to_type]
+kind = "namedType"
+value = "*"
+
+[[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.from.children.children]]
+children = []
+
+[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.from.children.children.root.Symbol]
+name = "x"
+
+[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.from.children.children.root.Symbol.evaluates_to_type]
+kind = "namedType"
+value = "Real"
+
+[[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.from.children.children]]
+children = []
+
+[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.from.children.children.root.Symbol]
+name = "y"
+
+[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.from.children.children.root.Symbol.evaluates_to_type]
+kind = "namedType"
+value = "Real"
+
+[[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.from.children]]
+
+[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.from.children.root.Symbol]
+name = "*"
+
+[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.from.children.root.Symbol.evaluates_to_type]
+kind = "namedType"
+value = "*"
+
+[[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.from.children.children]]
+children = []
+
+[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.from.children.children.root.Symbol]
+name = "x"
+
+[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.from.children.children.root.Symbol.evaluates_to_type]
+kind = "namedType"
+value = "Real"
+
+[[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.from.children.children]]
+children = []
+
+[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.from.children.children.root.Symbol]
+name = "z"
+
+[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.from.children.children.root.Symbol.evaluates_to_type]
+kind = "namedType"
+value = "Real"
+
+[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.to.root.Symbol]
+name = "*"
+
+[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.to.root.Symbol.evaluates_to_type]
+kind = "namedType"
+value = "*"
+
+[[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.to.children]]
+children = []
+
+[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.to.children.root.Symbol]
+name = "x"
+
+[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.to.children.root.Symbol.evaluates_to_type]
+kind = "namedType"
+value = "Real"
+
+[[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.to.children]]
+
+[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.to.children.root.Symbol]
+name = "+"
+
+[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.to.children.root.Symbol.evaluates_to_type]
+kind = "namedType"
+value = "+"
+
+[[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.to.children.children]]
+children = []
+
+[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.to.children.children.root.Symbol]
+name = "y"
+
+[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.to.children.children.root.Symbol.evaluates_to_type]
+kind = "namedType"
+value = "Real"
+
+[[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.to.children.children]]
+children = []
+
+[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.to.children.children.root.Symbol]
+name = "z"
+
+[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.to.children.children.root.Symbol.evaluates_to_type]
+kind = "namedType"
+value = "Real"
+
+[[transactions.items.Snapshot.transformation_lattice.available_transformations]]
+
+[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.from.root.Symbol]
+name = "="
+
+[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.from.root.Symbol.evaluates_to_type]
+kind = "namedType"
+value = "="
+
+[[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.from.children]]
+children = []
+
+[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.from.children.root.Symbol]
+name = "x"
+
+[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.from.children.root.Symbol.evaluates_to_type]
+kind = "namedType"
+value = "Real"
+
+[[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.from.children]]
+children = []
+
+[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.from.children.root.Symbol]
+name = "y"
+
+[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.from.children.root.Symbol.evaluates_to_type]
+kind = "namedType"
+value = "Real"
+
+[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.to.root.Symbol]
+name = "="
+
+[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.to.root.Symbol.evaluates_to_type]
+kind = "namedType"
+value = "="
+
+[[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.to.children]]
+
+[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.to.children.root.Arbitrary]
+name = "Any"
+
+[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.to.children.root.Arbitrary.evaluates_to_type]
+kind = "namedType"
+value = "Real"
+
+[[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.to.children.children]]
+children = []
+
+[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.to.children.children.root.Symbol]
+name = "x"
+
+[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.to.children.children.root.Symbol.evaluates_to_type]
+kind = "namedType"
+value = "Real"
+
+[[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.to.children]]
+
+[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.to.children.root.Arbitrary]
+name = "Any"
+
+[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.to.children.root.Arbitrary.evaluates_to_type]
+kind = "namedType"
+value = "Real"
+
+[[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.to.children.children]]
+children = []
+
+[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.to.children.children.root.Symbol]
+name = "y"
+
+[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.to.children.children.root.Symbol.evaluates_to_type]
+kind = "namedType"
+value = "Real"
+
+[transactions.items.Snapshot.transformation_lattice.transformations_from]
+
+[transactions.items.Snapshot.transformation_lattice.transformations_to]
+
+[[transactions]]
+
+[[transactions.items]]
+
+[transactions.items.AddInterpretation]
+expression_precidence = 4
+
+[transactions.items.AddInterpretation.condition]
+kind = "matches"
+
+[transactions.items.AddInterpretation.condition.token]
+kind = "object"
+value = "^"
+
+[transactions.items.AddInterpretation.expression_type]
+kind = "infix"
+
+[transactions.items.AddInterpretation.output_type]
+kind = "type"
+
+[transactions.items.AddInterpretation.output_type.type]
+kind = "namedType"
+value = "Real"
+
+[[transactions]]
+
+[[transactions.items]]
+
+[[transactions.items.AddType]]
+kind = "namedType"
+value = "^"
+
+[[transactions.items.AddType]]
+kind = "namedType"
+value = "Real"
+
+[[transactions]]
+
+[[transactions.items]]
+
+[transactions.items.AddTransformation.AlgorithmTransformation]
+algorithm_type = "Exponentiation"
+
+[transactions.items.AddTransformation.AlgorithmTransformation.operator]
+name = "^"
+
+[transactions.items.AddTransformation.AlgorithmTransformation.operator.evaluates_to_type]
+kind = "namedType"
+value = "^"
+
+[transactions.items.AddTransformation.AlgorithmTransformation.input_type.condition]
+kind = "isNumeric"
+
+[[transactions.items.AddTransformation.AlgorithmTransformation.input_type.parents]]
+kind = "namedType"
+value = "Real"
+
+[[transactions]]
+
+[[transactions.items]]
+
+[transactions.items.AddTransformation.ExplicitTransformation.from.root.Symbol]
+name = "^"
+
+[transactions.items.AddTransformation.ExplicitTransformation.from.root.Symbol.evaluates_to_type]
+kind = "namedType"
+value = "Real"
+
+[[transactions.items.AddTransformation.ExplicitTransformation.from.children]]
+children = []
+
+[transactions.items.AddTransformation.ExplicitTransformation.from.children.root.Symbol]
+name = "x"
+
+[transactions.items.AddTransformation.ExplicitTransformation.from.children.root.Symbol.evaluates_to_type]
+kind = "namedType"
+value = "Real"
+
+[[transactions.items.AddTransformation.ExplicitTransformation.from.children]]
+
+[transactions.items.AddTransformation.ExplicitTransformation.from.children.root.Symbol]
+name = "+"
+
+[transactions.items.AddTransformation.ExplicitTransformation.from.children.root.Symbol.evaluates_to_type]
+kind = "namedType"
+value = "+"
+
+[[transactions.items.AddTransformation.ExplicitTransformation.from.children.children]]
+children = []
+
+[transactions.items.AddTransformation.ExplicitTransformation.from.children.children.root.Symbol]
+name = "y"
+
+[transactions.items.AddTransformation.ExplicitTransformation.from.children.children.root.Symbol.evaluates_to_type]
+kind = "namedType"
+value = "Real"
+
+[[transactions.items.AddTransformation.ExplicitTransformation.from.children.children]]
+children = []
+
+[transactions.items.AddTransformation.ExplicitTransformation.from.children.children.root.Symbol]
+name = "z"
+
+[transactions.items.AddTransformation.ExplicitTransformation.from.children.children.root.Symbol.evaluates_to_type]
+kind = "namedType"
+value = "Real"
+
+[transactions.items.AddTransformation.ExplicitTransformation.to.root.Symbol]
+name = "*"
+
+[transactions.items.AddTransformation.ExplicitTransformation.to.root.Symbol.evaluates_to_type]
+kind = "namedType"
+value = "*"
+
+[[transactions.items.AddTransformation.ExplicitTransformation.to.children]]
+
+[transactions.items.AddTransformation.ExplicitTransformation.to.children.root.Symbol]
+name = "^"
+
+[transactions.items.AddTransformation.ExplicitTransformation.to.children.root.Symbol.evaluates_to_type]
+kind = "namedType"
+value = "Real"
+
+[[transactions.items.AddTransformation.ExplicitTransformation.to.children.children]]
+children = []
+
+[transactions.items.AddTransformation.ExplicitTransformation.to.children.children.root.Symbol]
+name = "x"
+
+[transactions.items.AddTransformation.ExplicitTransformation.to.children.children.root.Symbol.evaluates_to_type]
+kind = "namedType"
+value = "Real"
+
+[[transactions.items.AddTransformation.ExplicitTransformation.to.children.children]]
+children = []
+
+[transactions.items.AddTransformation.ExplicitTransformation.to.children.children.root.Symbol]
+name = "y"
+
+[transactions.items.AddTransformation.ExplicitTransformation.to.children.children.root.Symbol.evaluates_to_type]
+kind = "namedType"
+value = "Real"
+
+[[transactions.items.AddTransformation.ExplicitTransformation.to.children]]
+
+[transactions.items.AddTransformation.ExplicitTransformation.to.children.root.Symbol]
+name = "^"
+
+[transactions.items.AddTransformation.ExplicitTransformation.to.children.root.Symbol.evaluates_to_type]
+kind = "namedType"
+value = "Real"
+
+[[transactions.items.AddTransformation.ExplicitTransformation.to.children.children]]
+children = []
+
+[transactions.items.AddTransformation.ExplicitTransformation.to.children.children.root.Symbol]
+name = "x"
+
+[transactions.items.AddTransformation.ExplicitTransformation.to.children.children.root.Symbol.evaluates_to_type]
+kind = "namedType"
+value = "Real"
+
+[[transactions.items.AddTransformation.ExplicitTransformation.to.children.children]]
+children = []
+
+[transactions.items.AddTransformation.ExplicitTransformation.to.children.children.root.Symbol]
+name = "z"
+
+[transactions.items.AddTransformation.ExplicitTransformation.to.children.children.root.Symbol.evaluates_to_type]
+kind = "namedType"
+value = "Real"
+
+[[transactions.items]]
+
+[transactions.items.AddTransformation.ExplicitTransformation.from.root.Symbol]
+name = "*"
+
+[transactions.items.AddTransformation.ExplicitTransformation.from.root.Symbol.evaluates_to_type]
+kind = "namedType"
+value = "*"
+
+[[transactions.items.AddTransformation.ExplicitTransformation.from.children]]
+
+[transactions.items.AddTransformation.ExplicitTransformation.from.children.root.Symbol]
+name = "^"
+
+[transactions.items.AddTransformation.ExplicitTransformation.from.children.root.Symbol.evaluates_to_type]
+kind = "namedType"
+value = "Real"
+
+[[transactions.items.AddTransformation.ExplicitTransformation.from.children.children]]
+children = []
+
+[transactions.items.AddTransformation.ExplicitTransformation.from.children.children.root.Symbol]
+name = "x"
+
+[transactions.items.AddTransformation.ExplicitTransformation.from.children.children.root.Symbol.evaluates_to_type]
+kind = "namedType"
+value = "Real"
+
+[[transactions.items.AddTransformation.ExplicitTransformation.from.children.children]]
+children = []
+
+[transactions.items.AddTransformation.ExplicitTransformation.from.children.children.root.Symbol]
+name = "y"
+
+[transactions.items.AddTransformation.ExplicitTransformation.from.children.children.root.Symbol.evaluates_to_type]
+kind = "namedType"
+value = "Real"
+
+[[transactions.items.AddTransformation.ExplicitTransformation.from.children]]
+
+[transactions.items.AddTransformation.ExplicitTransformation.from.children.root.Symbol]
+name = "^"
+
+[transactions.items.AddTransformation.ExplicitTransformation.from.children.root.Symbol.evaluates_to_type]
+kind = "namedType"
+value = "Real"
+
+[[transactions.items.AddTransformation.ExplicitTransformation.from.children.children]]
+children = []
+
+[transactions.items.AddTransformation.ExplicitTransformation.from.children.children.root.Symbol]
+name = "x"
+
+[transactions.items.AddTransformation.ExplicitTransformation.from.children.children.root.Symbol.evaluates_to_type]
+kind = "namedType"
+value = "Real"
+
+[[transactions.items.AddTransformation.ExplicitTransformation.from.children.children]]
+children = []
+
+[transactions.items.AddTransformation.ExplicitTransformation.from.children.children.root.Symbol]
+name = "z"
+
+[transactions.items.AddTransformation.ExplicitTransformation.from.children.children.root.Symbol.evaluates_to_type]
+kind = "namedType"
+value = "Real"
+
+[transactions.items.AddTransformation.ExplicitTransformation.to.root.Symbol]
+name = "^"
+
+[transactions.items.AddTransformation.ExplicitTransformation.to.root.Symbol.evaluates_to_type]
+kind = "namedType"
+value = "Real"
+
+[[transactions.items.AddTransformation.ExplicitTransformation.to.children]]
+children = []
+
+[transactions.items.AddTransformation.ExplicitTransformation.to.children.root.Symbol]
+name = "x"
+
+[transactions.items.AddTransformation.ExplicitTransformation.to.children.root.Symbol.evaluates_to_type]
+kind = "namedType"
+value = "Real"
+
+[[transactions.items.AddTransformation.ExplicitTransformation.to.children]]
+
+[transactions.items.AddTransformation.ExplicitTransformation.to.children.root.Symbol]
+name = "+"
+
+[transactions.items.AddTransformation.ExplicitTransformation.to.children.root.Symbol.evaluates_to_type]
+kind = "namedType"
+value = "+"
+
+[[transactions.items.AddTransformation.ExplicitTransformation.to.children.children]]
+children = []
+
+[transactions.items.AddTransformation.ExplicitTransformation.to.children.children.root.Symbol]
+name = "y"
+
+[transactions.items.AddTransformation.ExplicitTransformation.to.children.children.root.Symbol.evaluates_to_type]
+kind = "namedType"
+value = "Real"
+
+[[transactions.items.AddTransformation.ExplicitTransformation.to.children.children]]
+children = []
+
+[transactions.items.AddTransformation.ExplicitTransformation.to.children.children.root.Symbol]
+name = "z"
+
+[transactions.items.AddTransformation.ExplicitTransformation.to.children.children.root.Symbol.evaluates_to_type]
+kind = "namedType"
+value = "Real"
+
+[[transactions]]
+
+[[transactions.items]]
+
+[[transactions.items.AddType]]
+kind = "namedType"
+value = "x_0"
+
+[[transactions.items.AddType]]
+kind = "namedType"
+value = "Real"
+
+[[transactions]]
+
+[[transactions.items]]
+DuplicateInterpretation = 5
+
+[[transactions.items]]
+UpdateInterpretation = [14, { condition = { kind = "matches", token = { kind = "object", value = "a" } }, expression_type = { kind = "singleton" }, expression_precidence = 99, output_type = { kind = "type", type = { kind = "namedType", value = "Real" } } }]
+
+[[transactions]]
+
+[[transactions.items]]
+DuplicateInterpretation = 5
+
+[[transactions.items]]
+UpdateInterpretation = [15, { condition = { kind = "matches", token = { kind = "object", value = "b" } }, expression_type = { kind = "singleton" }, expression_precidence = 99, output_type = { kind = "type", type = { kind = "namedType", value = "Real" } } }]
+
+[[transactions]]
+
+[[transactions.items]]
+DuplicateInterpretation = 5
+
+[[transactions.items]]
+UpdateInterpretation = [16, { condition = { kind = "matches", token = { kind = "object", value = "c" } }, expression_type = { kind = "singleton" }, expression_precidence = 99, output_type = { kind = "type", type = { kind = "namedType", value = "Real" } } }]
+
+[[transactions]]
+
+[[transactions.items]]
+
+[transactions.items.AddInterpretation]
+expression_precidence = 99
+
+[transactions.items.AddInterpretation.condition]
+kind = "matches"
+
+[transactions.items.AddInterpretation.condition.token]
+kind = "object"
+value = "x_0"
+
+[transactions.items.AddInterpretation.expression_type]
+kind = "singleton"
+
+[transactions.items.AddInterpretation.output_type]
+kind = "type"
+
+[transactions.items.AddInterpretation.output_type.type]
+kind = "namedType"
+value = "x_0"
+
+[[transactions]]
+
+[[transactions.items]]
+RemoveInterpretation = 13
+
+[[transactions]]
+
+[[transactions.items]]
+
+[transactions.items.AddInterpretation]
+expression_precidence = 4
+
+[transactions.items.AddInterpretation.condition]
+kind = "matches"
+
+[transactions.items.AddInterpretation.condition.token]
+kind = "object"
+value = "^"
+
+[transactions.items.AddInterpretation.expression_type]
+kind = "infix"
+
+[transactions.items.AddInterpretation.output_type]
+kind = "type"
+
+[transactions.items.AddInterpretation.output_type.type]
+kind = "namedType"
+value = "^"
+
+[[transactions]]
+
+[[transactions.items]]
+
+[[transactions.items.AddType]]
+kind = "namedType"
+value = "2"
+
+[[transactions.items.AddType]]
+kind = "namedType"
+value = "Real"
+
+[[transactions.items]]
+
+[[transactions.items.AddType]]
+kind = "namedType"
+value = "4"
+
+[[transactions.items.AddType]]
+kind = "namedType"
+value = "Real"
+
+[[transactions.items]]
+
+[transactions.items.AddHypothesis.root.Symbol]
+name = "="
+
+[transactions.items.AddHypothesis.root.Symbol.evaluates_to_type]
+kind = "namedType"
+value = "="
+
+[[transactions.items.AddHypothesis.children]]
+children = []
+
+[transactions.items.AddHypothesis.children.root.Symbol]
+name = "x_0"
+
+[transactions.items.AddHypothesis.children.root.Symbol.evaluates_to_type]
+kind = "namedType"
+value = "x_0"
+
+[[transactions.items.AddHypothesis.children]]
+
+[transactions.items.AddHypothesis.children.root.Symbol]
+name = "/"
+
+[transactions.items.AddHypothesis.children.root.Symbol.evaluates_to_type]
+kind = "namedType"
+value = "/"
+
+[[transactions.items.AddHypothesis.children.children]]
+
+[transactions.items.AddHypothesis.children.children.root.Symbol]
+name = "+"
+
+[transactions.items.AddHypothesis.children.children.root.Symbol.evaluates_to_type]
+kind = "namedType"
+value = "+"
+
+[[transactions.items.AddHypothesis.children.children.children]]
+
+[transactions.items.AddHypothesis.children.children.children.root.Symbol]
+name = "Negative"
+
+[transactions.items.AddHypothesis.children.children.children.root.Symbol.evaluates_to_type]
+kind = "namedType"
+value = "Negative"
+
+[[transactions.items.AddHypothesis.children.children.children.children]]
+children = []
+
+[transactions.items.AddHypothesis.children.children.children.children.root.Symbol]
+name = "b"
+
+[transactions.items.AddHypothesis.children.children.children.children.root.Symbol.evaluates_to_type]
+kind = "namedType"
+value = "Real"
+
+[[transactions.items.AddHypothesis.children.children.children]]
+
+[transactions.items.AddHypothesis.children.children.children.root.Symbol]
+name = "^"
+
+[transactions.items.AddHypothesis.children.children.children.root.Symbol.evaluates_to_type]
+kind = "namedType"
+value = "^"
+
+[[transactions.items.AddHypothesis.children.children.children.children]]
+
+[transactions.items.AddHypothesis.children.children.children.children.root.Symbol]
+name = "-"
+
+[transactions.items.AddHypothesis.children.children.children.children.root.Symbol.evaluates_to_type]
+kind = "namedType"
+value = "-"
+
+[[transactions.items.AddHypothesis.children.children.children.children.children]]
+
+[transactions.items.AddHypothesis.children.children.children.children.children.root.Symbol]
+name = "^"
+
+[transactions.items.AddHypothesis.children.children.children.children.children.root.Symbol.evaluates_to_type]
+kind = "namedType"
+value = "^"
+
+[[transactions.items.AddHypothesis.children.children.children.children.children.children]]
+children = []
+
+[transactions.items.AddHypothesis.children.children.children.children.children.children.root.Symbol]
+name = "b"
+
+[transactions.items.AddHypothesis.children.children.children.children.children.children.root.Symbol.evaluates_to_type]
+kind = "namedType"
+value = "Real"
+
+[[transactions.items.AddHypothesis.children.children.children.children.children.children]]
+children = []
+
+[transactions.items.AddHypothesis.children.children.children.children.children.children.root.Symbol]
+name = "2"
+
+[transactions.items.AddHypothesis.children.children.children.children.children.children.root.Symbol.evaluates_to_type]
+kind = "namedType"
+value = "2"
+
+[[transactions.items.AddHypothesis.children.children.children.children.children]]
+
+[transactions.items.AddHypothesis.children.children.children.children.children.root.Symbol]
+name = "*"
+
+[transactions.items.AddHypothesis.children.children.children.children.children.root.Symbol.evaluates_to_type]
+kind = "namedType"
+value = "*"
+
+[[transactions.items.AddHypothesis.children.children.children.children.children.children]]
+
+[transactions.items.AddHypothesis.children.children.children.children.children.children.root.Symbol]
+name = "*"
+
+[transactions.items.AddHypothesis.children.children.children.children.children.children.root.Symbol.evaluates_to_type]
+kind = "namedType"
+value = "*"
+
+[[transactions.items.AddHypothesis.children.children.children.children.children.children.children]]
+children = []
+
+[transactions.items.AddHypothesis.children.children.children.children.children.children.children.root.Symbol]
+name = "4"
+
+[transactions.items.AddHypothesis.children.children.children.children.children.children.children.root.Symbol.evaluates_to_type]
+kind = "namedType"
+value = "4"
+
+[[transactions.items.AddHypothesis.children.children.children.children.children.children.children]]
+children = []
+
+[transactions.items.AddHypothesis.children.children.children.children.children.children.children.root.Symbol]
+name = "a"
+
+[transactions.items.AddHypothesis.children.children.children.children.children.children.children.root.Symbol.evaluates_to_type]
+kind = "namedType"
+value = "Real"
+
+[[transactions.items.AddHypothesis.children.children.children.children.children.children]]
+children = []
+
+[transactions.items.AddHypothesis.children.children.children.children.children.children.root.Symbol]
+name = "c"
+
+[transactions.items.AddHypothesis.children.children.children.children.children.children.root.Symbol.evaluates_to_type]
+kind = "namedType"
+value = "Real"
+
+[[transactions.items.AddHypothesis.children.children.children.children]]
+
+[transactions.items.AddHypothesis.children.children.children.children.root.Symbol]
+name = "/"
+
+[transactions.items.AddHypothesis.children.children.children.children.root.Symbol.evaluates_to_type]
+kind = "namedType"
+value = "/"
+
+[[transactions.items.AddHypothesis.children.children.children.children.children]]
+children = []
+
+[transactions.items.AddHypothesis.children.children.children.children.children.root.Symbol]
+name = "1"
+
+[transactions.items.AddHypothesis.children.children.children.children.children.root.Symbol.evaluates_to_type]
+kind = "namedType"
+value = "1"
+
+[[transactions.items.AddHypothesis.children.children.children.children.children]]
+children = []
+
+[transactions.items.AddHypothesis.children.children.children.children.children.root.Symbol]
+name = "2"
+
+[transactions.items.AddHypothesis.children.children.children.children.children.root.Symbol.evaluates_to_type]
+kind = "namedType"
+value = "2"
+
+[[transactions.items.AddHypothesis.children.children]]
+
+[transactions.items.AddHypothesis.children.children.root.Symbol]
+name = "*"
+
+[transactions.items.AddHypothesis.children.children.root.Symbol.evaluates_to_type]
+kind = "namedType"
+value = "*"
+
+[[transactions.items.AddHypothesis.children.children.children]]
+children = []
+
+[transactions.items.AddHypothesis.children.children.children.root.Symbol]
+name = "2"
+
+[transactions.items.AddHypothesis.children.children.children.root.Symbol.evaluates_to_type]
+kind = "namedType"
+value = "2"
+
+[[transactions.items.AddHypothesis.children.children.children]]
+children = []
+
+[transactions.items.AddHypothesis.children.children.children.root.Symbol]
+name = "a"
+
+[transactions.items.AddHypothesis.children.children.children.root.Symbol.evaluates_to_type]
+kind = "namedType"
+value = "Real"
+
+[command_history]
+commands = ["symbolic-manipulation-engine import-context -- real-analysis", "symbolic-manipulation-engine add-interpretation -- Infix 4 Real ^", "symbolic-manipulation-engine add-type -- ^ Real", "symbolic-manipulation-engine add-algorithm -- Exponentiation ^ Real", "symbolic-manipulation-engine add-transformation --is-equivalence -- x^(y+z) x^y*x^z", "symbolic-manipulation-engine export-context -f -- real-analysis", "symbolic-manipulation-engine add-type -- x_0 Real", "symbolic-manipulation-engine hypothesize -- 0=a*x^2+b*x+c", "symbolic-manipulation-engine add-interpretation -- Singleton 99 x_0 x_0", "symbolic-manipulation-engine hypothesize -- (x_0=((Negative(b)+(((b^2)-((4*a)*c))^(1/2)))/(2*a)))", "symbolic-manipulation-engine derive -- ((((a*(x_0^2))+(b*x_0))+c)=(((a*(x_0^2))+(b*((Negative(b)+(((b^2)-((4*a)*c))^(1/2)))/(2*a))))+c)) [0,1] [19]", "symbolic-manipulation-engine undo", "symbolic-manipulation-engine derive -- ((((a*(x_0^2))+(b*x_0))+c)=(((a*(((Negative(b)+(((b^2)-((4*a)*c))^(1/2)))/(2*a))^2))+(b*((Negative(b)+(((b^2)-((4*a)*c))^(1/2)))/(2*a))))+c)) [0,1] [0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30]", "symbolic-manipulation-engine undo", "symbolic-manipulation-engine undo", "symbolic-manipulation-engine undo", "symbolic-manipulation-engine undo", "symbolic-manipulation-engine duplicate-interpretation -- 5 a", "symbolic-manipulation-engine duplicate-interpretation -- 5 b", "symbolic-manipulation-engine duplicate-interpretation -- 5 c", "symbolic-manipulation-engine hypothesize -- x+y=z", "symbolic-manipulation-engine undo", "symbolic-manipulation-engine hypothesize -- ((x*y)=z)", "symbolic-manipulation-engine undo", "symbolic-manipulation-engine add-interpretation -- Singleton 99 x_0 x_0", "symbolic-manipulation-engine hypothesize -- x_0=(Negative(b)+(b^2-4*a*c)^(1/2))/(2*a)", "symbolic-manipulation-engine undo", "symbolic-manipulation-engine remove-interpretation -- 13", "symbolic-manipulation-engine add-interpretation -- Infix 4 ^ ^", "symbolic-manipulation-engine hypothesize -- (x_0=((Negative(b)+(((b^2)-((4*a)*c))^(1/2)))/(2*a)))"]
