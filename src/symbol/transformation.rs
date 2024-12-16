@@ -612,7 +612,7 @@ impl Transformation {
                             })
                         };
 
-                        // Bail out if we've gotten too deep or the substatement doesn't contain
+                        // Bail out if we've gotten too deep or the to_statement doesn't contain
                         // the result
                         if result.get_depth() > final_max_depth {
                             debug!("Max depth reached!");
