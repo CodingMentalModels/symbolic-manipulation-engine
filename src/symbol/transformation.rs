@@ -641,7 +641,7 @@ impl Transformation {
                 };
 
                 for statement_to_apply_to in valid_roots {
-                    let result = self.apply_valid_transformations_to_children(
+                    let result = Self::apply_valid_transformations_to_children(
                         &child_to_valid_transformations,
                         &statement_to_apply_to,
                         None,
@@ -675,7 +675,6 @@ impl Transformation {
     }
 
     fn apply_valid_transformations_to_children(
-        &self,
         child_to_valid_transformations: &HashMap<SymbolNode, HashSet<SymbolNode>>,
         statement: &SymbolNode,
         max_additional_depth: Option<usize>,
