@@ -1,5 +1,5 @@
-use log::debug;
-use std::path::PathBuf;
+use log::{debug, trace};
+use std::{collections::HashSet, path::PathBuf};
 
 use clap::ArgMatches;
 use serde_json::to_string;
@@ -12,20 +12,19 @@ use crate::{
     },
     constants::*,
     context::context::Context,
-    parsing::{
-        interpretation::{
-            ExpressionPrecedence, ExpressionType, Interpretation, InterpretationCondition,
-            InterpretedType,
-        },
-        parser::Parser,
+    parsing::interpretation::{
+        ExpressionPrecedence, ExpressionType, Interpretation, InterpretationCondition,
+        InterpretedType,
     },
     symbol::{
         algorithm::AlgorithmType,
+        symbol_node::SymbolNode,
         symbol_type::{GeneratedType, GeneratedTypeCondition, Type},
-        transformation::ExplicitTransformation,
+        transformation::Transformation,
     },
     workspace::workspace::{
-        Workspace, WorkspaceTransaction, WorkspaceTransactionItem, WorkspaceTransactionStore,
+        StatementIndex, TransformationIndex, Workspace, WorkspaceTransaction,
+        WorkspaceTransactionItem, WorkspaceTransactionStore,
     },
 };
 
@@ -330,13 +329,20 @@ impl Cli {
 
     pub fn get_transformations(&self, sub_matches: &ArgMatches) -> Result<String, String> {
         let workspace_store = self.load_workspace_store()?;
+        let workspace = workspace_store.compile();
+        let (maybe_statement_scope, maybe_transformation_scope) =
+            extract_scopes(sub_matches, &workspace)?;
         match sub_matches.get_one::<String>("partial-statement") {
             None => Err("No partial statement provided.".to_string()),
             Some(partial_statement) => {
                 let workspace = workspace_store.compile();
                 let serialized_result = to_string(
                     &workspace
-                        .get_valid_transformations(partial_statement)
+                        .get_valid_transformations(
+                            partial_statement,
+                            maybe_statement_scope,
+                            maybe_transformation_scope,
+                        )
                         .map_err(|e| format!("Error getting valid transformations: {:?}", e))?
                         .into_iter()
                         .map(|n| {
@@ -352,14 +358,23 @@ impl Cli {
 
     pub fn get_transformations_from(&self, sub_matches: &ArgMatches) -> Result<String, String> {
         let workspace_store = self.load_workspace_store()?;
+        let workspace = workspace_store.compile();
+        let (maybe_statement_scope, maybe_transformation_scope) =
+            extract_scopes(sub_matches, &workspace)?;
         match sub_matches.get_one::<String>("statement-index") {
             None => Err("No statement index provided.".to_string()),
             Some(index_string) => match index_string.parse::<usize>() {
                 Ok(statement_index) => {
-                    let workspace = workspace_store.compile();
-                    let statement = workspace.get_ordered_statements()[statement_index].clone();
+                    let statement = workspace
+                        .get_statement(statement_index)
+                        .map_err(|e| format!("Workspace error: {:?}", e))?
+                        .clone();
                     let mut result = workspace
-                        .get_valid_transformations_from(statement)
+                        .get_valid_transformations_from(
+                            statement,
+                            maybe_statement_scope,
+                            maybe_transformation_scope,
+                        )
                         .map_err(|e| format!("Error getting valid transformations: {:?}", e))?
                         .into_iter()
                         .map(|n| {
@@ -468,11 +483,17 @@ impl Cli {
     pub fn derive(&self, sub_matches: &ArgMatches) -> Result<String, String> {
         let mut workspace_store = self.load_workspace_store()?;
         let workspace = workspace_store.compile();
+        let (maybe_statement_scope, maybe_transformation_scope) =
+            extract_scopes(sub_matches, &workspace)?;
         match sub_matches.get_one::<String>("statement") {
             None => return Err("No statement provided to derive".to_string()),
             Some(statement) => {
                 let to_return = workspace_store
-                    .try_transform_into_parsed(statement)
+                    .try_transform_into_parsed(
+                        statement,
+                        maybe_statement_scope,
+                        maybe_transformation_scope,
+                    )
                     .map_err(|e| format!("Workspace error: {:?} (Statement: {})", e, statement))
                     .map(|statement| {
                         statement.to_interpreted_string(workspace.get_interpretations())
@@ -640,6 +661,81 @@ impl Cli {
     fn get_context_filename(name: &str) -> String {
         format!("{}.toml", name).to_string()
     }
+}
+
+fn extract_scopes(
+    sub_matches: &ArgMatches,
+    workspace: &Workspace,
+) -> Result<(Option<HashSet<SymbolNode>>, Option<HashSet<Transformation>>), String> {
+    let maybe_statement_scope = match sub_matches.get_one::<String>("statements-in-scope") {
+        None => None,
+        Some(s) => Some(get_statement_scope(workspace, s)?),
+    };
+    debug!(
+        "maybe_statement_scope: {}",
+        maybe_statement_scope
+            .clone()
+            .map_or("None".to_string(), |scope| scope
+                .iter()
+                .map(|n| n.to_symbol_string())
+                .collect::<Vec<_>>()
+                .join("\n"))
+    );
+    let maybe_transformation_scope = match sub_matches.get_one::<String>("transformations-in-scope")
+    {
+        None => None,
+        Some(s) => Some(get_transformation_scope(workspace, s)?),
+    };
+    debug!(
+        "maybe_transformation_scope: {}",
+        maybe_transformation_scope
+            .clone()
+            .map_or("None".to_string(), |scope| scope
+                .iter()
+                .map(|t| t.to_symbol_string())
+                .collect::<Vec<_>>()
+                .join("\n"))
+    );
+    Ok((maybe_statement_scope, maybe_transformation_scope))
+}
+
+fn get_statement_scope(workspace: &Workspace, s: &String) -> Result<HashSet<SymbolNode>, String> {
+    let statement_indices: Vec<StatementIndex> =
+        serde_json::from_str(s).map_err(|e| format!("Deserialization error: {:?}", e))?;
+    trace!("statement_indices: {:#?}", statement_indices);
+    let mut statement_scope = HashSet::new();
+    for i in statement_indices {
+        let statement = workspace
+            .get_statement(i)
+            .map_err(|_| format!("Invalid statement index: {}", i))?;
+        statement_scope.insert(statement);
+    }
+    trace!(
+        "statement_scope: {}",
+        statement_scope
+            .iter()
+            .map(|s| s.to_symbol_string())
+            .collect::<Vec<_>>()
+            .join("\n")
+    );
+    Ok(statement_scope)
+}
+
+fn get_transformation_scope(
+    workspace: &Workspace,
+    s: &String,
+) -> Result<HashSet<Transformation>, String> {
+    let transformation_indices: Vec<TransformationIndex> =
+        serde_json::from_str(s).map_err(|e| format!("Deserialization error: {:?}", e))?;
+    trace!("transformation_indices: {:#?}", transformation_indices);
+    let mut transformation_scope = HashSet::new();
+    for i in transformation_indices {
+        let transformation = workspace
+            .get_transformation(i)
+            .map_err(|_| format!("Invalid transformation index: {}", i))?;
+        transformation_scope.insert(transformation);
+    }
+    Ok(transformation_scope)
 }
 
 fn copy_test_input_to_workspace_state(filesystem: &mut FileSystem) -> Result<(), String> {

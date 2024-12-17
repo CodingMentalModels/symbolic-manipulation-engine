@@ -65,6 +65,48 @@ impl TransformationLattice {
         )
     }
 
+    pub fn scope_down(
+        &self,
+        maybe_scoped_statements: Option<HashSet<SymbolNode>>,
+        maybe_scoped_transformations: Option<HashSet<Transformation>>,
+    ) -> Result<Self, TransformationError> {
+        let scoped_statements = match maybe_scoped_statements {
+            None => self.statements.clone(),
+            Some(statements) => self.verify_statements(statements)?,
+        };
+        let scoped_available_transformations = match maybe_scoped_transformations {
+            None => self.available_transformations.clone(),
+            Some(available_transformations) => {
+                self.verify_available_transformations(available_transformations)?
+            }
+        };
+        Ok(Self::new(
+            scoped_statements,
+            scoped_available_transformations,
+            HashMap::new(),
+            HashMap::new(),
+        ))
+    }
+
+    pub fn verify_statements(
+        &self,
+        to_verify: HashSet<SymbolNode>,
+    ) -> Result<HashSet<SymbolNode>, TransformationError> {
+        let missing_statements: Vec<&SymbolNode> = to_verify
+            .iter()
+            .filter(|s| !self.statements.contains(s))
+            .collect();
+        if missing_statements.len() == 0 {
+            Ok(to_verify.clone())
+        } else {
+            Err(
+                TransformationError::MissingStatementsInTransformationLattice(
+                    missing_statements.into_iter().cloned().collect(),
+                ),
+            )
+        }
+    }
+
     pub fn get_statements(&self) -> &HashSet<SymbolNode> {
         &self.statements
     }
@@ -81,6 +123,25 @@ impl TransformationLattice {
 
     pub fn get_available_transformations(&self) -> &HashSet<Transformation> {
         &self.available_transformations
+    }
+
+    pub fn verify_available_transformations(
+        &self,
+        to_verify: HashSet<Transformation>,
+    ) -> Result<HashSet<Transformation>, TransformationError> {
+        let missing_transformation: Vec<&Transformation> = to_verify
+            .iter()
+            .filter(|t| !self.available_transformations.contains(t))
+            .collect();
+        if missing_transformation.len() == 0 {
+            Ok(to_verify.clone())
+        } else {
+            Err(
+                TransformationError::MissingTransformationsInTransformationLattice(
+                    missing_transformation.into_iter().cloned().collect(),
+                ),
+            )
+        }
     }
 
     pub fn get_ordered_available_transformations(&self) -> Vec<Transformation> {
@@ -492,8 +553,10 @@ impl Transformation {
         // We also implement our own call stack to avoid stack overflows and make it easier to
         // inspect the contents
         debug!(
-            "get_valid_transformations({})",
-            from_statement.to_symbol_string()
+            "get_valid_transformations({}, {}) called on {}",
+            from_statement.to_symbol_string(),
+            maybe_to_statement.map_or("None".to_string(), |s| s.to_symbol_string()),
+            self.to_symbol_string(),
         );
 
         // Optimize away this function if the transformation can't possibly work
@@ -549,7 +612,7 @@ impl Transformation {
                             })
                         };
 
-                        // Bail out if we've gotten too deep or the substatement doesn't contain
+                        // Bail out if we've gotten too deep or the to_statement doesn't contain
                         // the result
                         if result.get_depth() > final_max_depth {
                             debug!("Max depth reached!");
@@ -578,7 +641,7 @@ impl Transformation {
                 };
 
                 for statement_to_apply_to in valid_roots {
-                    let result = self.apply_valid_transformations_to_children(
+                    let result = Self::apply_valid_transformations_to_children(
                         &child_to_valid_transformations,
                         &statement_to_apply_to,
                         None,
@@ -590,6 +653,7 @@ impl Transformation {
                             }
                             Some(to_statement) => {
                                 if result.contains(to_statement) {
+                                    debug!("Found result matching to_statement:\nfrom_statement: {}\ntransformation: {}\nresult: {}", from_statement.to_symbol_string(), self.to_symbol_string(), to_statement.to_symbol_string());
                                     return vec![to_statement.clone()].into_iter().collect();
                                 }
                             }
@@ -611,7 +675,6 @@ impl Transformation {
     }
 
     fn apply_valid_transformations_to_children(
-        &self,
         child_to_valid_transformations: &HashMap<SymbolNode, HashSet<SymbolNode>>,
         statement: &SymbolNode,
         max_additional_depth: Option<usize>,
@@ -795,26 +858,12 @@ impl Transformation {
                         }
                     } else if node_delta > 0 {
                         if from_statement.len() >= to_statement.len() {
-                            debug!("node_delta > 0 meaning the statement will get longer but it needs to shrink.");
-                            return true;
-                        }
-                        let desired_shrink = to_statement.len() - from_statement.len();
-                        if desired_shrink % isize::unsigned_abs(node_delta) != 0 {
-                            // If each application of the transform diffs by node_delta than
-                            // the desired change must be divisible by node_delta
-                            debug!("desired_shrink % node_delta != 0");
+                            debug!("node_delta > 0 meaning the statement will grow but it's being asked to shrink.");
                             return true;
                         }
                     } else if node_delta < 0 {
                         if from_statement.len() <= to_statement.len() {
-                            debug!("node_delta < 0 meaning the statement will shrink but it needs to get longer.");
-                            return true;
-                        }
-                        let desired_growth = from_statement.len() - to_statement.len();
-                        if desired_growth % isize::unsigned_abs(node_delta) != 0 {
-                            // If each application of the transform diffs by node_delta than
-                            // the desired change must be divisible by node_delta
-                            debug!("desired_shrink % node_delta != 0");
+                            debug!("node_delta < 0 meaning the statement will shrink but it's being asked to grow.");
                             return true;
                         }
                     } else {
@@ -1411,6 +1460,8 @@ pub enum TransformationError {
     SymbolDoesntMatch(Symbol),
     ApplyToBothSidesCalledOnNChildren(usize),
     StatementTypesDoNotMatch,
+    MissingStatementsInTransformationLattice(Vec<SymbolNode>),
+    MissingTransformationsInTransformationLattice(Vec<Transformation>),
     NoValidTransformationsPossible,
     GeneratedTypeConditionFailedDuringAlgorithm(Symbol),
     TransformCalledOnArbitrary,
@@ -2273,6 +2324,46 @@ mod test_transformation {
 
         assert_eq!(transformation.from, expected);
         assert_eq!(transformation.to, expected);
+    }
+
+    #[test]
+    fn test_transformation_gets_node_delta() {
+        assert_eq!(
+            ExplicitTransformation::symmetry(
+                "+".to_string(),
+                "Complex".into(),
+                ("x".to_string(), "y".to_string()),
+                "Complex".into()
+            )
+            .get_node_delta(),
+            0
+        );
+
+        let interpretations = vec![
+            Interpretation::infix_operator(Token::Object("+".to_string()), 3, "Complex".into()),
+            Interpretation::singleton("x", "Complex".into()),
+            Interpretation::singleton("y", "Complex".into()),
+            Interpretation::singleton("2", "Complex".into()),
+            Interpretation::singleton("4", "Complex".into()),
+        ];
+        let parser = Parser::new(interpretations);
+
+        let two_plus_two = parser
+            .parse_from_string(vec!["+".to_string()], "2+2")
+            .unwrap();
+
+        let four = parser
+            .parse_from_string(vec!["+".to_string()], "4")
+            .unwrap();
+
+        assert_eq!(
+            ExplicitTransformation::new(two_plus_two.clone(), four.clone()).get_node_delta(),
+            -2
+        );
+        assert_eq!(
+            ExplicitTransformation::new(four.clone(), two_plus_two.clone()).get_node_delta(),
+            2
+        );
     }
 
     #[test]

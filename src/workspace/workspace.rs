@@ -1,4 +1,4 @@
-use log::debug;
+use log::{debug, trace};
 use std::collections::{HashMap, HashSet};
 
 use serde::{Deserialize, Serialize};
@@ -25,11 +25,12 @@ use crate::{
     },
 };
 
+pub type StatementIndex = usize;
+pub type TransformationIndex = usize;
+pub type InterpretationIndex = usize;
+
 type SymbolNodeString = String;
 type DisplayTransformation = String;
-type StatementIndex = usize;
-type TransformationIndex = usize;
-type InterpretationIndex = usize;
 
 #[derive(Clone, Debug, Serialize, Deserialize, TS)]
 #[serde(rename_all = "camelCase")]
@@ -59,7 +60,7 @@ impl DisplayWorkspace {
                 .collect(),
             statements: workspace.get_display_symbol_nodes()?,
             transformations: workspace
-                .get_available_transformations()
+                .get_ordered_available_transformations()
                 .iter()
                 .map(|t| t.to_interpreted_string(&workspace.interpretations))
                 .collect(),
@@ -111,6 +112,20 @@ impl Workspace {
             interpretations,
             transformation_lattice: TransformationLattice::empty(),
         }
+    }
+
+    pub fn scope_down(
+        &self,
+        maybe_statement_scope: Option<HashSet<SymbolNode>>,
+        maybe_transformation_scope: Option<HashSet<Transformation>>,
+    ) -> Result<Self, WorkspaceError> {
+        Ok(Self::new(
+            self.types.clone(),
+            self.generated_types.clone(),
+            self.interpretations.clone(),
+            self.transformation_lattice
+                .scope_down(maybe_statement_scope, maybe_transformation_scope)?,
+        ))
     }
 
     pub fn get_types(&self) -> &TypeHierarchy {
@@ -242,7 +257,8 @@ impl Workspace {
         let mut has_changed = true;
         while has_changed {
             let before = to_return.clone();
-            let results = alg_only_workspace.get_valid_transformations_from(to_return.clone())?;
+            let results =
+                alg_only_workspace.get_valid_transformations_from(to_return.clone(), None, None)?;
             if results.len() == 0 {
                 return Err(WorkspaceError::NoTransformationsPossible);
             }
@@ -320,6 +336,14 @@ impl Workspace {
         if self.transformation_index_is_invalid(index) {
             Err(WorkspaceError::InvalidTransformationIndex(index))
         } else {
+            trace!(
+                "ordered_available_transformations:\n{}",
+                self.get_ordered_available_transformations()
+                    .iter()
+                    .map(|t| t.to_symbol_string())
+                    .collect::<Vec<_>>()
+                    .join("\n")
+            );
             Ok(self.get_ordered_available_transformations()[index].clone())
         }
     }
@@ -428,6 +452,8 @@ impl Workspace {
     pub fn get_valid_transformations(
         &self,
         partial_statement: &str,
+        maybe_statement_scope: Option<HashSet<SymbolNode>>,
+        maybe_transformation_scope: Option<HashSet<Transformation>>,
     ) -> Result<Vec<SymbolNode>, WorkspaceError> {
         // TODO Try to complete partial statements
         let desired = match self.parse_from_string(partial_statement) {
@@ -436,10 +462,12 @@ impl Workspace {
             }
             Ok(s) => s,
         };
-        let instantiated_transformations = self
+        let scoped_ws = self.scope_down(maybe_statement_scope, maybe_transformation_scope)?;
+        debug!("scoped_down_workspace: {}", scoped_ws.to_json().unwrap());
+        let instantiated_transformations = scoped_ws
             .transformation_lattice
             .get_instantiated_transformations_with_arbitrary(
-                self.get_types(),
+                scoped_ws.get_types(),
                 Some(desired.clone()),
             )?;
         debug!(
@@ -457,15 +485,18 @@ impl Workspace {
         );
         for (instantiated, _) in instantiated_transformations {
             let statements = if instantiated.is_joint_transform() {
-                self.transformation_lattice.get_statement_pairs()
+                scoped_ws.transformation_lattice.get_statement_pairs()
             } else {
-                self.transformation_lattice.get_statements().clone()
+                scoped_ws.transformation_lattice.get_statements().clone()
             };
             for statement in statements {
-                let valid_transformations =
-                    instantiated.get_valid_transformations(self.get_types(), &statement, None);
+                let valid_transformations = instantiated.get_valid_transformations(
+                    scoped_ws.get_types(),
+                    &statement,
+                    Some(&desired),
+                );
                 if valid_transformations.contains(&desired)
-                    && !self.get_statements().contains(&desired)
+                    && !scoped_ws.get_statements().contains(&desired)
                 {
                     return Ok(vec![desired.clone()]);
                 }
@@ -477,10 +508,14 @@ impl Workspace {
     pub fn get_valid_transformations_from(
         &self,
         from_statement: SymbolNode,
+        maybe_statement_scope: Option<HashSet<SymbolNode>>,
+        maybe_transformation_scope: Option<HashSet<Transformation>>,
     ) -> Result<Vec<SymbolNode>, WorkspaceError> {
-        let instantiated_transformations = self
+        let scoped_ws = self.scope_down(maybe_statement_scope, maybe_transformation_scope)?;
+        debug!("scoped_down_workspace: {}", scoped_ws.to_json().unwrap());
+        let instantiated_transformations = scoped_ws
             .transformation_lattice
-            .get_instantiated_transformations_with_arbitrary(self.get_types(), None)?;
+            .get_instantiated_transformations_with_arbitrary(scoped_ws.get_types(), None)?;
         debug!(
             "instantiated_transformations:\n{}",
             instantiated_transformations
@@ -497,14 +532,18 @@ impl Workspace {
         let mut to_return = HashSet::new();
         for (transformation, _) in instantiated_transformations {
             let statements = if transformation.is_joint_transform() {
-                self.transformation_lattice
+                scoped_ws
+                    .transformation_lattice
                     .get_statement_pairs_including(Some(&from_statement))
             } else {
                 vec![from_statement.clone()].into_iter().collect()
             };
             for statement in statements {
-                let valid_transformations =
-                    transformation.get_valid_transformations(self.get_types(), &statement, None);
+                let valid_transformations = transformation.get_valid_transformations(
+                    scoped_ws.get_types(),
+                    &statement,
+                    None,
+                );
                 to_return.extend(valid_transformations);
             }
         }
@@ -861,14 +900,18 @@ impl WorkspaceTransactionStore {
     pub fn try_transform_into_parsed(
         &mut self,
         desired: &str,
+        maybe_statement_scope: Option<HashSet<SymbolNode>>,
+        maybe_transformation_scope: Option<HashSet<Transformation>>,
     ) -> Result<SymbolNode, WorkspaceError> {
         let parsed = self.compile().parse_from_string(desired)?;
-        self.try_transform_into(parsed)
+        self.try_transform_into(parsed, maybe_statement_scope, maybe_transformation_scope)
     }
 
     pub fn try_transform_into(
         &mut self,
         desired: SymbolNode,
+        maybe_statement_scope: Option<HashSet<SymbolNode>>,
+        maybe_transformation_scope: Option<HashSet<Transformation>>,
     ) -> Result<SymbolNode, WorkspaceError> {
         let mut transaction = self.get_generated_types_transaction(&desired)?;
 
@@ -876,7 +919,10 @@ impl WorkspaceTransactionStore {
         // mucking up the transaction we eventually apply
         let type_hierarchy = self.get_type_hierarchy_with_transaction_applied(&transaction)?;
 
-        let mut workspace = self.compile();
+        let mut workspace = self
+            .compile()
+            .scope_down(maybe_statement_scope, maybe_transformation_scope)?;
+        debug!("scoped_down_workspace: {}", workspace.to_json().unwrap());
 
         let (from_statement, transformation, to_statement) = workspace
             .transformation_lattice
@@ -1532,7 +1578,9 @@ mod test_workspace {
                     .unwrap();
             }
 
-            let actual = workspace_store.try_transform_into_parsed(desired).unwrap();
+            let actual = workspace_store
+                .try_transform_into_parsed(desired, None, None)
+                .unwrap();
             let expected = workspace_store
                 .compile()
                 .parse_from_string(desired)
@@ -1598,7 +1646,7 @@ mod test_workspace {
             .unwrap();
         assert_eq!(
             workspace_store
-                .try_transform_into_parsed("p^s=q^s")
+                .try_transform_into_parsed("p^s=q^s", None, None)
                 .unwrap(),
             expected
         );
@@ -1608,7 +1656,7 @@ mod test_workspace {
             .contains(&expected));
 
         let actual = workspace_store
-            .try_transform_into_parsed("p+q^s=q+q^s")
+            .try_transform_into_parsed("p+q^s=q+q^s", None, None)
             .unwrap();
 
         let expected = workspace_store
@@ -1846,7 +1894,7 @@ mod test_workspace {
 
         workspace_store.add_parsed_hypothesis("p=q").unwrap();
         assert!(workspace_store
-            .try_transform_into_parsed("Any(p)=Any(q)")
+            .try_transform_into_parsed("Any(p)=Any(q)", None, None)
             .is_err());
     }
 
@@ -1890,7 +1938,9 @@ mod test_workspace {
         workspace_store.add_parsed_hypothesis("x+y").unwrap();
         let expected = workspace_store.compile().parse_from_string("y+x").unwrap();
         assert_eq!(
-            workspace_store.try_transform_into_parsed("y+x").unwrap(),
+            workspace_store
+                .try_transform_into_parsed("y+x", None, None)
+                .unwrap(),
             expected
         );
         assert!(workspace_store
@@ -1901,7 +1951,9 @@ mod test_workspace {
         workspace_store.add_parsed_hypothesis("j+k").unwrap();
         let expected = workspace_store.compile().parse_from_string("k+j").unwrap();
         assert_eq!(
-            workspace_store.try_transform_into_parsed("k+j").unwrap(),
+            workspace_store
+                .try_transform_into_parsed("k+j", None, None)
+                .unwrap(),
             expected
         );
         assert!(workspace_store
@@ -1916,7 +1968,7 @@ mod test_workspace {
             .unwrap();
         assert_eq!(
             workspace_store
-                .try_transform_into_parsed("(b+c)+a")
+                .try_transform_into_parsed("(b+c)+a", None, None)
                 .unwrap(),
             expected
         );
@@ -1938,7 +1990,7 @@ mod test_workspace {
             .unwrap();
         assert_eq!(
             workspace_store
-                .try_transform_into_parsed("a+(c+b)")
+                .try_transform_into_parsed("a+(c+b)", None, None)
                 .unwrap(),
             expected
         );
@@ -1958,7 +2010,9 @@ mod test_workspace {
 
         let expected = workspace_store.compile().parse_from_string("r^s").unwrap();
         assert_eq!(
-            workspace_store.try_transform_into_parsed("r^s").unwrap(),
+            workspace_store
+                .try_transform_into_parsed("r^s", None, None)
+                .unwrap(),
             expected
         );
         assert!(workspace_store
@@ -1968,7 +2022,9 @@ mod test_workspace {
 
         let expected = workspace_store.compile().parse_from_string("s^r").unwrap();
         assert_eq!(
-            workspace_store.try_transform_into_parsed("s^r").unwrap(),
+            workspace_store
+                .try_transform_into_parsed("s^r", None, None)
+                .unwrap(),
             expected
         );
         assert!(workspace_store
@@ -2022,22 +2078,24 @@ mod test_workspace {
         assert_eq!(
             workspace_store
                 .compile()
-                .get_valid_transformations_from(x_plus_y.clone())
+                .get_valid_transformations_from(x_plus_y.clone(), None, None)
                 .unwrap(),
             expected
         );
-        let y_plus_x = workspace_store.try_transform_into_parsed("y+x").unwrap();
+        let y_plus_x = workspace_store
+            .try_transform_into_parsed("y+x", None, None)
+            .unwrap();
         assert_eq!(
             workspace_store
                 .compile()
-                .get_valid_transformations_from(x_plus_y.clone())
+                .get_valid_transformations_from(x_plus_y.clone(), None, None)
                 .unwrap(),
             vec![],
         );
         assert_eq!(
             workspace_store
                 .compile()
-                .get_valid_transformations_from(y_plus_x.clone())
+                .get_valid_transformations_from(y_plus_x.clone(), None, None)
                 .unwrap(),
             vec![],
         );
@@ -2047,7 +2105,7 @@ mod test_workspace {
         assert_eq!(
             workspace_store
                 .compile()
-                .get_valid_transformations_from(x_plus_y.clone())
+                .get_valid_transformations_from(x_plus_y.clone(), None, None)
                 .unwrap(),
             vec![],
         );
@@ -2057,7 +2115,7 @@ mod test_workspace {
         assert_eq!(
             workspace_store
                 .compile()
-                .get_valid_transformations_from(j_plus_k)
+                .get_valid_transformations_from(j_plus_k, None, None)
                 .unwrap(),
             expected
         );
@@ -2082,7 +2140,7 @@ mod test_workspace {
         assert_eq!(
             workspace_store
                 .compile()
-                .get_valid_transformations_from(a_plus_b_plus_c)
+                .get_valid_transformations_from(a_plus_b_plus_c, None, None)
                 .unwrap()
                 .into_iter()
                 .collect::<HashSet<_>>(),
@@ -2135,7 +2193,7 @@ mod test_workspace {
         assert_eq!(
             workspace_store
                 .compile()
-                .get_valid_transformations("y+x")
+                .get_valid_transformations("y+x", None, None)
                 .unwrap(),
             expected,
             "workspace_store:\n{:?}\nworkspace:\n{:?}",
@@ -2149,7 +2207,7 @@ mod test_workspace {
         assert_eq!(
             workspace_store
                 .compile()
-                .get_valid_transformations("k+j")
+                .get_valid_transformations("k+j", None, None)
                 .unwrap(),
             expected
         );
@@ -2162,7 +2220,7 @@ mod test_workspace {
         assert_eq!(
             workspace_store
                 .compile()
-                .get_valid_transformations("(b+c)+a")
+                .get_valid_transformations("(b+c)+a", None, None)
                 .unwrap(),
             vec![expected]
         );
@@ -2181,7 +2239,7 @@ mod test_workspace {
         assert_eq!(
             workspace_store
                 .compile()
-                .get_valid_transformations("a+(c+b)")
+                .get_valid_transformations("a+(c+b)", None, None)
                 .unwrap(),
             vec![expected]
         );
@@ -2199,7 +2257,7 @@ mod test_workspace {
         assert_eq!(
             workspace_store
                 .compile()
-                .get_valid_transformations("r^s")
+                .get_valid_transformations("r^s", None, None)
                 .unwrap(),
             vec![expected]
         );
@@ -2208,7 +2266,7 @@ mod test_workspace {
         assert_eq!(
             workspace_store
                 .compile()
-                .get_valid_transformations("s^r")
+                .get_valid_transformations("s^r", None, None)
                 .unwrap(),
             vec![expected]
         );
@@ -2227,7 +2285,7 @@ mod test_workspace {
         assert_eq!(
             workspace_store
                 .compile()
-                .get_valid_transformations("p^q=q^q")
+                .get_valid_transformations("p^q=q^q", None, None)
                 .unwrap(),
             vec![expected]
         );
@@ -2246,7 +2304,7 @@ mod test_workspace {
         assert_eq!(
             workspace_store
                 .compile()
-                .get_valid_transformations("r^s=s^s")
+                .get_valid_transformations("r^s=s^s", None, None)
                 .unwrap(),
             vec![expected]
         );
@@ -2352,7 +2410,9 @@ mod test_workspace {
             1
         );
 
-        let _transformed = workspace_store.try_transform_into_parsed("4").unwrap();
+        let _transformed = workspace_store
+            .try_transform_into_parsed("4", None, None)
+            .unwrap();
         assert_eq!(workspace_store.compile().get_ordered_statements().len(), 2);
         let four = SymbolNode::leaf(Symbol::new("4".to_string(), "4".into()));
         assert_eq!(workspace_store.compile().get_ordered_statements()[1], four);
@@ -2372,7 +2432,9 @@ mod test_workspace {
             2
         );
 
-        let _transformed = workspace_store.try_transform_into_parsed("2").unwrap();
+        let _transformed = workspace_store
+            .try_transform_into_parsed("2", None, None)
+            .unwrap();
         assert_eq!(workspace_store.compile().get_ordered_statements().len(), 4);
         assert!(workspace_store.compile().contains_statement(&two));
 
@@ -2390,7 +2452,9 @@ mod test_workspace {
             3
         );
 
-        let _transformed = workspace_store.try_transform_into_parsed("0").unwrap();
+        let _transformed = workspace_store
+            .try_transform_into_parsed("0", None, None)
+            .unwrap();
         let zero = SymbolNode::leaf(Symbol::new("0".to_string(), "0".into()));
         assert_eq!(workspace_store.compile().get_ordered_statements().len(), 6);
         assert!(workspace_store.compile().contains_statement(&zero));
@@ -2416,7 +2480,9 @@ mod test_workspace {
             1
         );
 
-        let _transformed = workspace_store.try_transform_into_parsed("b").unwrap();
+        let _transformed = workspace_store
+            .try_transform_into_parsed("b", None, None)
+            .unwrap();
         assert_eq!(workspace_store.compile().get_ordered_statements().len(), 2);
         assert_eq!(
             workspace_store.compile().get_ordered_statements(),
