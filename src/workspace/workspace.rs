@@ -291,10 +291,6 @@ impl Workspace {
             .map_err(|e| e.into())
     }
 
-    pub fn parse_and_verify_statements(&self, statements: &str) -> HashSet<SymbolNode> {
-        todo!();
-    }
-
     pub fn get_statements(&self) -> &HashSet<SymbolNode> {
         self.transformation_lattice.get_statements()
     }
@@ -314,13 +310,6 @@ impl Workspace {
     pub fn get_ordered_available_transformations(&self) -> Vec<Transformation> {
         self.transformation_lattice
             .get_ordered_available_transformations()
-    }
-
-    pub fn parse_and_verify_transformations(
-        &self,
-        transformations: &str,
-    ) -> HashSet<Transformation> {
-        todo!();
     }
 
     pub fn contains_transformation(&self, transformation: &Transformation) -> bool {
