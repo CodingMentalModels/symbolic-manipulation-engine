@@ -397,17 +397,21 @@ impl TransformationLattice {
     }
 
     fn get_arbitrary_transformations(&self) -> HashSet<Transformation> {
-        self.get_available_transformations()
-            .iter()
-            .filter(|t| t.contains_arbitrary_nodes())
-            .cloned()
-            .collect()
+        self.get_transformations_filtered_on_arbitrariness(true)
     }
 
     fn get_non_arbitrary_transformations(&self) -> HashSet<Transformation> {
+        self.get_transformations_filtered_on_arbitrariness(false)
+    }
+
+    fn get_transformations_filtered_on_arbitrariness(
+        &self,
+        is_arbitrary: bool,
+    ) -> HashSet<Transformation> {
         self.get_available_transformations()
             .iter()
-            .filter(|t| !t.contains_arbitrary_nodes())
+            .map(|t| t.get_transformation())
+            .filter(|t| t.contains_arbitrary_nodes() == is_arbitrary)
             .cloned()
             .collect()
     }
@@ -447,17 +451,21 @@ impl TransformationLattice {
         let theorem = if hypotheses.len() == 1 {
             let hypothesis = hypotheses
                 .iter()
-                .take(1)
+                .next()
                 .expect("There is guaranteed to be one.");
-            Transformation::ExplicitTransformation(hypothesis, conclusion.clone())
+            Transformation::ExplicitTransformation((hypothesis.clone(), conclusion.clone()).into())
         } else if hypotheses.len() == 2 {
             let two_hypotheses = hypotheses.iter().take(2).collect::<Vec<_>>();
             Transformation::ExplicitTransformation(
-                two_hypotheses[0].clone().join(two_hypotheses[1].clone()),
+                (
+                    two_hypotheses[0].clone().join(two_hypotheses[1].clone()),
+                    conclusion.clone(),
+                )
+                    .into(),
             )
         } else {
             return Err(TransformationError::MoreThanTwoHypothesesForTheorem(
-                hypotheses,
+                hypotheses.into_iter().collect(),
                 conclusion.clone(),
             ));
         };
@@ -467,6 +475,28 @@ impl TransformationLattice {
             TransformationProvenance::new(conclusion.clone()),
         )));
         Ok(theorem)
+    }
+
+    fn get_ancestor_hypotheses(
+        &self,
+        conclusion: &SymbolNode,
+    ) -> Result<HashSet<SymbolNode>, TransformationError> {
+        match self.get_upstream_statement_and_transformation(conclusion) {
+            None => Ok(vec![conclusion.clone()].into_iter().collect()),
+            Some((parent, _)) => {
+                if parent.is_join() {
+                    let children = parent.get_children();
+                    assert_eq!(children.len(), 2, "Joins must have two children.");
+                    let (left, right) = (children[0].clone(), children[1].clone());
+                    let left_hypotheses = self.get_ancestor_hypotheses(&left)?;
+                    let right_hypotheses = self.get_ancestor_hypotheses(&right)?;
+                    let hypotheses = left_hypotheses.union(&right_hypotheses).cloned().collect();
+                    Ok(hypotheses)
+                } else {
+                    Ok(self.get_ancestor_hypotheses(&parent)?)
+                }
+            }
+        }
     }
 }
 
