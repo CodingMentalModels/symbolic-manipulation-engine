@@ -286,16 +286,20 @@ impl TransformationLattice {
                 .into_iter()
                 .map(|(instantiated, arbitrary)| format!(
                     "{} ({})",
-                    instantiated.to_symbol_string(),
-                    arbitrary.to_symbol_string()
+                    instantiated.get_transformation().to_symbol_string(),
+                    arbitrary.get_transformation().to_symbol_string()
                 ))
                 .collect::<Vec<_>>()
                 .join("\n")
         );
         for (instantiated_transform, arbitrary_transform) in instantiated_transformations {
-            let statements = self.get_candidate_statements(&instantiated_transform);
+            let statements =
+                self.get_candidate_statements(instantiated_transform.get_transformation());
             for statement in statements.into_iter() {
-                match instantiated_transform.try_transform_into(types, &statement, &desired) {
+                match instantiated_transform
+                    .get_transformation()
+                    .try_transform_into(types, &statement, &desired)
+                {
                     Ok(output) => {
                         // TODO Log the instantiated transform too and show it in the front end
                         self.force_apply_transformation(
@@ -303,7 +307,11 @@ impl TransformationLattice {
                             arbitrary_transform.clone(),
                             output.clone(),
                         );
-                        return Ok((statement, arbitrary_transform, output));
+                        return Ok((
+                            statement,
+                            arbitrary_transform.get_transformation().clone(),
+                            output,
+                        ));
                     }
                     Err(_) => {
                         // Do nothing, keep trying transformations
@@ -351,7 +359,7 @@ impl TransformationLattice {
         &self,
         types: &TypeHierarchy,
         maybe_desired: Option<SymbolNode>,
-    ) -> Result<Vec<(Transformation, Transformation)>, TransformationError> {
+    ) -> Result<Vec<(AvailableTransformation, AvailableTransformation)>, TransformationError> {
         let statements = if let Some(desired) = maybe_desired {
             let mut statements = vec![desired];
             statements.append(&mut self.get_ordered_statements().clone());
@@ -396,22 +404,21 @@ impl TransformationLattice {
         return Ok(to_return);
     }
 
-    fn get_arbitrary_transformations(&self) -> HashSet<Transformation> {
+    fn get_arbitrary_transformations(&self) -> HashSet<AvailableTransformation> {
         self.get_transformations_filtered_on_arbitrariness(true)
     }
 
-    fn get_non_arbitrary_transformations(&self) -> HashSet<Transformation> {
+    fn get_non_arbitrary_transformations(&self) -> HashSet<AvailableTransformation> {
         self.get_transformations_filtered_on_arbitrariness(false)
     }
 
     fn get_transformations_filtered_on_arbitrariness(
         &self,
         is_arbitrary: bool,
-    ) -> HashSet<Transformation> {
+    ) -> HashSet<AvailableTransformation> {
         self.get_available_transformations()
             .iter()
-            .map(|t| t.get_transformation())
-            .filter(|t| t.contains_arbitrary_nodes() == is_arbitrary)
+            .filter(|t| t.get_transformation().contains_arbitrary_nodes() == is_arbitrary)
             .cloned()
             .collect()
     }
