@@ -143,7 +143,11 @@ impl TransformationLattice {
         } else {
             Err(
                 TransformationError::MissingTransformationsInTransformationLattice(
-                    missing_transformation.into_iter().cloned().collect(),
+                    missing_transformation
+                        .into_iter()
+                        .map(|t| t.get_transformation())
+                        .cloned()
+                        .collect(),
                 ),
             )
         }
@@ -322,11 +326,11 @@ impl TransformationLattice {
     pub fn force_apply_transformation(
         &mut self,
         from: SymbolNode,
-        transformation: Transformation,
+        transformation: AvailableTransformation,
         to: SymbolNode,
     ) {
         self.statements.insert(to.clone());
-        if !self.contains_transformation(&transformation) {
+        if !self.contains_available_transformation(&transformation) {
             warn!(
                 "force_apply_transformation was used without the transformation being available."
             );
@@ -338,8 +342,9 @@ impl TransformationLattice {
         self.transformations_from
             .entry(from.clone())
             .or_default()
-            .push(transformation.clone());
-        self.transformations_to.insert((from, transformation), to);
+            .push(transformation.get_transformation().clone());
+        self.transformations_to
+            .insert((from, transformation.get_transformation().clone()), to);
     }
 
     pub fn get_instantiated_transformations_with_arbitrary(
