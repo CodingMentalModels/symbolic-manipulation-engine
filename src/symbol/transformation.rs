@@ -521,8 +521,34 @@ impl AvailableTransformation {
         }
     }
 
+    pub fn to_symbol_string(&self) -> String {
+        match self {
+            Self::Axiom(t) => format!("{} (Axiom)", t.to_symbol_string()),
+            Self::Theorem((t, _)) => format!("{} (Theorem)", t.to_symbol_string()),
+        }
+    }
+
     pub fn is_algorithm(&self) -> bool {
         self.get_transformation().is_algorithm()
+    }
+
+    pub fn instantiate_arbitrary_nodes(
+        &self,
+        hierarchy: &TypeHierarchy,
+        substatements: &HashSet<SymbolNode>,
+    ) -> Result<HashSet<Self>, TransformationError> {
+        match self {
+            Self::Axiom(t) => Ok(t
+                .instantiate_arbitrary_nodes(hierarchy, substatements)?
+                .into_iter()
+                .map(|r| Self::Axiom(r))
+                .collect()),
+            Self::Theorem((t, provenance)) => Ok(t
+                .instantiate_arbitrary_nodes(hierarchy, substatements)?
+                .into_iter()
+                .map(|r| Self::Theorem((r, provenance.clone())))
+                .collect()),
+        }
     }
 }
 

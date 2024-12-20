@@ -38,7 +38,9 @@ impl Context {
         match transformation_lattice
             .get_available_transformations()
             .iter()
-            .map(|transformation| types.binds_transformation_or_error(transformation))
+            .map(|transformation| {
+                types.binds_transformation_or_error(transformation.get_transformation())
+            })
             .next()
         {
             None | Some(Ok(())) => Ok(Self {

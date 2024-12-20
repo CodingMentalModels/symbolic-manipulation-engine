@@ -20,7 +20,7 @@ use crate::{
         algorithm::AlgorithmType,
         symbol_node::SymbolNode,
         symbol_type::{GeneratedType, GeneratedTypeCondition, Type},
-        transformation::Transformation,
+        transformation::{AvailableTransformation, Transformation},
     },
     workspace::workspace::{
         StatementIndex, TransformationIndex, Workspace, WorkspaceTransaction,
@@ -666,7 +666,13 @@ impl Cli {
 fn extract_scopes(
     sub_matches: &ArgMatches,
     workspace: &Workspace,
-) -> Result<(Option<HashSet<SymbolNode>>, Option<HashSet<Transformation>>), String> {
+) -> Result<
+    (
+        Option<HashSet<SymbolNode>>,
+        Option<HashSet<AvailableTransformation>>,
+    ),
+    String,
+> {
     let maybe_statement_scope = match sub_matches.get_one::<String>("statements-in-scope") {
         None => None,
         Some(s) => Some(get_statement_scope(workspace, s)?),
@@ -724,14 +730,14 @@ fn get_statement_scope(workspace: &Workspace, s: &String) -> Result<HashSet<Symb
 fn get_transformation_scope(
     workspace: &Workspace,
     s: &String,
-) -> Result<HashSet<Transformation>, String> {
+) -> Result<HashSet<AvailableTransformation>, String> {
     let transformation_indices: Vec<TransformationIndex> =
         serde_json::from_str(s).map_err(|e| format!("Deserialization error: {:?}", e))?;
     trace!("transformation_indices: {:#?}", transformation_indices);
     let mut transformation_scope = HashSet::new();
     for i in transformation_indices {
         let transformation = workspace
-            .get_transformation(i)
+            .get_available_transformation(i)
             .map_err(|_| format!("Invalid transformation index: {}", i))?;
         transformation_scope.insert(transformation);
     }

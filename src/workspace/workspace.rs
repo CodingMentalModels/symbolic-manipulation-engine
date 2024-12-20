@@ -19,8 +19,8 @@ use crate::{
             Type, TypeError, TypeHierarchy, TypeName,
         },
         transformation::{
-            AlgorithmTransformation, ExplicitTransformation, Transformation, TransformationError,
-            TransformationLattice,
+            AlgorithmTransformation, AvailableTransformation, ExplicitTransformation,
+            Transformation, TransformationError, TransformationLattice, TransformationProvenance,
         },
     },
 };
@@ -30,7 +30,7 @@ pub type TransformationIndex = usize;
 pub type InterpretationIndex = usize;
 
 type SymbolNodeString = String;
-type DisplayTransformation = String;
+type TransformationString = String;
 
 #[derive(Clone, Debug, Serialize, Deserialize, TS)]
 #[serde(rename_all = "camelCase")]
@@ -40,7 +40,7 @@ pub struct DisplayWorkspace {
     generated_types: Vec<DisplayGeneratedType>,
     interpretations: Vec<DisplayInterpretation>,
     statements: Vec<DisplaySymbolNode>,
-    transformations: Vec<DisplayTransformation>,
+    transformations: Vec<DisplayAvailableTransformation>,
     transformation_lattice: DisplayTransformationLattice,
 }
 
@@ -59,11 +59,7 @@ impl DisplayWorkspace {
                 .map(|i| DisplayInterpretation::from(i))
                 .collect(),
             statements: workspace.get_display_symbol_nodes()?,
-            transformations: workspace
-                .get_ordered_available_transformations()
-                .iter()
-                .map(|t| t.to_interpreted_string(&workspace.interpretations))
-                .collect(),
+            transformations: workspace.get_display_available_transformations()?,
             transformation_lattice: DisplayTransformationLattice::from_transformation_lattice(
                 &workspace.interpretations,
                 &workspace.transformation_lattice,
@@ -117,7 +113,7 @@ impl Workspace {
     pub fn scope_down(
         &self,
         maybe_statement_scope: Option<HashSet<SymbolNode>>,
-        maybe_transformation_scope: Option<HashSet<Transformation>>,
+        maybe_transformation_scope: Option<HashSet<AvailableTransformation>>,
     ) -> Result<Self, WorkspaceError> {
         Ok(Self::new(
             self.types.clone(),
@@ -303,11 +299,11 @@ impl Workspace {
         self.transformation_lattice.contains_statement(statement)
     }
 
-    pub fn get_available_transformations(&self) -> &HashSet<Transformation> {
+    pub fn get_available_transformations(&self) -> &HashSet<AvailableTransformation> {
         self.transformation_lattice.get_available_transformations()
     }
 
-    pub fn get_ordered_available_transformations(&self) -> Vec<Transformation> {
+    pub fn get_ordered_available_transformations(&self) -> Vec<AvailableTransformation> {
         self.transformation_lattice
             .get_ordered_available_transformations()
     }
@@ -329,10 +325,10 @@ impl Workspace {
         }
     }
 
-    pub fn get_transformation(
+    pub fn get_available_transformation(
         &self,
         index: TransformationIndex,
-    ) -> Result<Transformation, WorkspaceError> {
+    ) -> Result<AvailableTransformation, WorkspaceError> {
         if self.transformation_index_is_invalid(index) {
             Err(WorkspaceError::InvalidTransformationIndex(index))
         } else {
@@ -340,7 +336,7 @@ impl Workspace {
                 "ordered_available_transformations:\n{}",
                 self.get_ordered_available_transformations()
                     .iter()
-                    .map(|t| t.to_symbol_string())
+                    .map(|t| t.get_transformation().to_symbol_string())
                     .collect::<Vec<_>>()
                     .join("\n")
             );
@@ -424,7 +420,7 @@ impl Workspace {
     fn force_apply_transformation(
         &mut self,
         from_statement: SymbolNode,
-        transformation: Transformation,
+        transformation: AvailableTransformation,
         to_statement: SymbolNode,
     ) {
         self.transformation_lattice.force_apply_transformation(
@@ -442,10 +438,10 @@ impl Workspace {
             .get_upstream_statement_and_transformation(statement)
     }
 
-    fn add_transformation(&mut self, transformation: Transformation) -> Result<(), WorkspaceError> {
+    fn add_axiom(&mut self, transformation: Transformation) -> Result<(), WorkspaceError> {
         self.types.binds_transformation_or_error(&transformation)?;
         self.transformation_lattice
-            .add_available_transformation(transformation)
+            .add_available_transformation(AvailableTransformation::Axiom(transformation))
             .map_err(|e| e.into())
     }
 
@@ -453,7 +449,7 @@ impl Workspace {
         &self,
         partial_statement: &str,
         maybe_statement_scope: Option<HashSet<SymbolNode>>,
-        maybe_transformation_scope: Option<HashSet<Transformation>>,
+        maybe_transformation_scope: Option<HashSet<AvailableTransformation>>,
     ) -> Result<Vec<SymbolNode>, WorkspaceError> {
         // TODO Try to complete partial statements
         let desired = match self.parse_from_string(partial_statement) {
@@ -484,13 +480,14 @@ impl Workspace {
                 .join("\n")
         );
         for (instantiated, _) in instantiated_transformations {
-            let statements = if instantiated.is_joint_transform() {
+            let instantiated_transformation = instantiated.get_transformation();
+            let statements = if instantiated_transformation.is_joint_transform() {
                 scoped_ws.transformation_lattice.get_statement_pairs()
             } else {
                 scoped_ws.transformation_lattice.get_statements().clone()
             };
             for statement in statements {
-                let valid_transformations = instantiated.get_valid_transformations(
+                let valid_transformations = instantiated_transformation.get_valid_transformations(
                     scoped_ws.get_types(),
                     &statement,
                     Some(&desired),
@@ -509,7 +506,7 @@ impl Workspace {
         &self,
         from_statement: SymbolNode,
         maybe_statement_scope: Option<HashSet<SymbolNode>>,
-        maybe_transformation_scope: Option<HashSet<Transformation>>,
+        maybe_transformation_scope: Option<HashSet<AvailableTransformation>>,
     ) -> Result<Vec<SymbolNode>, WorkspaceError> {
         let scoped_ws = self.scope_down(maybe_statement_scope, maybe_transformation_scope)?;
         debug!("scoped_down_workspace: {}", scoped_ws.to_json().unwrap());
@@ -531,7 +528,8 @@ impl Workspace {
         );
         let mut to_return = HashSet::new();
         for (transformation, _) in instantiated_transformations {
-            let statements = if transformation.is_joint_transform() {
+            let instantiated_transformation = transformation.get_transformation();
+            let statements = if instantiated_transformation.is_joint_transform() {
                 scoped_ws
                     .transformation_lattice
                     .get_statement_pairs_including(Some(&from_statement))
@@ -539,7 +537,7 @@ impl Workspace {
                 vec![from_statement.clone()].into_iter().collect()
             };
             for statement in statements {
-                let valid_transformations = transformation.get_valid_transformations(
+                let valid_transformations = instantiated_transformation.get_valid_transformations(
                     scoped_ws.get_types(),
                     &statement,
                     None,
@@ -551,6 +549,30 @@ impl Workspace {
             .into_iter()
             .filter(|s| !self.get_statements().contains(s))
             .collect());
+    }
+
+    pub fn get_display_available_transformations(
+        &self,
+    ) -> Result<Vec<DisplayAvailableTransformation>, WorkspaceError> {
+        let mut to_return = Vec::new();
+        for i in 0..self.get_ordered_available_transformations().len() {
+            let t = self.get_display_available_transformation(i)?;
+            to_return.push(t);
+        }
+        Ok(to_return)
+    }
+
+    pub fn get_display_available_transformation(
+        &self,
+        index: usize,
+    ) -> Result<DisplayAvailableTransformation, WorkspaceError> {
+        let available_transformation = self.get_available_transformation(index)?;
+        Ok(
+            DisplayAvailableTransformation::from_available_transformation(
+                self.get_interpretations(),
+                available_transformation,
+            ),
+        )
     }
 
     pub fn get_display_symbol_nodes(&self) -> Result<Vec<DisplaySymbolNode>, WorkspaceError> {
@@ -743,8 +765,8 @@ impl WorkspaceTransactionStore {
             WorkspaceTransactionItem::AddHypothesis(hypothesis) => {
                 workspace.add_hypothesis(hypothesis)?;
             }
-            WorkspaceTransactionItem::AddTransformation(transformation) => {
-                workspace.add_transformation(transformation)?;
+            WorkspaceTransactionItem::AddAxiom(transformation) => {
+                workspace.add_axiom(transformation)?;
             }
             WorkspaceTransactionItem::Derive((from_statement, transform, to_statement)) => {
                 workspace.force_apply_transformation(from_statement, transform, to_statement);
@@ -842,9 +864,7 @@ impl WorkspaceTransactionStore {
         // type?
         let transformation: Transformation =
             ExplicitTransformation::new(parsed_from, parsed_to).into();
-        transaction.add(WorkspaceTransactionItem::AddTransformation(
-            transformation.clone(),
-        ));
+        transaction.add(WorkspaceTransactionItem::AddAxiom(transformation.clone()));
         self.add(transaction)?;
         Ok(transformation)
     }
@@ -865,15 +885,11 @@ impl WorkspaceTransactionStore {
         // from and to?
         let transformation: Transformation =
             ExplicitTransformation::new(parsed_from.clone(), parsed_to.clone()).into();
-        transaction.add(WorkspaceTransactionItem::AddTransformation(
-            transformation.clone(),
-        ));
+        transaction.add(WorkspaceTransactionItem::AddAxiom(transformation.clone()));
         if is_equivalence {
             let transformation: Transformation =
                 ExplicitTransformation::new(parsed_to, parsed_from).into();
-            transaction.add(WorkspaceTransactionItem::AddTransformation(
-                transformation.clone(),
-            ));
+            transaction.add(WorkspaceTransactionItem::AddAxiom(transformation.clone()));
         }
         self.add(transaction)?;
         Ok(transformation)
@@ -891,8 +907,7 @@ impl WorkspaceTransactionStore {
         let input_type = workspace.get_generated_type_from_parent_name(input_type_name)?;
         let transformation: Transformation =
             AlgorithmTransformation::new(algorithm_type.clone(), operator, input_type).into();
-        let transaction =
-            WorkspaceTransactionItem::AddTransformation(transformation.clone()).into();
+        let transaction = WorkspaceTransactionItem::AddAxiom(transformation.clone()).into();
         self.add(transaction)?;
         Ok(transformation)
     }
@@ -901,7 +916,7 @@ impl WorkspaceTransactionStore {
         &mut self,
         desired: &str,
         maybe_statement_scope: Option<HashSet<SymbolNode>>,
-        maybe_transformation_scope: Option<HashSet<Transformation>>,
+        maybe_transformation_scope: Option<HashSet<AvailableTransformation>>,
     ) -> Result<SymbolNode, WorkspaceError> {
         let parsed = self.compile().parse_from_string(desired)?;
         self.try_transform_into(parsed, maybe_statement_scope, maybe_transformation_scope)
@@ -911,7 +926,7 @@ impl WorkspaceTransactionStore {
         &mut self,
         desired: SymbolNode,
         maybe_statement_scope: Option<HashSet<SymbolNode>>,
-        maybe_transformation_scope: Option<HashSet<Transformation>>,
+        maybe_transformation_scope: Option<HashSet<AvailableTransformation>>,
     ) -> Result<SymbolNode, WorkspaceError> {
         let mut transaction = self.get_generated_types_transaction(&desired)?;
 
@@ -1060,7 +1075,7 @@ pub enum WorkspaceTransactionItem {
     UpdateInterpretation((InterpretationIndex, Interpretation)),
     RemoveInterpretation(InterpretationIndex),
     AddHypothesis(SymbolNode),
-    AddTransformation(Transformation),
+    AddAxiom(Transformation),
     Derive((SymbolNode, Transformation, SymbolNode)),
 }
 
@@ -1092,14 +1107,14 @@ impl DisplayProvenance {
 #[serde(rename_all = "camelCase")]
 #[ts(export)]
 pub struct DerivedDisplayProvenance {
-    from_transformation: DisplayTransformation,
+    from_transformation: TransformationString,
     from_statement: SymbolNodeString,
     applied_addresses: Vec<SymbolNodeAddress>,
 }
 
 impl DerivedDisplayProvenance {
     pub fn new(
-        from_transformation: DisplayTransformation,
+        from_transformation: TransformationString,
         from_statement: SymbolNodeString,
         applied_addresses: Vec<SymbolNodeAddress>,
     ) -> Self {
@@ -1282,6 +1297,54 @@ impl DisplaySymbolNode {
 
     pub fn get_interpreted_string(&self) -> &String {
         &self.interpreted_string
+    }
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub enum DisplayAvailableTransformation {
+    Axiom(String),
+    Theorem((String, DisplayTransformationProvenance)),
+}
+
+impl DisplayAvailableTransformation {
+    pub fn from_available_transformation(
+        interpretations: &Vec<Interpretation>,
+        t: AvailableTransformation,
+    ) -> Self {
+        match t {
+            AvailableTransformation::Axiom(t) => {
+                Self::Axiom(t.to_interpreted_string(interpretations))
+            }
+            AvailableTransformation::Theorem((t, p)) => Self::Theorem((
+                t.to_interpreted_string(interpretations),
+                DisplayTransformationProvenance::from_transformation_provenance(interpretations, p),
+            )),
+        }
+    }
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub struct DisplayTransformationProvenance {
+    derivation: String,
+}
+
+impl DisplayTransformationProvenance {
+    pub fn new(derivation: String) -> Self {
+        Self { derivation }
+    }
+
+    pub fn from_transformation_provenance(
+        interpretations: &Vec<Interpretation>,
+        provenance: TransformationProvenance,
+    ) -> Self {
+        Self::new(format!(
+            "Derivation of {}",
+            provenance.conclusion.to_interpreted_string(interpretations)
+        ))
     }
 }
 
