@@ -1076,7 +1076,7 @@ pub enum WorkspaceTransactionItem {
     RemoveInterpretation(InterpretationIndex),
     AddHypothesis(SymbolNode),
     AddAxiom(Transformation),
-    Derive((SymbolNode, Transformation, SymbolNode)),
+    Derive((SymbolNode, AvailableTransformation, SymbolNode)),
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, TS)]
@@ -1771,11 +1771,13 @@ mod test_workspace {
         workspace_store.add_parsed_hypothesis("y=10").unwrap();
 
         let instantiate = |from: &str, to: &str| {
-            ExplicitTransformation::new(
-                workspace_store.compile().parse_from_string(from).unwrap(),
-                workspace_store.compile().parse_from_string(to).unwrap(),
+            AvailableTransformation::Axiom(
+                ExplicitTransformation::new(
+                    workspace_store.compile().parse_from_string(from).unwrap(),
+                    workspace_store.compile().parse_from_string(to).unwrap(),
+                )
+                .into(),
             )
-            .into()
         };
 
         // Looking for x+y=5+y but that'll appear as the more general x=y -> ...
@@ -1870,7 +1872,7 @@ mod test_workspace {
             .get_instantiated_transformations_with_arbitrary(&types, None)
             .unwrap()
             .into_iter()
-            .map(|(t, _)| t)
+            .map(|(t, _)| t.get_transformation().clone())
             .collect();
         assert_eq!(
             actual,
@@ -1913,7 +1915,7 @@ mod test_workspace {
             .get_instantiated_transformations_with_arbitrary(&types, None)
             .unwrap()
             .into_iter()
-            .map(|(t, _)| t)
+            .map(|(t, _)| t.get_transformation().clone())
             .collect();
         assert_eq!(
             actual,
@@ -2591,6 +2593,7 @@ mod test_workspace {
                     equality_symmetry.clone().into(),
                 ]
                 .into_iter()
+                .map(|t| AvailableTransformation::Axiom(t))
                 .collect(),
             )
             .unwrap(),
@@ -2628,6 +2631,7 @@ mod test_workspace {
             TransformationLattice::from_transformations(
                 vec![equality_reflexivity.into(), equality_symmetry.into()]
                     .into_iter()
+                    .map(|t| AvailableTransformation::Axiom(t))
                     .collect(),
             )
             .unwrap(),

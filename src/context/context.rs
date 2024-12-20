@@ -120,7 +120,7 @@ impl From<TypeError> for ContextError {
 mod tests {
     use crate::{
         parsing::{interpretation::Interpretation, parser::Parser, tokenizer::Tokenizer},
-        symbol::transformation::ExplicitTransformation,
+        symbol::transformation::{AvailableTransformation, ExplicitTransformation},
     };
 
     use super::*;
@@ -189,8 +189,8 @@ mod tests {
 
         let transformations = vec![commutativity, associativity, identity, inverse]
             .into_iter()
-            .map(|t| t.into())
-            .collect::<HashSet<Transformation>>();
+            .map(|t| AvailableTransformation::Axiom(t.into()))
+            .collect::<HashSet<AvailableTransformation>>();
         let lattice = TransformationLattice::from_transformations(transformations.clone()).unwrap();
 
         let context = Context::new(types.clone(), vec![], vec![], lattice.clone());
@@ -260,8 +260,8 @@ mod tests {
 
         let transformations = vec![additive_commutativity, multiplicative_commutativity]
             .into_iter()
-            .map(|t| t.into())
-            .collect::<HashSet<Transformation>>();
+            .map(|t| AvailableTransformation::Axiom(t.into()))
+            .collect::<HashSet<AvailableTransformation>>();
         let lattice = TransformationLattice::from_transformations(transformations).unwrap();
 
         let context = Context::new(types.clone(), vec![], vec![], lattice.clone());

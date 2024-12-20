@@ -45,15 +45,10 @@ impl TransformationLattice {
     }
 
     pub fn from_transformations(
-        transformations: HashSet<Transformation>,
+        transformations: HashSet<AvailableTransformation>,
     ) -> Result<Self, TransformationError> {
         let mut to_return = Self::empty();
-        to_return.add_available_transformations(
-            transformations
-                .into_iter()
-                .map(|t| AvailableTransformation::Axiom(t))
-                .collect(),
-        )?;
+        to_return.add_available_transformations(transformations)?;
         Ok(to_return)
     }
 
@@ -265,7 +260,7 @@ impl TransformationLattice {
         &mut self,
         types: &TypeHierarchy,
         desired: SymbolNode,
-    ) -> Result<(SymbolNode, Transformation, SymbolNode), TransformationError> {
+    ) -> Result<(SymbolNode, AvailableTransformation, SymbolNode), TransformationError> {
         if self.contains_statement(&desired) {
             return Err(TransformationError::AlreadyContainsStatement(
                 desired.clone(),
@@ -307,11 +302,7 @@ impl TransformationLattice {
                             arbitrary_transform.clone(),
                             output.clone(),
                         );
-                        return Ok((
-                            statement,
-                            arbitrary_transform.get_transformation().clone(),
-                            output,
-                        ));
+                        return Ok((statement, arbitrary_transform.clone(), output));
                     }
                     Err(_) => {
                         // Do nothing, keep trying transformations
