@@ -1301,11 +1301,11 @@ impl DisplaySymbolNode {
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize, TS)]
-#[serde(rename_all = "camelCase")]
+#[serde(tag = "kind", content = "value", rename_all = "camelCase")]
 #[ts(export)]
 pub enum DisplayAvailableTransformation {
-    Axiom(String),
-    Theorem((String, DisplayTransformationProvenance)),
+    Axiom(DisplayAxiom),
+    Theorem(DisplayTheorem),
 }
 
 impl DisplayAvailableTransformation {
@@ -1315,12 +1315,42 @@ impl DisplayAvailableTransformation {
     ) -> Self {
         match t {
             AvailableTransformation::Axiom(t) => {
-                Self::Axiom(t.to_interpreted_string(interpretations))
+                Self::Axiom(DisplayAxiom::new(t.to_interpreted_string(interpretations)))
             }
-            AvailableTransformation::Theorem((t, p)) => Self::Theorem((
+            AvailableTransformation::Theorem((t, p)) => Self::Theorem(DisplayTheorem::new(
                 t.to_interpreted_string(interpretations),
                 DisplayTransformationProvenance::from_transformation_provenance(interpretations, p),
             )),
+        }
+    }
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub struct DisplayAxiom {
+    statement: String,
+}
+
+impl DisplayAxiom {
+    pub fn new(statement: String) -> Self {
+        Self { statement }
+    }
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub struct DisplayTheorem {
+    statement: String,
+    provenance: DisplayTransformationProvenance,
+}
+
+impl DisplayTheorem {
+    pub fn new(statement: String, provenance: DisplayTransformationProvenance) -> Self {
+        Self {
+            statement,
+            provenance,
         }
     }
 }
