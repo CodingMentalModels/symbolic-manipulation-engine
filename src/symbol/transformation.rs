@@ -346,6 +346,18 @@ impl TransformationLattice {
             .insert((from, transformation.get_transformation().clone()), to);
     }
 
+    pub fn force_derive_theorem(
+        &mut self,
+        transformation: Transformation,
+        provenance: TransformationProvenance,
+    ) {
+        self.available_transformations
+            .insert(AvailableTransformation::Theorem((
+                transformation,
+                provenance,
+            )));
+    }
+
     pub fn get_instantiated_transformations_with_arbitrary(
         &self,
         types: &TypeHierarchy,
@@ -443,7 +455,7 @@ impl TransformationLattice {
     pub fn derive_theorem(
         &mut self,
         conclusion: &SymbolNode,
-    ) -> Result<Transformation, TransformationError> {
+    ) -> Result<(Transformation, TransformationProvenance), TransformationError> {
         let hypotheses = self.get_ancestor_hypotheses(conclusion)?;
 
         let theorem = if hypotheses.len() == 1 {
@@ -468,11 +480,17 @@ impl TransformationLattice {
             ));
         };
 
+        if self.contains_transformation(&theorem) {
+            return Err(TransformationError::AlreadyContainsTransformation(
+                theorem.clone(),
+            ));
+        }
+        let provenance = TransformationProvenance::new(conclusion.clone());
         self.add_available_transformation(AvailableTransformation::Theorem((
             theorem.clone(),
-            TransformationProvenance::new(conclusion.clone()),
-        )));
-        Ok(theorem)
+            provenance.clone(),
+        )))?;
+        Ok((theorem, provenance))
     }
 
     fn get_ancestor_hypotheses(

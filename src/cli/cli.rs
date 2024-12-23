@@ -504,6 +504,23 @@ impl Cli {
         }
     }
 
+    pub fn derive_theorem(&self, sub_matches: &ArgMatches) -> Result<String, String> {
+        let mut workspace_store = self.load_workspace_store()?;
+        let workspace = workspace_store.compile();
+        match sub_matches.get_one::<String>("conclusion") {
+            None => return Err("No conclusion provided.".to_string()),
+            Some(conclusion) => {
+                let to_return = workspace_store
+                    .try_derive_theorem_parsed(conclusion)
+                    .map_err(|e| format!("Workspace error: {:?} (Conclusion: {})", e, conclusion))
+                    .map(|statement| {
+                        statement.to_interpreted_string(workspace.get_interpretations())
+                    });
+                self.update_workspace_store(workspace_store)?;
+                to_return
+            }
+        }
+    }
     pub fn undo(&self) -> Result<String, String> {
         let mut workspace_store = self.load_workspace_store()?;
         let did_undo = workspace_store.undo().is_some();

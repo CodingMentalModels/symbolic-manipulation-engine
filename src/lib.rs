@@ -143,6 +143,11 @@ pub fn build_cli() -> Command {
                     Arg::new("transformations-in-scope").help("A JSON array of the transformation indices that are in scope to be used while deriving. If absent, all transformations are in scope.").required(false)
                 )
             )
+        .subcommand(Command::new("derive-theorem").about("Derive a theorem from the given conclusion, using its upstream hypotheses.")
+                .arg(
+                    Arg::new("conclusion").help("Conclusion of theo theorem to derive. Its hypotheses will be computed automatically.").required(true)
+                )
+            )
         .subcommand(Command::new("undo").about("Undoes the previous command (if possible)."))
         .subcommand(Command::new("redo").about("Redoes the previous undo (if possible)."))
         .subcommand(Command::new("evaluate").about("Applies available algorithms to the statement provided.")

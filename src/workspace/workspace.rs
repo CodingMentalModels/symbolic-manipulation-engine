@@ -430,6 +430,15 @@ impl Workspace {
         );
     }
 
+    fn force_derive_theorem(
+        &mut self,
+        transformation: Transformation,
+        provenance: TransformationProvenance,
+    ) {
+        self.transformation_lattice
+            .force_derive_theorem(transformation, provenance);
+    }
+
     fn get_upstream_statement_and_transformation(
         &self,
         statement: &SymbolNode,
@@ -768,6 +777,9 @@ impl WorkspaceTransactionStore {
             WorkspaceTransactionItem::AddAxiom(transformation) => {
                 workspace.add_axiom(transformation)?;
             }
+            WorkspaceTransactionItem::AddTheorem((transformation, provenance)) => {
+                workspace.force_derive_theorem(transformation, provenance);
+            }
             WorkspaceTransactionItem::Derive((from_statement, transform, to_statement)) => {
                 workspace.force_apply_transformation(from_statement, transform, to_statement);
             }
@@ -951,6 +963,24 @@ impl WorkspaceTransactionStore {
         Ok(desired)
     }
 
+    pub fn try_derive_theorem_parsed(&mut self, s: &str) -> Result<SymbolNode, WorkspaceError> {
+        let conclusion = self.compile().parse_from_string(s)?;
+        self.try_derive_theorem(conclusion)
+    }
+
+    pub fn try_derive_theorem(
+        &mut self,
+        conclusion: SymbolNode,
+    ) -> Result<SymbolNode, WorkspaceError> {
+        let mut workspace = self.compile();
+        let transformation = workspace
+            .transformation_lattice
+            .derive_theorem(&conclusion)?;
+        let transaction = WorkspaceTransactionItem::AddTheorem(transformation).into();
+        self.add(transaction)?;
+        Ok(conclusion)
+    }
+
     fn get_type_hierarchy_with_transaction_applied(
         &mut self,
         transaction: &WorkspaceTransaction,
@@ -1076,6 +1106,7 @@ pub enum WorkspaceTransactionItem {
     RemoveInterpretation(InterpretationIndex),
     AddHypothesis(SymbolNode),
     AddAxiom(Transformation),
+    AddTheorem((Transformation, TransformationProvenance)),
     Derive((SymbolNode, AvailableTransformation, SymbolNode)),
 }
 
