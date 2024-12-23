@@ -145,7 +145,7 @@ pub fn build_cli() -> Command {
             )
         .subcommand(Command::new("derive-theorem").about("Derive a theorem from the given conclusion, using its upstream hypotheses.")
                 .arg(
-                    Arg::new("conclusion").help("Conclusion of theo theorem to derive. Its hypotheses will be computed automatically.").required(true)
+                    Arg::new("conclusion").help("Conclusion of theorem to derive. Its hypotheses will be computed automatically.").required(true)
                 )
             )
         .subcommand(Command::new("undo").about("Undoes the previous command (if possible)."))
