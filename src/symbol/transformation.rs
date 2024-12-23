@@ -497,6 +497,13 @@ impl TransformationLattice {
         &self,
         conclusion: &SymbolNode,
     ) -> Result<HashSet<SymbolNode>, TransformationError> {
+        if !self.contains_statement(conclusion) {
+            return Err(
+                TransformationError::MissingStatementsInTransformationLattice(vec![
+                    conclusion.clone()
+                ]),
+            );
+        }
         match self.get_upstream_statement_and_transformation(conclusion) {
             None => Ok(vec![conclusion.clone()].into_iter().collect()),
             Some((parent, _)) => {

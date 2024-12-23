@@ -2025,6 +2025,76 @@ mod test_workspace {
     }
 
     #[test]
+    fn test_workspace_derive_theorem() {
+        let mut types = TypeHierarchy::chain(vec!["Real".into(), "Integer".into()]).unwrap();
+        types
+            .add_child_to_parent("=".into(), "Real".into())
+            .unwrap();
+        types
+            .add_child_to_parent("+".into(), "Real".into())
+            .unwrap();
+        types
+            .add_chain(vec!["Proposition".into(), "^".into()])
+            .unwrap();
+
+        let interpretations = vec![
+            Interpretation::infix_operator("=".into(), 1, "=".into()),
+            Interpretation::infix_operator("+".into(), 6, "+".into()),
+            Interpretation::singleton("x".into(), "Real".into()),
+            Interpretation::singleton("y".into(), "Real".into()),
+            Interpretation::singleton("j".into(), "Real".into()),
+            Interpretation::singleton("k".into(), "Real".into()),
+            Interpretation::singleton("a".into(), "Real".into()),
+            Interpretation::singleton("b".into(), "Real".into()),
+            Interpretation::singleton("c".into(), "Real".into()),
+            Interpretation::infix_operator("^".into(), 1, "^".into()),
+            Interpretation::singleton("p".into(), "Proposition".into()),
+            Interpretation::singleton("q".into(), "Proposition".into()),
+            Interpretation::singleton("r".into(), "Proposition".into()),
+            Interpretation::singleton("s".into(), "Proposition".into()),
+            Interpretation::singleton("s".into(), "Proposition".into()),
+        ];
+        let workspace = Workspace::initialize(types.clone(), vec![], interpretations.clone());
+        let mut workspace_store = WorkspaceTransactionStore::snapshot(workspace);
+
+        workspace_store
+            .add_parsed_transformation(false, "a+b", "b+a")
+            .unwrap();
+
+        workspace_store.add_parsed_hypothesis("x+y").unwrap();
+        let expected = workspace_store.compile().parse_from_string("y+x").unwrap();
+        assert_eq!(
+            workspace_store
+                .try_transform_into_parsed("y+x", None, None)
+                .unwrap(),
+            expected
+        );
+        assert!(workspace_store
+            .compile()
+            .get_statements()
+            .contains(&expected));
+
+        // Can't derive this -- we don't have any statement with a and b in it
+        let invalid_derivation = workspace_store.try_derive_theorem_parsed("a+b");
+        assert!(invalid_derivation.is_err(), "{:#?}", invalid_derivation);
+
+        workspace_store.add_parsed_hypothesis("b+a").unwrap();
+        workspace_store
+            .try_transform_into_parsed("a+b", None, None)
+            .unwrap();
+        // Derive b+a -> a+b
+        workspace_store.try_derive_theorem_parsed("a+b").unwrap();
+
+        assert_eq!(
+            workspace_store
+                .compile()
+                .get_available_transformations()
+                .len(),
+            2
+        );
+    }
+
+    #[test]
     fn test_workspace_try_transform_into() {
         let mut types = TypeHierarchy::chain(vec!["Real".into(), "Integer".into()]).unwrap();
         types
