@@ -440,1653 +440,1653 @@ statements = []
 
 [[transactions.items.Snapshot.transformation_lattice.available_transformations]]
 
-[transactions.items.Snapshot.transformation_lattice.available_transformations.AlgorithmTransformation]
+[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.AlgorithmTransformation]
 algorithm_type = "Subtraction"
 
-[transactions.items.Snapshot.transformation_lattice.available_transformations.AlgorithmTransformation.operator]
+[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.AlgorithmTransformation.operator]
 name = "-"
 
-[transactions.items.Snapshot.transformation_lattice.available_transformations.AlgorithmTransformation.operator.evaluates_to_type]
+[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.AlgorithmTransformation.operator.evaluates_to_type]
 kind = "namedType"
 value = "-"
 
-[transactions.items.Snapshot.transformation_lattice.available_transformations.AlgorithmTransformation.input_type.condition]
+[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.AlgorithmTransformation.input_type.condition]
 kind = "isNumeric"
 
-[[transactions.items.Snapshot.transformation_lattice.available_transformations.AlgorithmTransformation.input_type.parents]]
+[[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.AlgorithmTransformation.input_type.parents]]
 kind = "namedType"
 value = "Real"
 
 [[transactions.items.Snapshot.transformation_lattice.available_transformations]]
 
-[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.from.root.Symbol]
+[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.ExplicitTransformation.from.root.Symbol]
 name = "/"
 
-[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.from.root.Symbol.evaluates_to_type]
+[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.ExplicitTransformation.from.root.Symbol.evaluates_to_type]
 kind = "namedType"
 value = "/"
 
-[[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.from.children]]
+[[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.ExplicitTransformation.from.children]]
 children = []
 
-[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.from.children.root.Symbol]
+[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.ExplicitTransformation.from.children.root.Symbol]
 name = "1"
 
-[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.from.children.root.Symbol.evaluates_to_type]
+[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.ExplicitTransformation.from.children.root.Symbol.evaluates_to_type]
 kind = "namedType"
 value = "1"
 
-[[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.from.children]]
+[[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.ExplicitTransformation.from.children]]
 children = []
 
-[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.from.children.root.Symbol]
+[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.ExplicitTransformation.from.children.root.Symbol]
 name = "x"
 
-[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.from.children.root.Symbol.evaluates_to_type]
+[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.ExplicitTransformation.from.children.root.Symbol.evaluates_to_type]
 kind = "namedType"
 value = "Real"
 
-[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.to.root.Symbol]
+[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.ExplicitTransformation.to.root.Symbol]
 name = "Reciprocal"
 
-[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.to.root.Symbol.evaluates_to_type]
+[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.ExplicitTransformation.to.root.Symbol.evaluates_to_type]
 kind = "namedType"
 value = "Reciprocal"
 
-[[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.to.children]]
+[[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.ExplicitTransformation.to.children]]
 children = []
 
-[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.to.children.root.Symbol]
+[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.ExplicitTransformation.to.children.root.Symbol]
 name = "x"
 
-[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.to.children.root.Symbol.evaluates_to_type]
+[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.ExplicitTransformation.to.children.root.Symbol.evaluates_to_type]
 kind = "namedType"
 value = "Real"
 
 [[transactions.items.Snapshot.transformation_lattice.available_transformations]]
 
-[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.from]
+[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.ExplicitTransformation.from]
 children = []
 
-[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.from.root.Symbol]
+[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.ExplicitTransformation.from.root.Symbol]
 name = "1"
 
-[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.from.root.Symbol.evaluates_to_type]
+[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.ExplicitTransformation.from.root.Symbol.evaluates_to_type]
 kind = "namedType"
 value = "1"
 
-[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.to.root.Symbol]
+[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.ExplicitTransformation.to.root.Symbol]
 name = "*"
 
-[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.to.root.Symbol.evaluates_to_type]
+[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.ExplicitTransformation.to.root.Symbol.evaluates_to_type]
 kind = "namedType"
 value = "*"
 
-[[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.to.children]]
+[[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.ExplicitTransformation.to.children]]
 children = []
 
-[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.to.children.root.Symbol]
+[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.ExplicitTransformation.to.children.root.Symbol]
 name = "x"
 
-[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.to.children.root.Symbol.evaluates_to_type]
+[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.ExplicitTransformation.to.children.root.Symbol.evaluates_to_type]
 kind = "namedType"
 value = "Real"
 
-[[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.to.children]]
+[[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.ExplicitTransformation.to.children]]
 
-[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.to.children.root.Symbol]
+[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.ExplicitTransformation.to.children.root.Symbol]
 name = "Reciprocal"
 
-[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.to.children.root.Symbol.evaluates_to_type]
+[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.ExplicitTransformation.to.children.root.Symbol.evaluates_to_type]
 kind = "namedType"
 value = "Reciprocal"
 
-[[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.to.children.children]]
+[[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.ExplicitTransformation.to.children.children]]
 children = []
 
-[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.to.children.children.root.Symbol]
+[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.ExplicitTransformation.to.children.children.root.Symbol]
 name = "x"
 
-[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.to.children.children.root.Symbol.evaluates_to_type]
+[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.ExplicitTransformation.to.children.children.root.Symbol.evaluates_to_type]
 kind = "namedType"
 value = "Real"
 
 [[transactions.items.Snapshot.transformation_lattice.available_transformations]]
 
-[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.from.root.Symbol]
+[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.ExplicitTransformation.from.root.Symbol]
 name = "+"
 
-[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.from.root.Symbol.evaluates_to_type]
+[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.ExplicitTransformation.from.root.Symbol.evaluates_to_type]
 kind = "namedType"
 value = "+"
 
-[[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.from.children]]
+[[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.ExplicitTransformation.from.children]]
 children = []
 
-[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.from.children.root.Symbol]
+[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.ExplicitTransformation.from.children.root.Symbol]
 name = "x"
 
-[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.from.children.root.Symbol.evaluates_to_type]
+[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.ExplicitTransformation.from.children.root.Symbol.evaluates_to_type]
 kind = "namedType"
 value = "Real"
 
-[[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.from.children]]
+[[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.ExplicitTransformation.from.children]]
 children = []
 
-[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.from.children.root.Symbol]
+[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.ExplicitTransformation.from.children.root.Symbol]
 name = "y"
 
-[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.from.children.root.Symbol.evaluates_to_type]
+[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.ExplicitTransformation.from.children.root.Symbol.evaluates_to_type]
 kind = "namedType"
 value = "Real"
 
-[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.to.root.Symbol]
+[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.ExplicitTransformation.to.root.Symbol]
 name = "+"
 
-[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.to.root.Symbol.evaluates_to_type]
+[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.ExplicitTransformation.to.root.Symbol.evaluates_to_type]
 kind = "namedType"
 value = "+"
 
-[[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.to.children]]
+[[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.ExplicitTransformation.to.children]]
 children = []
 
-[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.to.children.root.Symbol]
+[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.ExplicitTransformation.to.children.root.Symbol]
 name = "y"
 
-[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.to.children.root.Symbol.evaluates_to_type]
+[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.ExplicitTransformation.to.children.root.Symbol.evaluates_to_type]
 kind = "namedType"
 value = "Real"
 
-[[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.to.children]]
+[[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.ExplicitTransformation.to.children]]
 children = []
 
-[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.to.children.root.Symbol]
+[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.ExplicitTransformation.to.children.root.Symbol]
 name = "x"
 
-[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.to.children.root.Symbol.evaluates_to_type]
+[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.ExplicitTransformation.to.children.root.Symbol.evaluates_to_type]
 kind = "namedType"
 value = "Real"
 
 [[transactions.items.Snapshot.transformation_lattice.available_transformations]]
 
-[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.from.root.Symbol]
+[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.ExplicitTransformation.from.root.Symbol]
 name = "+"
 
-[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.from.root.Symbol.evaluates_to_type]
+[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.ExplicitTransformation.from.root.Symbol.evaluates_to_type]
 kind = "namedType"
 value = "+"
 
-[[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.from.children]]
+[[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.ExplicitTransformation.from.children]]
 children = []
 
-[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.from.children.root.Symbol]
+[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.ExplicitTransformation.from.children.root.Symbol]
 name = "x"
 
-[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.from.children.root.Symbol.evaluates_to_type]
+[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.ExplicitTransformation.from.children.root.Symbol.evaluates_to_type]
 kind = "namedType"
 value = "Real"
 
-[[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.from.children]]
+[[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.ExplicitTransformation.from.children]]
 
-[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.from.children.root.Symbol]
+[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.ExplicitTransformation.from.children.root.Symbol]
 name = "+"
 
-[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.from.children.root.Symbol.evaluates_to_type]
+[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.ExplicitTransformation.from.children.root.Symbol.evaluates_to_type]
 kind = "namedType"
 value = "+"
 
-[[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.from.children.children]]
+[[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.ExplicitTransformation.from.children.children]]
 children = []
 
-[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.from.children.children.root.Symbol]
+[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.ExplicitTransformation.from.children.children.root.Symbol]
 name = "y"
 
-[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.from.children.children.root.Symbol.evaluates_to_type]
+[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.ExplicitTransformation.from.children.children.root.Symbol.evaluates_to_type]
 kind = "namedType"
 value = "Real"
 
-[[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.from.children.children]]
+[[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.ExplicitTransformation.from.children.children]]
 children = []
 
-[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.from.children.children.root.Symbol]
+[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.ExplicitTransformation.from.children.children.root.Symbol]
 name = "z"
 
-[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.from.children.children.root.Symbol.evaluates_to_type]
+[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.ExplicitTransformation.from.children.children.root.Symbol.evaluates_to_type]
 kind = "namedType"
 value = "Real"
 
-[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.to.root.Symbol]
+[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.ExplicitTransformation.to.root.Symbol]
 name = "+"
 
-[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.to.root.Symbol.evaluates_to_type]
+[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.ExplicitTransformation.to.root.Symbol.evaluates_to_type]
 kind = "namedType"
 value = "+"
 
-[[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.to.children]]
+[[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.ExplicitTransformation.to.children]]
 
-[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.to.children.root.Symbol]
+[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.ExplicitTransformation.to.children.root.Symbol]
 name = "+"
 
-[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.to.children.root.Symbol.evaluates_to_type]
+[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.ExplicitTransformation.to.children.root.Symbol.evaluates_to_type]
 kind = "namedType"
 value = "+"
 
-[[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.to.children.children]]
+[[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.ExplicitTransformation.to.children.children]]
 children = []
 
-[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.to.children.children.root.Symbol]
+[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.ExplicitTransformation.to.children.children.root.Symbol]
 name = "x"
 
-[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.to.children.children.root.Symbol.evaluates_to_type]
+[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.ExplicitTransformation.to.children.children.root.Symbol.evaluates_to_type]
 kind = "namedType"
 value = "Real"
 
-[[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.to.children.children]]
+[[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.ExplicitTransformation.to.children.children]]
 children = []
 
-[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.to.children.children.root.Symbol]
+[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.ExplicitTransformation.to.children.children.root.Symbol]
 name = "y"
 
-[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.to.children.children.root.Symbol.evaluates_to_type]
+[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.ExplicitTransformation.to.children.children.root.Symbol.evaluates_to_type]
 kind = "namedType"
 value = "Real"
 
-[[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.to.children]]
+[[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.ExplicitTransformation.to.children]]
 children = []
 
-[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.to.children.root.Symbol]
+[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.ExplicitTransformation.to.children.root.Symbol]
 name = "z"
 
-[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.to.children.root.Symbol.evaluates_to_type]
+[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.ExplicitTransformation.to.children.root.Symbol.evaluates_to_type]
 kind = "namedType"
 value = "Real"
 
 [[transactions.items.Snapshot.transformation_lattice.available_transformations]]
 
-[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.from.root.Symbol]
+[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.ExplicitTransformation.from.root.Symbol]
 name = "*"
 
-[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.from.root.Symbol.evaluates_to_type]
+[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.ExplicitTransformation.from.root.Symbol.evaluates_to_type]
 kind = "namedType"
 value = "*"
 
-[[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.from.children]]
+[[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.ExplicitTransformation.from.children]]
 children = []
 
-[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.from.children.root.Symbol]
+[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.ExplicitTransformation.from.children.root.Symbol]
 name = "x"
 
-[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.from.children.root.Symbol.evaluates_to_type]
+[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.ExplicitTransformation.from.children.root.Symbol.evaluates_to_type]
 kind = "namedType"
 value = "Real"
 
-[[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.from.children]]
+[[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.ExplicitTransformation.from.children]]
 
-[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.from.children.root.Symbol]
+[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.ExplicitTransformation.from.children.root.Symbol]
 name = "Reciprocal"
 
-[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.from.children.root.Symbol.evaluates_to_type]
+[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.ExplicitTransformation.from.children.root.Symbol.evaluates_to_type]
 kind = "namedType"
 value = "Reciprocal"
 
-[[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.from.children.children]]
+[[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.ExplicitTransformation.from.children.children]]
 children = []
 
-[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.from.children.children.root.Symbol]
+[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.ExplicitTransformation.from.children.children.root.Symbol]
 name = "x"
 
-[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.from.children.children.root.Symbol.evaluates_to_type]
+[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.ExplicitTransformation.from.children.children.root.Symbol.evaluates_to_type]
 kind = "namedType"
 value = "Real"
 
-[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.to]
+[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.ExplicitTransformation.to]
 children = []
 
-[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.to.root.Symbol]
+[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.ExplicitTransformation.to.root.Symbol]
 name = "1"
 
-[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.to.root.Symbol.evaluates_to_type]
+[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.ExplicitTransformation.to.root.Symbol.evaluates_to_type]
 kind = "namedType"
 value = "1"
 
 [[transactions.items.Snapshot.transformation_lattice.available_transformations]]
 
-[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.from.root.Symbol]
+[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.ExplicitTransformation.from.root.Symbol]
 name = "="
 
-[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.from.root.Symbol.evaluates_to_type]
+[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.ExplicitTransformation.from.root.Symbol.evaluates_to_type]
 kind = "namedType"
 value = "="
 
-[[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.from.children]]
+[[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.ExplicitTransformation.from.children]]
 children = []
 
-[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.from.children.root.Symbol]
+[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.ExplicitTransformation.from.children.root.Symbol]
 name = "x"
 
-[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.from.children.root.Symbol.evaluates_to_type]
+[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.ExplicitTransformation.from.children.root.Symbol.evaluates_to_type]
 kind = "namedType"
 value = "Real"
 
-[[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.from.children]]
+[[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.ExplicitTransformation.from.children]]
 children = []
 
-[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.from.children.root.Symbol]
+[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.ExplicitTransformation.from.children.root.Symbol]
 name = "y"
 
-[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.from.children.root.Symbol.evaluates_to_type]
+[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.ExplicitTransformation.from.children.root.Symbol.evaluates_to_type]
 kind = "namedType"
 value = "Real"
 
-[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.to.root.Symbol]
+[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.ExplicitTransformation.to.root.Symbol]
 name = "="
 
-[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.to.root.Symbol.evaluates_to_type]
+[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.ExplicitTransformation.to.root.Symbol.evaluates_to_type]
 kind = "namedType"
 value = "="
 
-[[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.to.children]]
+[[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.ExplicitTransformation.to.children]]
 children = []
 
-[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.to.children.root.Symbol]
+[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.ExplicitTransformation.to.children.root.Symbol]
 name = "y"
 
-[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.to.children.root.Symbol.evaluates_to_type]
+[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.ExplicitTransformation.to.children.root.Symbol.evaluates_to_type]
 kind = "namedType"
 value = "Real"
 
-[[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.to.children]]
+[[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.ExplicitTransformation.to.children]]
 children = []
 
-[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.to.children.root.Symbol]
+[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.ExplicitTransformation.to.children.root.Symbol]
 name = "x"
 
-[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.to.children.root.Symbol.evaluates_to_type]
+[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.ExplicitTransformation.to.children.root.Symbol.evaluates_to_type]
 kind = "namedType"
 value = "Real"
 
 [[transactions.items.Snapshot.transformation_lattice.available_transformations]]
 
-[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.from]
+[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.ExplicitTransformation.from]
 children = []
 
-[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.from.root.Symbol]
+[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.ExplicitTransformation.from.root.Symbol]
 name = "x"
 
-[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.from.root.Symbol.evaluates_to_type]
+[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.ExplicitTransformation.from.root.Symbol.evaluates_to_type]
 kind = "namedType"
 value = "Real"
 
-[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.to.root.Symbol]
+[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.ExplicitTransformation.to.root.Symbol]
 name = "*"
 
-[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.to.root.Symbol.evaluates_to_type]
+[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.ExplicitTransformation.to.root.Symbol.evaluates_to_type]
 kind = "namedType"
 value = "*"
 
-[[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.to.children]]
+[[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.ExplicitTransformation.to.children]]
 children = []
 
-[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.to.children.root.Symbol]
+[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.ExplicitTransformation.to.children.root.Symbol]
 name = "x"
 
-[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.to.children.root.Symbol.evaluates_to_type]
+[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.ExplicitTransformation.to.children.root.Symbol.evaluates_to_type]
 kind = "namedType"
 value = "Real"
 
-[[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.to.children]]
+[[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.ExplicitTransformation.to.children]]
 children = []
 
-[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.to.children.root.Symbol]
+[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.ExplicitTransformation.to.children.root.Symbol]
 name = "1"
 
-[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.to.children.root.Symbol.evaluates_to_type]
+[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.ExplicitTransformation.to.children.root.Symbol.evaluates_to_type]
 kind = "namedType"
 value = "1"
 
 [[transactions.items.Snapshot.transformation_lattice.available_transformations]]
 
-[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.from.root.Symbol]
+[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.ExplicitTransformation.from.root.Symbol]
 name = "*"
 
-[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.from.root.Symbol.evaluates_to_type]
+[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.ExplicitTransformation.from.root.Symbol.evaluates_to_type]
 kind = "namedType"
 value = "*"
 
-[[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.from.children]]
+[[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.ExplicitTransformation.from.children]]
 
-[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.from.children.root.Symbol]
+[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.ExplicitTransformation.from.children.root.Symbol]
 name = "*"
 
-[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.from.children.root.Symbol.evaluates_to_type]
+[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.ExplicitTransformation.from.children.root.Symbol.evaluates_to_type]
 kind = "namedType"
 value = "*"
 
-[[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.from.children.children]]
+[[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.ExplicitTransformation.from.children.children]]
 children = []
 
-[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.from.children.children.root.Symbol]
+[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.ExplicitTransformation.from.children.children.root.Symbol]
 name = "x"
 
-[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.from.children.children.root.Symbol.evaluates_to_type]
+[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.ExplicitTransformation.from.children.children.root.Symbol.evaluates_to_type]
 kind = "namedType"
 value = "Real"
 
-[[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.from.children.children]]
+[[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.ExplicitTransformation.from.children.children]]
 children = []
 
-[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.from.children.children.root.Symbol]
+[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.ExplicitTransformation.from.children.children.root.Symbol]
 name = "y"
 
-[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.from.children.children.root.Symbol.evaluates_to_type]
+[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.ExplicitTransformation.from.children.children.root.Symbol.evaluates_to_type]
 kind = "namedType"
 value = "Real"
 
-[[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.from.children]]
+[[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.ExplicitTransformation.from.children]]
 children = []
 
-[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.from.children.root.Symbol]
+[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.ExplicitTransformation.from.children.root.Symbol]
 name = "z"
 
-[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.from.children.root.Symbol.evaluates_to_type]
+[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.ExplicitTransformation.from.children.root.Symbol.evaluates_to_type]
 kind = "namedType"
 value = "Real"
 
-[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.to.root.Symbol]
+[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.ExplicitTransformation.to.root.Symbol]
 name = "*"
 
-[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.to.root.Symbol.evaluates_to_type]
+[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.ExplicitTransformation.to.root.Symbol.evaluates_to_type]
 kind = "namedType"
 value = "*"
 
-[[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.to.children]]
+[[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.ExplicitTransformation.to.children]]
 children = []
 
-[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.to.children.root.Symbol]
+[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.ExplicitTransformation.to.children.root.Symbol]
 name = "x"
 
-[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.to.children.root.Symbol.evaluates_to_type]
+[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.ExplicitTransformation.to.children.root.Symbol.evaluates_to_type]
 kind = "namedType"
 value = "Real"
 
-[[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.to.children]]
+[[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.ExplicitTransformation.to.children]]
 
-[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.to.children.root.Symbol]
+[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.ExplicitTransformation.to.children.root.Symbol]
 name = "*"
 
-[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.to.children.root.Symbol.evaluates_to_type]
+[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.ExplicitTransformation.to.children.root.Symbol.evaluates_to_type]
 kind = "namedType"
 value = "*"
 
-[[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.to.children.children]]
+[[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.ExplicitTransformation.to.children.children]]
 children = []
 
-[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.to.children.children.root.Symbol]
+[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.ExplicitTransformation.to.children.children.root.Symbol]
 name = "y"
 
-[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.to.children.children.root.Symbol.evaluates_to_type]
+[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.ExplicitTransformation.to.children.children.root.Symbol.evaluates_to_type]
 kind = "namedType"
 value = "Real"
 
-[[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.to.children.children]]
+[[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.ExplicitTransformation.to.children.children]]
 children = []
 
-[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.to.children.children.root.Symbol]
+[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.ExplicitTransformation.to.children.children.root.Symbol]
 name = "z"
 
-[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.to.children.children.root.Symbol.evaluates_to_type]
+[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.ExplicitTransformation.to.children.children.root.Symbol.evaluates_to_type]
 kind = "namedType"
 value = "Real"
 
 [[transactions.items.Snapshot.transformation_lattice.available_transformations]]
 
-[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.from.root.Symbol]
+[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.ExplicitTransformation.from.root.Symbol]
 name = "+"
 
-[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.from.root.Symbol.evaluates_to_type]
+[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.ExplicitTransformation.from.root.Symbol.evaluates_to_type]
 kind = "namedType"
 value = "+"
 
-[[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.from.children]]
+[[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.ExplicitTransformation.from.children]]
 children = []
 
-[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.from.children.root.Symbol]
+[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.ExplicitTransformation.from.children.root.Symbol]
 name = "y"
 
-[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.from.children.root.Symbol.evaluates_to_type]
+[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.ExplicitTransformation.from.children.root.Symbol.evaluates_to_type]
 kind = "namedType"
 value = "Real"
 
-[[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.from.children]]
+[[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.ExplicitTransformation.from.children]]
 children = []
 
-[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.from.children.root.Symbol]
+[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.ExplicitTransformation.from.children.root.Symbol]
 name = "x"
 
-[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.from.children.root.Symbol.evaluates_to_type]
+[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.ExplicitTransformation.from.children.root.Symbol.evaluates_to_type]
 kind = "namedType"
 value = "Real"
 
-[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.to.root.Symbol]
+[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.ExplicitTransformation.to.root.Symbol]
 name = "+"
 
-[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.to.root.Symbol.evaluates_to_type]
+[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.ExplicitTransformation.to.root.Symbol.evaluates_to_type]
 kind = "namedType"
 value = "+"
 
-[[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.to.children]]
+[[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.ExplicitTransformation.to.children]]
 children = []
 
-[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.to.children.root.Symbol]
+[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.ExplicitTransformation.to.children.root.Symbol]
 name = "x"
 
-[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.to.children.root.Symbol.evaluates_to_type]
+[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.ExplicitTransformation.to.children.root.Symbol.evaluates_to_type]
 kind = "namedType"
 value = "Real"
 
-[[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.to.children]]
+[[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.ExplicitTransformation.to.children]]
 children = []
 
-[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.to.children.root.Symbol]
+[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.ExplicitTransformation.to.children.root.Symbol]
 name = "y"
 
-[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.to.children.root.Symbol.evaluates_to_type]
+[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.ExplicitTransformation.to.children.root.Symbol.evaluates_to_type]
 kind = "namedType"
 value = "Real"
 
 [[transactions.items.Snapshot.transformation_lattice.available_transformations]]
 
-[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.from.root.Symbol]
+[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.ExplicitTransformation.from.root.Symbol]
 name = "*"
 
-[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.from.root.Symbol.evaluates_to_type]
+[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.ExplicitTransformation.from.root.Symbol.evaluates_to_type]
 kind = "namedType"
 value = "*"
 
-[[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.from.children]]
+[[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.ExplicitTransformation.from.children]]
 children = []
 
-[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.from.children.root.Symbol]
+[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.ExplicitTransformation.from.children.root.Symbol]
 name = "x"
 
-[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.from.children.root.Symbol.evaluates_to_type]
+[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.ExplicitTransformation.from.children.root.Symbol.evaluates_to_type]
 kind = "namedType"
 value = "Real"
 
-[[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.from.children]]
+[[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.ExplicitTransformation.from.children]]
 
-[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.from.children.root.Symbol]
+[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.ExplicitTransformation.from.children.root.Symbol]
 name = "+"
 
-[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.from.children.root.Symbol.evaluates_to_type]
+[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.ExplicitTransformation.from.children.root.Symbol.evaluates_to_type]
 kind = "namedType"
 value = "+"
 
-[[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.from.children.children]]
+[[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.ExplicitTransformation.from.children.children]]
 children = []
 
-[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.from.children.children.root.Symbol]
+[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.ExplicitTransformation.from.children.children.root.Symbol]
 name = "y"
 
-[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.from.children.children.root.Symbol.evaluates_to_type]
+[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.ExplicitTransformation.from.children.children.root.Symbol.evaluates_to_type]
 kind = "namedType"
 value = "Real"
 
-[[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.from.children.children]]
+[[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.ExplicitTransformation.from.children.children]]
 children = []
 
-[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.from.children.children.root.Symbol]
+[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.ExplicitTransformation.from.children.children.root.Symbol]
 name = "z"
 
-[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.from.children.children.root.Symbol.evaluates_to_type]
+[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.ExplicitTransformation.from.children.children.root.Symbol.evaluates_to_type]
 kind = "namedType"
 value = "Real"
 
-[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.to.root.Symbol]
+[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.ExplicitTransformation.to.root.Symbol]
 name = "+"
 
-[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.to.root.Symbol.evaluates_to_type]
+[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.ExplicitTransformation.to.root.Symbol.evaluates_to_type]
 kind = "namedType"
 value = "+"
 
-[[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.to.children]]
+[[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.ExplicitTransformation.to.children]]
 
-[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.to.children.root.Symbol]
+[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.ExplicitTransformation.to.children.root.Symbol]
 name = "*"
 
-[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.to.children.root.Symbol.evaluates_to_type]
+[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.ExplicitTransformation.to.children.root.Symbol.evaluates_to_type]
 kind = "namedType"
 value = "*"
 
-[[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.to.children.children]]
+[[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.ExplicitTransformation.to.children.children]]
 children = []
 
-[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.to.children.children.root.Symbol]
+[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.ExplicitTransformation.to.children.children.root.Symbol]
 name = "x"
 
-[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.to.children.children.root.Symbol.evaluates_to_type]
+[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.ExplicitTransformation.to.children.children.root.Symbol.evaluates_to_type]
 kind = "namedType"
 value = "Real"
 
-[[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.to.children.children]]
+[[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.ExplicitTransformation.to.children.children]]
 children = []
 
-[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.to.children.children.root.Symbol]
+[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.ExplicitTransformation.to.children.children.root.Symbol]
 name = "y"
 
-[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.to.children.children.root.Symbol.evaluates_to_type]
+[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.ExplicitTransformation.to.children.children.root.Symbol.evaluates_to_type]
 kind = "namedType"
 value = "Real"
 
-[[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.to.children]]
+[[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.ExplicitTransformation.to.children]]
 
-[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.to.children.root.Symbol]
+[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.ExplicitTransformation.to.children.root.Symbol]
 name = "*"
 
-[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.to.children.root.Symbol.evaluates_to_type]
+[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.ExplicitTransformation.to.children.root.Symbol.evaluates_to_type]
 kind = "namedType"
 value = "*"
 
-[[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.to.children.children]]
+[[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.ExplicitTransformation.to.children.children]]
 children = []
 
-[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.to.children.children.root.Symbol]
+[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.ExplicitTransformation.to.children.children.root.Symbol]
 name = "x"
 
-[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.to.children.children.root.Symbol.evaluates_to_type]
+[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.ExplicitTransformation.to.children.children.root.Symbol.evaluates_to_type]
 kind = "namedType"
 value = "Real"
 
-[[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.to.children.children]]
+[[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.ExplicitTransformation.to.children.children]]
 children = []
 
-[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.to.children.children.root.Symbol]
+[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.ExplicitTransformation.to.children.children.root.Symbol]
 name = "z"
 
-[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.to.children.children.root.Symbol.evaluates_to_type]
+[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.ExplicitTransformation.to.children.children.root.Symbol.evaluates_to_type]
 kind = "namedType"
 value = "Real"
 
 [[transactions.items.Snapshot.transformation_lattice.available_transformations]]
 
-[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.from.root.Symbol]
+[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.ExplicitTransformation.from.root.Symbol]
 name = "+"
 
-[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.from.root.Symbol.evaluates_to_type]
+[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.ExplicitTransformation.from.root.Symbol.evaluates_to_type]
 kind = "namedType"
 value = "+"
 
-[[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.from.children]]
+[[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.ExplicitTransformation.from.children]]
 
-[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.from.children.root.Symbol]
+[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.ExplicitTransformation.from.children.root.Symbol]
 name = "+"
 
-[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.from.children.root.Symbol.evaluates_to_type]
+[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.ExplicitTransformation.from.children.root.Symbol.evaluates_to_type]
 kind = "namedType"
 value = "+"
 
-[[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.from.children.children]]
+[[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.ExplicitTransformation.from.children.children]]
 children = []
 
-[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.from.children.children.root.Symbol]
+[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.ExplicitTransformation.from.children.children.root.Symbol]
 name = "x"
 
-[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.from.children.children.root.Symbol.evaluates_to_type]
+[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.ExplicitTransformation.from.children.children.root.Symbol.evaluates_to_type]
 kind = "namedType"
 value = "Real"
 
-[[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.from.children.children]]
+[[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.ExplicitTransformation.from.children.children]]
 children = []
 
-[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.from.children.children.root.Symbol]
+[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.ExplicitTransformation.from.children.children.root.Symbol]
 name = "y"
 
-[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.from.children.children.root.Symbol.evaluates_to_type]
+[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.ExplicitTransformation.from.children.children.root.Symbol.evaluates_to_type]
 kind = "namedType"
 value = "Real"
 
-[[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.from.children]]
+[[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.ExplicitTransformation.from.children]]
 children = []
 
-[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.from.children.root.Symbol]
+[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.ExplicitTransformation.from.children.root.Symbol]
 name = "z"
 
-[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.from.children.root.Symbol.evaluates_to_type]
+[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.ExplicitTransformation.from.children.root.Symbol.evaluates_to_type]
 kind = "namedType"
 value = "Real"
 
-[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.to.root.Symbol]
+[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.ExplicitTransformation.to.root.Symbol]
 name = "+"
 
-[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.to.root.Symbol.evaluates_to_type]
+[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.ExplicitTransformation.to.root.Symbol.evaluates_to_type]
 kind = "namedType"
 value = "+"
 
-[[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.to.children]]
+[[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.ExplicitTransformation.to.children]]
 children = []
 
-[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.to.children.root.Symbol]
+[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.ExplicitTransformation.to.children.root.Symbol]
 name = "x"
 
-[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.to.children.root.Symbol.evaluates_to_type]
+[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.ExplicitTransformation.to.children.root.Symbol.evaluates_to_type]
 kind = "namedType"
 value = "Real"
 
-[[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.to.children]]
+[[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.ExplicitTransformation.to.children]]
 
-[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.to.children.root.Symbol]
+[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.ExplicitTransformation.to.children.root.Symbol]
 name = "+"
 
-[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.to.children.root.Symbol.evaluates_to_type]
+[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.ExplicitTransformation.to.children.root.Symbol.evaluates_to_type]
 kind = "namedType"
 value = "+"
 
-[[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.to.children.children]]
+[[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.ExplicitTransformation.to.children.children]]
 children = []
 
-[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.to.children.children.root.Symbol]
+[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.ExplicitTransformation.to.children.children.root.Symbol]
 name = "y"
 
-[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.to.children.children.root.Symbol.evaluates_to_type]
+[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.ExplicitTransformation.to.children.children.root.Symbol.evaluates_to_type]
 kind = "namedType"
 value = "Real"
 
-[[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.to.children.children]]
+[[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.ExplicitTransformation.to.children.children]]
 children = []
 
-[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.to.children.children.root.Symbol]
+[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.ExplicitTransformation.to.children.children.root.Symbol]
 name = "z"
 
-[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.to.children.children.root.Symbol.evaluates_to_type]
+[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.ExplicitTransformation.to.children.children.root.Symbol.evaluates_to_type]
 kind = "namedType"
 value = "Real"
 
 [[transactions.items.Snapshot.transformation_lattice.available_transformations]]
 
-[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.from]
+[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.ExplicitTransformation.from]
 root = "Join"
 
-[[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.from.children]]
+[[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.ExplicitTransformation.from.children]]
 
-[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.from.children.root.Symbol]
+[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.ExplicitTransformation.from.children.root.Symbol]
 name = "="
 
-[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.from.children.root.Symbol.evaluates_to_type]
+[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.ExplicitTransformation.from.children.root.Symbol.evaluates_to_type]
 kind = "namedType"
 value = "="
 
-[[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.from.children.children]]
+[[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.ExplicitTransformation.from.children.children]]
 children = []
 
-[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.from.children.children.root.Symbol]
+[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.ExplicitTransformation.from.children.children.root.Symbol]
 name = "x"
 
-[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.from.children.children.root.Symbol.evaluates_to_type]
+[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.ExplicitTransformation.from.children.children.root.Symbol.evaluates_to_type]
 kind = "namedType"
 value = "Real"
 
-[[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.from.children.children]]
+[[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.ExplicitTransformation.from.children.children]]
 children = []
 
-[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.from.children.children.root.Symbol]
+[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.ExplicitTransformation.from.children.children.root.Symbol]
 name = "y"
 
-[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.from.children.children.root.Symbol.evaluates_to_type]
+[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.ExplicitTransformation.from.children.children.root.Symbol.evaluates_to_type]
 kind = "namedType"
 value = "Real"
 
-[[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.from.children]]
+[[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.ExplicitTransformation.from.children]]
 
-[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.from.children.root.Symbol]
+[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.ExplicitTransformation.from.children.root.Symbol]
 name = "="
 
-[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.from.children.root.Symbol.evaluates_to_type]
+[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.ExplicitTransformation.from.children.root.Symbol.evaluates_to_type]
 kind = "namedType"
 value = "="
 
-[[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.from.children.children]]
+[[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.ExplicitTransformation.from.children.children]]
 children = []
 
-[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.from.children.children.root.Symbol]
+[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.ExplicitTransformation.from.children.children.root.Symbol]
 name = "y"
 
-[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.from.children.children.root.Symbol.evaluates_to_type]
+[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.ExplicitTransformation.from.children.children.root.Symbol.evaluates_to_type]
 kind = "namedType"
 value = "Real"
 
-[[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.from.children.children]]
+[[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.ExplicitTransformation.from.children.children]]
 children = []
 
-[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.from.children.children.root.Symbol]
+[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.ExplicitTransformation.from.children.children.root.Symbol]
 name = "z"
 
-[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.from.children.children.root.Symbol.evaluates_to_type]
+[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.ExplicitTransformation.from.children.children.root.Symbol.evaluates_to_type]
 kind = "namedType"
 value = "Real"
 
-[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.to.root.Symbol]
+[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.ExplicitTransformation.to.root.Symbol]
 name = "="
 
-[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.to.root.Symbol.evaluates_to_type]
+[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.ExplicitTransformation.to.root.Symbol.evaluates_to_type]
 kind = "namedType"
 value = "="
 
-[[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.to.children]]
+[[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.ExplicitTransformation.to.children]]
 children = []
 
-[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.to.children.root.Symbol]
+[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.ExplicitTransformation.to.children.root.Symbol]
 name = "x"
 
-[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.to.children.root.Symbol.evaluates_to_type]
+[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.ExplicitTransformation.to.children.root.Symbol.evaluates_to_type]
 kind = "namedType"
 value = "Real"
 
-[[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.to.children]]
+[[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.ExplicitTransformation.to.children]]
 children = []
 
-[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.to.children.root.Symbol]
+[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.ExplicitTransformation.to.children.root.Symbol]
 name = "z"
 
-[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.to.children.root.Symbol.evaluates_to_type]
+[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.ExplicitTransformation.to.children.root.Symbol.evaluates_to_type]
 kind = "namedType"
 value = "Real"
 
 [[transactions.items.Snapshot.transformation_lattice.available_transformations]]
 
-[transactions.items.Snapshot.transformation_lattice.available_transformations.AlgorithmTransformation]
+[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.AlgorithmTransformation]
 algorithm_type = "Addition"
 
-[transactions.items.Snapshot.transformation_lattice.available_transformations.AlgorithmTransformation.operator]
+[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.AlgorithmTransformation.operator]
 name = "+"
 
-[transactions.items.Snapshot.transformation_lattice.available_transformations.AlgorithmTransformation.operator.evaluates_to_type]
+[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.AlgorithmTransformation.operator.evaluates_to_type]
 kind = "namedType"
 value = "+"
 
-[transactions.items.Snapshot.transformation_lattice.available_transformations.AlgorithmTransformation.input_type.condition]
+[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.AlgorithmTransformation.input_type.condition]
 kind = "isNumeric"
 
-[[transactions.items.Snapshot.transformation_lattice.available_transformations.AlgorithmTransformation.input_type.parents]]
+[[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.AlgorithmTransformation.input_type.parents]]
 kind = "namedType"
 value = "Real"
 
 [[transactions.items.Snapshot.transformation_lattice.available_transformations]]
 
-[transactions.items.Snapshot.transformation_lattice.available_transformations.AlgorithmTransformation]
+[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.AlgorithmTransformation]
 algorithm_type = "Multiplication"
 
-[transactions.items.Snapshot.transformation_lattice.available_transformations.AlgorithmTransformation.operator]
+[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.AlgorithmTransformation.operator]
 name = "*"
 
-[transactions.items.Snapshot.transformation_lattice.available_transformations.AlgorithmTransformation.operator.evaluates_to_type]
+[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.AlgorithmTransformation.operator.evaluates_to_type]
 kind = "namedType"
 value = "*"
 
-[transactions.items.Snapshot.transformation_lattice.available_transformations.AlgorithmTransformation.input_type.condition]
+[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.AlgorithmTransformation.input_type.condition]
 kind = "isNumeric"
 
-[[transactions.items.Snapshot.transformation_lattice.available_transformations.AlgorithmTransformation.input_type.parents]]
+[[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.AlgorithmTransformation.input_type.parents]]
 kind = "namedType"
 value = "Real"
 
 [[transactions.items.Snapshot.transformation_lattice.available_transformations]]
 
-[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.from.root.Symbol]
+[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.ExplicitTransformation.from.root.Symbol]
 name = "+"
 
-[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.from.root.Symbol.evaluates_to_type]
+[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.ExplicitTransformation.from.root.Symbol.evaluates_to_type]
 kind = "namedType"
 value = "+"
 
-[[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.from.children]]
+[[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.ExplicitTransformation.from.children]]
 
-[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.from.children.root.Symbol]
+[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.ExplicitTransformation.from.children.root.Symbol]
 name = "*"
 
-[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.from.children.root.Symbol.evaluates_to_type]
+[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.ExplicitTransformation.from.children.root.Symbol.evaluates_to_type]
 kind = "namedType"
 value = "*"
 
-[[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.from.children.children]]
+[[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.ExplicitTransformation.from.children.children]]
 children = []
 
-[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.from.children.children.root.Symbol]
+[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.ExplicitTransformation.from.children.children.root.Symbol]
 name = "x"
 
-[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.from.children.children.root.Symbol.evaluates_to_type]
+[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.ExplicitTransformation.from.children.children.root.Symbol.evaluates_to_type]
 kind = "namedType"
 value = "Real"
 
-[[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.from.children.children]]
+[[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.ExplicitTransformation.from.children.children]]
 children = []
 
-[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.from.children.children.root.Symbol]
+[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.ExplicitTransformation.from.children.children.root.Symbol]
 name = "y"
 
-[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.from.children.children.root.Symbol.evaluates_to_type]
+[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.ExplicitTransformation.from.children.children.root.Symbol.evaluates_to_type]
 kind = "namedType"
 value = "Real"
 
-[[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.from.children]]
+[[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.ExplicitTransformation.from.children]]
 
-[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.from.children.root.Symbol]
+[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.ExplicitTransformation.from.children.root.Symbol]
 name = "*"
 
-[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.from.children.root.Symbol.evaluates_to_type]
+[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.ExplicitTransformation.from.children.root.Symbol.evaluates_to_type]
 kind = "namedType"
 value = "*"
 
-[[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.from.children.children]]
+[[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.ExplicitTransformation.from.children.children]]
 children = []
 
-[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.from.children.children.root.Symbol]
+[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.ExplicitTransformation.from.children.children.root.Symbol]
 name = "x"
 
-[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.from.children.children.root.Symbol.evaluates_to_type]
+[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.ExplicitTransformation.from.children.children.root.Symbol.evaluates_to_type]
 kind = "namedType"
 value = "Real"
 
-[[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.from.children.children]]
+[[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.ExplicitTransformation.from.children.children]]
 children = []
 
-[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.from.children.children.root.Symbol]
+[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.ExplicitTransformation.from.children.children.root.Symbol]
 name = "z"
 
-[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.from.children.children.root.Symbol.evaluates_to_type]
+[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.ExplicitTransformation.from.children.children.root.Symbol.evaluates_to_type]
 kind = "namedType"
 value = "Real"
 
-[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.to.root.Symbol]
+[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.ExplicitTransformation.to.root.Symbol]
 name = "*"
 
-[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.to.root.Symbol.evaluates_to_type]
+[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.ExplicitTransformation.to.root.Symbol.evaluates_to_type]
 kind = "namedType"
 value = "*"
 
-[[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.to.children]]
+[[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.ExplicitTransformation.to.children]]
 children = []
 
-[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.to.children.root.Symbol]
+[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.ExplicitTransformation.to.children.root.Symbol]
 name = "x"
 
-[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.to.children.root.Symbol.evaluates_to_type]
+[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.ExplicitTransformation.to.children.root.Symbol.evaluates_to_type]
 kind = "namedType"
 value = "Real"
 
-[[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.to.children]]
+[[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.ExplicitTransformation.to.children]]
 
-[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.to.children.root.Symbol]
+[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.ExplicitTransformation.to.children.root.Symbol]
 name = "+"
 
-[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.to.children.root.Symbol.evaluates_to_type]
+[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.ExplicitTransformation.to.children.root.Symbol.evaluates_to_type]
 kind = "namedType"
 value = "+"
 
-[[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.to.children.children]]
+[[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.ExplicitTransformation.to.children.children]]
 children = []
 
-[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.to.children.children.root.Symbol]
+[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.ExplicitTransformation.to.children.children.root.Symbol]
 name = "y"
 
-[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.to.children.children.root.Symbol.evaluates_to_type]
+[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.ExplicitTransformation.to.children.children.root.Symbol.evaluates_to_type]
 kind = "namedType"
 value = "Real"
 
-[[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.to.children.children]]
+[[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.ExplicitTransformation.to.children.children]]
 children = []
 
-[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.to.children.children.root.Symbol]
+[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.ExplicitTransformation.to.children.children.root.Symbol]
 name = "z"
 
-[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.to.children.children.root.Symbol.evaluates_to_type]
+[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.ExplicitTransformation.to.children.children.root.Symbol.evaluates_to_type]
 kind = "namedType"
 value = "Real"
 
 [[transactions.items.Snapshot.transformation_lattice.available_transformations]]
 
-[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.from.root.Symbol]
+[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.ExplicitTransformation.from.root.Symbol]
 name = "="
 
-[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.from.root.Symbol.evaluates_to_type]
+[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.ExplicitTransformation.from.root.Symbol.evaluates_to_type]
 kind = "namedType"
 value = "="
 
-[[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.from.children]]
+[[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.ExplicitTransformation.from.children]]
 children = []
 
-[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.from.children.root.Symbol]
+[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.ExplicitTransformation.from.children.root.Symbol]
 name = "x"
 
-[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.from.children.root.Symbol.evaluates_to_type]
+[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.ExplicitTransformation.from.children.root.Symbol.evaluates_to_type]
 kind = "namedType"
 value = "Real"
 
-[[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.from.children]]
+[[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.ExplicitTransformation.from.children]]
 children = []
 
-[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.from.children.root.Symbol]
+[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.ExplicitTransformation.from.children.root.Symbol]
 name = "y"
 
-[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.from.children.root.Symbol.evaluates_to_type]
+[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.ExplicitTransformation.from.children.root.Symbol.evaluates_to_type]
 kind = "namedType"
 value = "Real"
 
-[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.to.root.Symbol]
+[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.ExplicitTransformation.to.root.Symbol]
 name = "="
 
-[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.to.root.Symbol.evaluates_to_type]
+[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.ExplicitTransformation.to.root.Symbol.evaluates_to_type]
 kind = "namedType"
 value = "="
 
-[[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.to.children]]
+[[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.ExplicitTransformation.to.children]]
 
-[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.to.children.root.Arbitrary]
+[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.ExplicitTransformation.to.children.root.Arbitrary]
 name = "Any"
 
-[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.to.children.root.Arbitrary.evaluates_to_type]
+[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.ExplicitTransformation.to.children.root.Arbitrary.evaluates_to_type]
 kind = "namedType"
 value = "Real"
 
-[[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.to.children.children]]
+[[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.ExplicitTransformation.to.children.children]]
 children = []
 
-[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.to.children.children.root.Symbol]
+[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.ExplicitTransformation.to.children.children.root.Symbol]
 name = "x"
 
-[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.to.children.children.root.Symbol.evaluates_to_type]
+[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.ExplicitTransformation.to.children.children.root.Symbol.evaluates_to_type]
 kind = "namedType"
 value = "Real"
 
-[[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.to.children]]
+[[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.ExplicitTransformation.to.children]]
 
-[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.to.children.root.Arbitrary]
+[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.ExplicitTransformation.to.children.root.Arbitrary]
 name = "Any"
 
-[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.to.children.root.Arbitrary.evaluates_to_type]
+[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.ExplicitTransformation.to.children.root.Arbitrary.evaluates_to_type]
 kind = "namedType"
 value = "Real"
 
-[[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.to.children.children]]
+[[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.ExplicitTransformation.to.children.children]]
 children = []
 
-[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.to.children.children.root.Symbol]
+[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.ExplicitTransformation.to.children.children.root.Symbol]
 name = "y"
 
-[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.to.children.children.root.Symbol.evaluates_to_type]
+[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.ExplicitTransformation.to.children.children.root.Symbol.evaluates_to_type]
 kind = "namedType"
 value = "Real"
 
 [[transactions.items.Snapshot.transformation_lattice.available_transformations]]
 
-[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.from.root.Symbol]
+[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.ExplicitTransformation.from.root.Symbol]
 name = "*"
 
-[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.from.root.Symbol.evaluates_to_type]
+[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.ExplicitTransformation.from.root.Symbol.evaluates_to_type]
 kind = "namedType"
 value = "*"
 
-[[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.from.children]]
+[[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.ExplicitTransformation.from.children]]
 children = []
 
-[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.from.children.root.Symbol]
+[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.ExplicitTransformation.from.children.root.Symbol]
 name = "y"
 
-[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.from.children.root.Symbol.evaluates_to_type]
+[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.ExplicitTransformation.from.children.root.Symbol.evaluates_to_type]
 kind = "namedType"
 value = "Real"
 
-[[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.from.children]]
+[[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.ExplicitTransformation.from.children]]
 children = []
 
-[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.from.children.root.Symbol]
+[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.ExplicitTransformation.from.children.root.Symbol]
 name = "x"
 
-[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.from.children.root.Symbol.evaluates_to_type]
+[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.ExplicitTransformation.from.children.root.Symbol.evaluates_to_type]
 kind = "namedType"
 value = "Real"
 
-[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.to.root.Symbol]
+[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.ExplicitTransformation.to.root.Symbol]
 name = "*"
 
-[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.to.root.Symbol.evaluates_to_type]
+[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.ExplicitTransformation.to.root.Symbol.evaluates_to_type]
 kind = "namedType"
 value = "*"
 
-[[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.to.children]]
+[[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.ExplicitTransformation.to.children]]
 children = []
 
-[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.to.children.root.Symbol]
+[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.ExplicitTransformation.to.children.root.Symbol]
 name = "x"
 
-[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.to.children.root.Symbol.evaluates_to_type]
+[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.ExplicitTransformation.to.children.root.Symbol.evaluates_to_type]
 kind = "namedType"
 value = "Real"
 
-[[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.to.children]]
+[[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.ExplicitTransformation.to.children]]
 children = []
 
-[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.to.children.root.Symbol]
+[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.ExplicitTransformation.to.children.root.Symbol]
 name = "y"
 
-[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.to.children.root.Symbol.evaluates_to_type]
+[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.ExplicitTransformation.to.children.root.Symbol.evaluates_to_type]
 kind = "namedType"
 value = "Real"
 
 [[transactions.items.Snapshot.transformation_lattice.available_transformations]]
 
-[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.from.root.Symbol]
+[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.ExplicitTransformation.from.root.Symbol]
 name = "="
 
-[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.from.root.Symbol.evaluates_to_type]
+[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.ExplicitTransformation.from.root.Symbol.evaluates_to_type]
 kind = "namedType"
 value = "="
 
-[[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.from.children]]
+[[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.ExplicitTransformation.from.children]]
 children = []
 
-[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.from.children.root.Symbol]
+[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.ExplicitTransformation.from.children.root.Symbol]
 name = "y"
 
-[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.from.children.root.Symbol.evaluates_to_type]
+[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.ExplicitTransformation.from.children.root.Symbol.evaluates_to_type]
 kind = "namedType"
 value = "Real"
 
-[[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.from.children]]
+[[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.ExplicitTransformation.from.children]]
 children = []
 
-[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.from.children.root.Symbol]
+[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.ExplicitTransformation.from.children.root.Symbol]
 name = "x"
 
-[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.from.children.root.Symbol.evaluates_to_type]
+[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.ExplicitTransformation.from.children.root.Symbol.evaluates_to_type]
 kind = "namedType"
 value = "Real"
 
-[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.to.root.Symbol]
+[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.ExplicitTransformation.to.root.Symbol]
 name = "="
 
-[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.to.root.Symbol.evaluates_to_type]
+[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.ExplicitTransformation.to.root.Symbol.evaluates_to_type]
 kind = "namedType"
 value = "="
 
-[[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.to.children]]
+[[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.ExplicitTransformation.to.children]]
 children = []
 
-[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.to.children.root.Symbol]
+[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.ExplicitTransformation.to.children.root.Symbol]
 name = "x"
 
-[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.to.children.root.Symbol.evaluates_to_type]
+[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.ExplicitTransformation.to.children.root.Symbol.evaluates_to_type]
 kind = "namedType"
 value = "Real"
 
-[[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.to.children]]
+[[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.ExplicitTransformation.to.children]]
 children = []
 
-[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.to.children.root.Symbol]
+[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.ExplicitTransformation.to.children.root.Symbol]
 name = "y"
 
-[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.to.children.root.Symbol.evaluates_to_type]
+[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.ExplicitTransformation.to.children.root.Symbol.evaluates_to_type]
 kind = "namedType"
 value = "Real"
 
 [[transactions.items.Snapshot.transformation_lattice.available_transformations]]
 
-[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.from.root.Symbol]
+[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.ExplicitTransformation.from.root.Symbol]
 name = "+"
 
-[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.from.root.Symbol.evaluates_to_type]
+[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.ExplicitTransformation.from.root.Symbol.evaluates_to_type]
 kind = "namedType"
 value = "+"
 
-[[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.from.children]]
+[[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.ExplicitTransformation.from.children]]
 children = []
 
-[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.from.children.root.Symbol]
+[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.ExplicitTransformation.from.children.root.Symbol]
 name = "x"
 
-[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.from.children.root.Symbol.evaluates_to_type]
+[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.ExplicitTransformation.from.children.root.Symbol.evaluates_to_type]
 kind = "namedType"
 value = "Real"
 
-[[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.from.children]]
+[[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.ExplicitTransformation.from.children]]
 children = []
 
-[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.from.children.root.Symbol]
+[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.ExplicitTransformation.from.children.root.Symbol]
 name = "0"
 
-[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.from.children.root.Symbol.evaluates_to_type]
+[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.ExplicitTransformation.from.children.root.Symbol.evaluates_to_type]
 kind = "namedType"
 value = "0"
 
-[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.to]
+[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.ExplicitTransformation.to]
 children = []
 
-[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.to.root.Symbol]
+[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.ExplicitTransformation.to.root.Symbol]
 name = "x"
 
-[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.to.root.Symbol.evaluates_to_type]
+[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.ExplicitTransformation.to.root.Symbol.evaluates_to_type]
 kind = "namedType"
 value = "Real"
 
 [[transactions.items.Snapshot.transformation_lattice.available_transformations]]
 
-[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.from.root.Symbol]
+[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.ExplicitTransformation.from.root.Symbol]
 name = "*"
 
-[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.from.root.Symbol.evaluates_to_type]
+[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.ExplicitTransformation.from.root.Symbol.evaluates_to_type]
 kind = "namedType"
 value = "*"
 
-[[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.from.children]]
+[[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.ExplicitTransformation.from.children]]
 children = []
 
-[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.from.children.root.Symbol]
+[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.ExplicitTransformation.from.children.root.Symbol]
 name = "x"
 
-[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.from.children.root.Symbol.evaluates_to_type]
+[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.ExplicitTransformation.from.children.root.Symbol.evaluates_to_type]
 kind = "namedType"
 value = "Real"
 
-[[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.from.children]]
+[[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.ExplicitTransformation.from.children]]
 children = []
 
-[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.from.children.root.Symbol]
+[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.ExplicitTransformation.from.children.root.Symbol]
 name = "y"
 
-[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.from.children.root.Symbol.evaluates_to_type]
+[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.ExplicitTransformation.from.children.root.Symbol.evaluates_to_type]
 kind = "namedType"
 value = "Real"
 
-[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.to.root.Symbol]
+[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.ExplicitTransformation.to.root.Symbol]
 name = "*"
 
-[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.to.root.Symbol.evaluates_to_type]
+[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.ExplicitTransformation.to.root.Symbol.evaluates_to_type]
 kind = "namedType"
 value = "*"
 
-[[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.to.children]]
+[[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.ExplicitTransformation.to.children]]
 children = []
 
-[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.to.children.root.Symbol]
+[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.ExplicitTransformation.to.children.root.Symbol]
 name = "y"
 
-[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.to.children.root.Symbol.evaluates_to_type]
+[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.ExplicitTransformation.to.children.root.Symbol.evaluates_to_type]
 kind = "namedType"
 value = "Real"
 
-[[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.to.children]]
+[[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.ExplicitTransformation.to.children]]
 children = []
 
-[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.to.children.root.Symbol]
+[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.ExplicitTransformation.to.children.root.Symbol]
 name = "x"
 
-[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.to.children.root.Symbol.evaluates_to_type]
+[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.ExplicitTransformation.to.children.root.Symbol.evaluates_to_type]
 kind = "namedType"
 value = "Real"
 
 [[transactions.items.Snapshot.transformation_lattice.available_transformations]]
 
-[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.from.root.Symbol]
+[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.ExplicitTransformation.from.root.Symbol]
 name = "Reciprocal"
 
-[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.from.root.Symbol.evaluates_to_type]
+[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.ExplicitTransformation.from.root.Symbol.evaluates_to_type]
 kind = "namedType"
 value = "Reciprocal"
 
-[[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.from.children]]
+[[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.ExplicitTransformation.from.children]]
 children = []
 
-[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.from.children.root.Symbol]
+[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.ExplicitTransformation.from.children.root.Symbol]
 name = "x"
 
-[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.from.children.root.Symbol.evaluates_to_type]
+[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.ExplicitTransformation.from.children.root.Symbol.evaluates_to_type]
 kind = "namedType"
 value = "Real"
 
-[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.to.root.Symbol]
+[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.ExplicitTransformation.to.root.Symbol]
 name = "/"
 
-[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.to.root.Symbol.evaluates_to_type]
+[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.ExplicitTransformation.to.root.Symbol.evaluates_to_type]
 kind = "namedType"
 value = "/"
 
-[[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.to.children]]
+[[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.ExplicitTransformation.to.children]]
 children = []
 
-[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.to.children.root.Symbol]
+[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.ExplicitTransformation.to.children.root.Symbol]
 name = "1"
 
-[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.to.children.root.Symbol.evaluates_to_type]
+[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.ExplicitTransformation.to.children.root.Symbol.evaluates_to_type]
 kind = "namedType"
 value = "1"
 
-[[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.to.children]]
+[[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.ExplicitTransformation.to.children]]
 children = []
 
-[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.to.children.root.Symbol]
+[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.ExplicitTransformation.to.children.root.Symbol]
 name = "x"
 
-[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.to.children.root.Symbol.evaluates_to_type]
+[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.ExplicitTransformation.to.children.root.Symbol.evaluates_to_type]
 kind = "namedType"
 value = "Real"
 
 [[transactions.items.Snapshot.transformation_lattice.available_transformations]]
 
-[transactions.items.Snapshot.transformation_lattice.available_transformations.AlgorithmTransformation]
+[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.AlgorithmTransformation]
 algorithm_type = "Division"
 
-[transactions.items.Snapshot.transformation_lattice.available_transformations.AlgorithmTransformation.operator]
+[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.AlgorithmTransformation.operator]
 name = "/"
 
-[transactions.items.Snapshot.transformation_lattice.available_transformations.AlgorithmTransformation.operator.evaluates_to_type]
+[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.AlgorithmTransformation.operator.evaluates_to_type]
 kind = "namedType"
 value = "/"
 
-[transactions.items.Snapshot.transformation_lattice.available_transformations.AlgorithmTransformation.input_type.condition]
+[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.AlgorithmTransformation.input_type.condition]
 kind = "isNumeric"
 
-[[transactions.items.Snapshot.transformation_lattice.available_transformations.AlgorithmTransformation.input_type.parents]]
+[[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.AlgorithmTransformation.input_type.parents]]
 kind = "namedType"
 value = "Real"
 
 [[transactions.items.Snapshot.transformation_lattice.available_transformations]]
 
-[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.from.root.Symbol]
+[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.ExplicitTransformation.from.root.Symbol]
 name = "*"
 
-[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.from.root.Symbol.evaluates_to_type]
+[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.ExplicitTransformation.from.root.Symbol.evaluates_to_type]
 kind = "namedType"
 value = "*"
 
-[[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.from.children]]
+[[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.ExplicitTransformation.from.children]]
 children = []
 
-[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.from.children.root.Symbol]
+[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.ExplicitTransformation.from.children.root.Symbol]
 name = "x"
 
-[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.from.children.root.Symbol.evaluates_to_type]
+[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.ExplicitTransformation.from.children.root.Symbol.evaluates_to_type]
 kind = "namedType"
 value = "Real"
 
-[[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.from.children]]
+[[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.ExplicitTransformation.from.children]]
 
-[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.from.children.root.Symbol]
+[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.ExplicitTransformation.from.children.root.Symbol]
 name = "*"
 
-[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.from.children.root.Symbol.evaluates_to_type]
+[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.ExplicitTransformation.from.children.root.Symbol.evaluates_to_type]
 kind = "namedType"
 value = "*"
 
-[[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.from.children.children]]
+[[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.ExplicitTransformation.from.children.children]]
 children = []
 
-[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.from.children.children.root.Symbol]
+[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.ExplicitTransformation.from.children.children.root.Symbol]
 name = "y"
 
-[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.from.children.children.root.Symbol.evaluates_to_type]
+[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.ExplicitTransformation.from.children.children.root.Symbol.evaluates_to_type]
 kind = "namedType"
 value = "Real"
 
-[[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.from.children.children]]
+[[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.ExplicitTransformation.from.children.children]]
 children = []
 
-[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.from.children.children.root.Symbol]
+[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.ExplicitTransformation.from.children.children.root.Symbol]
 name = "z"
 
-[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.from.children.children.root.Symbol.evaluates_to_type]
+[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.ExplicitTransformation.from.children.children.root.Symbol.evaluates_to_type]
 kind = "namedType"
 value = "Real"
 
-[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.to.root.Symbol]
+[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.ExplicitTransformation.to.root.Symbol]
 name = "*"
 
-[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.to.root.Symbol.evaluates_to_type]
+[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.ExplicitTransformation.to.root.Symbol.evaluates_to_type]
 kind = "namedType"
 value = "*"
 
-[[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.to.children]]
+[[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.ExplicitTransformation.to.children]]
 
-[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.to.children.root.Symbol]
+[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.ExplicitTransformation.to.children.root.Symbol]
 name = "*"
 
-[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.to.children.root.Symbol.evaluates_to_type]
+[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.ExplicitTransformation.to.children.root.Symbol.evaluates_to_type]
 kind = "namedType"
 value = "*"
 
-[[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.to.children.children]]
+[[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.ExplicitTransformation.to.children.children]]
 children = []
 
-[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.to.children.children.root.Symbol]
+[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.ExplicitTransformation.to.children.children.root.Symbol]
 name = "x"
 
-[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.to.children.children.root.Symbol.evaluates_to_type]
+[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.ExplicitTransformation.to.children.children.root.Symbol.evaluates_to_type]
 kind = "namedType"
 value = "Real"
 
-[[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.to.children.children]]
+[[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.ExplicitTransformation.to.children.children]]
 children = []
 
-[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.to.children.children.root.Symbol]
+[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.ExplicitTransformation.to.children.children.root.Symbol]
 name = "y"
 
-[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.to.children.children.root.Symbol.evaluates_to_type]
+[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.ExplicitTransformation.to.children.children.root.Symbol.evaluates_to_type]
 kind = "namedType"
 value = "Real"
 
-[[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.to.children]]
+[[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.ExplicitTransformation.to.children]]
 children = []
 
-[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.to.children.root.Symbol]
+[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.ExplicitTransformation.to.children.root.Symbol]
 name = "z"
 
-[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.to.children.root.Symbol.evaluates_to_type]
+[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.ExplicitTransformation.to.children.root.Symbol.evaluates_to_type]
 kind = "namedType"
 value = "Real"
 
 [[transactions.items.Snapshot.transformation_lattice.available_transformations]]
 
-[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.from.root.Symbol]
+[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.ExplicitTransformation.from.root.Symbol]
 name = "-"
 
-[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.from.root.Symbol.evaluates_to_type]
+[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.ExplicitTransformation.from.root.Symbol.evaluates_to_type]
 kind = "namedType"
 value = "-"
 
-[[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.from.children]]
+[[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.ExplicitTransformation.from.children]]
 children = []
 
-[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.from.children.root.Symbol]
+[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.ExplicitTransformation.from.children.root.Symbol]
 name = "x"
 
-[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.from.children.root.Symbol.evaluates_to_type]
+[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.ExplicitTransformation.from.children.root.Symbol.evaluates_to_type]
 kind = "namedType"
 value = "Real"
 
-[[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.from.children]]
+[[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.ExplicitTransformation.from.children]]
 children = []
 
-[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.from.children.root.Symbol]
+[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.ExplicitTransformation.from.children.root.Symbol]
 name = "y"
 
-[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.from.children.root.Symbol.evaluates_to_type]
+[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.ExplicitTransformation.from.children.root.Symbol.evaluates_to_type]
 kind = "namedType"
 value = "Real"
 
-[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.to.root.Symbol]
+[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.ExplicitTransformation.to.root.Symbol]
 name = "+"
 
-[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.to.root.Symbol.evaluates_to_type]
+[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.ExplicitTransformation.to.root.Symbol.evaluates_to_type]
 kind = "namedType"
 value = "+"
 
-[[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.to.children]]
+[[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.ExplicitTransformation.to.children]]
 children = []
 
-[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.to.children.root.Symbol]
+[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.ExplicitTransformation.to.children.root.Symbol]
 name = "x"
 
-[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.to.children.root.Symbol.evaluates_to_type]
+[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.ExplicitTransformation.to.children.root.Symbol.evaluates_to_type]
 kind = "namedType"
 value = "Real"
 
-[[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.to.children]]
+[[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.ExplicitTransformation.to.children]]
 
-[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.to.children.root.Symbol]
+[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.ExplicitTransformation.to.children.root.Symbol]
 name = "Negative"
 
-[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.to.children.root.Symbol.evaluates_to_type]
+[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.ExplicitTransformation.to.children.root.Symbol.evaluates_to_type]
 kind = "namedType"
 value = "Negative"
 
-[[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.to.children.children]]
+[[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.ExplicitTransformation.to.children.children]]
 children = []
 
-[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.to.children.children.root.Symbol]
+[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.ExplicitTransformation.to.children.children.root.Symbol]
 name = "y"
 
-[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.to.children.children.root.Symbol.evaluates_to_type]
+[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.ExplicitTransformation.to.children.children.root.Symbol.evaluates_to_type]
 kind = "namedType"
 value = "Real"
 
 [[transactions.items.Snapshot.transformation_lattice.available_transformations]]
 
-[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.from]
+[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.ExplicitTransformation.from]
 children = []
 
-[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.from.root.Symbol]
+[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.ExplicitTransformation.from.root.Symbol]
 name = "x"
 
-[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.from.root.Symbol.evaluates_to_type]
+[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.ExplicitTransformation.from.root.Symbol.evaluates_to_type]
 kind = "namedType"
 value = "Real"
 
-[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.to.root.Symbol]
+[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.ExplicitTransformation.to.root.Symbol]
 name = "+"
 
-[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.to.root.Symbol.evaluates_to_type]
+[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.ExplicitTransformation.to.root.Symbol.evaluates_to_type]
 kind = "namedType"
 value = "+"
 
-[[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.to.children]]
+[[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.ExplicitTransformation.to.children]]
 children = []
 
-[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.to.children.root.Symbol]
+[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.ExplicitTransformation.to.children.root.Symbol]
 name = "x"
 
-[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.to.children.root.Symbol.evaluates_to_type]
+[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.ExplicitTransformation.to.children.root.Symbol.evaluates_to_type]
 kind = "namedType"
 value = "Real"
 
-[[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.to.children]]
+[[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.ExplicitTransformation.to.children]]
 children = []
 
-[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.to.children.root.Symbol]
+[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.ExplicitTransformation.to.children.root.Symbol]
 name = "0"
 
-[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.to.children.root.Symbol.evaluates_to_type]
+[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.ExplicitTransformation.to.children.root.Symbol.evaluates_to_type]
 kind = "namedType"
 value = "0"
 
 [[transactions.items.Snapshot.transformation_lattice.available_transformations]]
 
-[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.from.root.Symbol]
+[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.ExplicitTransformation.from.root.Symbol]
 name = "+"
 
-[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.from.root.Symbol.evaluates_to_type]
+[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.ExplicitTransformation.from.root.Symbol.evaluates_to_type]
 kind = "namedType"
 value = "+"
 
-[[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.from.children]]
+[[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.ExplicitTransformation.from.children]]
 children = []
 
-[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.from.children.root.Symbol]
+[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.ExplicitTransformation.from.children.root.Symbol]
 name = "x"
 
-[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.from.children.root.Symbol.evaluates_to_type]
+[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.ExplicitTransformation.from.children.root.Symbol.evaluates_to_type]
 kind = "namedType"
 value = "Real"
 
-[[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.from.children]]
+[[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.ExplicitTransformation.from.children]]
 
-[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.from.children.root.Symbol]
+[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.ExplicitTransformation.from.children.root.Symbol]
 name = "Negative"
 
-[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.from.children.root.Symbol.evaluates_to_type]
+[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.ExplicitTransformation.from.children.root.Symbol.evaluates_to_type]
 kind = "namedType"
 value = "Negative"
 
-[[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.from.children.children]]
+[[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.ExplicitTransformation.from.children.children]]
 children = []
 
-[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.from.children.children.root.Symbol]
+[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.ExplicitTransformation.from.children.children.root.Symbol]
 name = "y"
 
-[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.from.children.children.root.Symbol.evaluates_to_type]
+[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.ExplicitTransformation.from.children.children.root.Symbol.evaluates_to_type]
 kind = "namedType"
 value = "Real"
 
-[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.to.root.Symbol]
+[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.ExplicitTransformation.to.root.Symbol]
 name = "-"
 
-[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.to.root.Symbol.evaluates_to_type]
+[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.ExplicitTransformation.to.root.Symbol.evaluates_to_type]
 kind = "namedType"
 value = "-"
 
-[[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.to.children]]
+[[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.ExplicitTransformation.to.children]]
 children = []
 
-[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.to.children.root.Symbol]
+[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.ExplicitTransformation.to.children.root.Symbol]
 name = "x"
 
-[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.to.children.root.Symbol.evaluates_to_type]
+[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.ExplicitTransformation.to.children.root.Symbol.evaluates_to_type]
 kind = "namedType"
 value = "Real"
 
-[[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.to.children]]
+[[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.ExplicitTransformation.to.children]]
 children = []
 
-[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.to.children.root.Symbol]
+[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.ExplicitTransformation.to.children.root.Symbol]
 name = "y"
 
-[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.to.children.root.Symbol.evaluates_to_type]
+[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.ExplicitTransformation.to.children.root.Symbol.evaluates_to_type]
 kind = "namedType"
 value = "Real"
 
 [[transactions.items.Snapshot.transformation_lattice.available_transformations]]
 
-[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.from.root.Symbol]
+[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.ExplicitTransformation.from.root.Symbol]
 name = "*"
 
-[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.from.root.Symbol.evaluates_to_type]
+[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.ExplicitTransformation.from.root.Symbol.evaluates_to_type]
 kind = "namedType"
 value = "*"
 
-[[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.from.children]]
+[[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.ExplicitTransformation.from.children]]
 children = []
 
-[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.from.children.root.Symbol]
+[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.ExplicitTransformation.from.children.root.Symbol]
 name = "x"
 
-[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.from.children.root.Symbol.evaluates_to_type]
+[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.ExplicitTransformation.from.children.root.Symbol.evaluates_to_type]
 kind = "namedType"
 value = "Real"
 
-[[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.from.children]]
+[[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.ExplicitTransformation.from.children]]
 children = []
 
-[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.from.children.root.Symbol]
+[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.ExplicitTransformation.from.children.root.Symbol]
 name = "1"
 
-[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.from.children.root.Symbol.evaluates_to_type]
+[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.ExplicitTransformation.from.children.root.Symbol.evaluates_to_type]
 kind = "namedType"
 value = "1"
 
-[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.to]
+[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.ExplicitTransformation.to]
 children = []
 
-[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.to.root.Symbol]
+[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.ExplicitTransformation.to.root.Symbol]
 name = "x"
 
-[transactions.items.Snapshot.transformation_lattice.available_transformations.ExplicitTransformation.to.root.Symbol.evaluates_to_type]
+[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.ExplicitTransformation.to.root.Symbol.evaluates_to_type]
 kind = "namedType"
 value = "Real"
 
@@ -2134,20 +2134,20 @@ value = "Real"
 
 [[transactions.items]]
 
-[transactions.items.AddTransformation.AlgorithmTransformation]
+[transactions.items.AddAxiom.AlgorithmTransformation]
 algorithm_type = "Exponentiation"
 
-[transactions.items.AddTransformation.AlgorithmTransformation.operator]
+[transactions.items.AddAxiom.AlgorithmTransformation.operator]
 name = "^"
 
-[transactions.items.AddTransformation.AlgorithmTransformation.operator.evaluates_to_type]
+[transactions.items.AddAxiom.AlgorithmTransformation.operator.evaluates_to_type]
 kind = "namedType"
 value = "^"
 
-[transactions.items.AddTransformation.AlgorithmTransformation.input_type.condition]
+[transactions.items.AddAxiom.AlgorithmTransformation.input_type.condition]
 kind = "isNumeric"
 
-[[transactions.items.AddTransformation.AlgorithmTransformation.input_type.parents]]
+[[transactions.items.AddAxiom.AlgorithmTransformation.input_type.parents]]
 kind = "namedType"
 value = "Real"
 
@@ -2155,227 +2155,227 @@ value = "Real"
 
 [[transactions.items]]
 
-[transactions.items.AddTransformation.ExplicitTransformation.from.root.Symbol]
+[transactions.items.AddAxiom.ExplicitTransformation.from.root.Symbol]
 name = "^"
 
-[transactions.items.AddTransformation.ExplicitTransformation.from.root.Symbol.evaluates_to_type]
+[transactions.items.AddAxiom.ExplicitTransformation.from.root.Symbol.evaluates_to_type]
 kind = "namedType"
 value = "Real"
 
-[[transactions.items.AddTransformation.ExplicitTransformation.from.children]]
+[[transactions.items.AddAxiom.ExplicitTransformation.from.children]]
 children = []
 
-[transactions.items.AddTransformation.ExplicitTransformation.from.children.root.Symbol]
+[transactions.items.AddAxiom.ExplicitTransformation.from.children.root.Symbol]
 name = "x"
 
-[transactions.items.AddTransformation.ExplicitTransformation.from.children.root.Symbol.evaluates_to_type]
+[transactions.items.AddAxiom.ExplicitTransformation.from.children.root.Symbol.evaluates_to_type]
 kind = "namedType"
 value = "Real"
 
-[[transactions.items.AddTransformation.ExplicitTransformation.from.children]]
+[[transactions.items.AddAxiom.ExplicitTransformation.from.children]]
 
-[transactions.items.AddTransformation.ExplicitTransformation.from.children.root.Symbol]
+[transactions.items.AddAxiom.ExplicitTransformation.from.children.root.Symbol]
 name = "+"
 
-[transactions.items.AddTransformation.ExplicitTransformation.from.children.root.Symbol.evaluates_to_type]
+[transactions.items.AddAxiom.ExplicitTransformation.from.children.root.Symbol.evaluates_to_type]
 kind = "namedType"
 value = "+"
 
-[[transactions.items.AddTransformation.ExplicitTransformation.from.children.children]]
+[[transactions.items.AddAxiom.ExplicitTransformation.from.children.children]]
 children = []
 
-[transactions.items.AddTransformation.ExplicitTransformation.from.children.children.root.Symbol]
+[transactions.items.AddAxiom.ExplicitTransformation.from.children.children.root.Symbol]
 name = "y"
 
-[transactions.items.AddTransformation.ExplicitTransformation.from.children.children.root.Symbol.evaluates_to_type]
+[transactions.items.AddAxiom.ExplicitTransformation.from.children.children.root.Symbol.evaluates_to_type]
 kind = "namedType"
 value = "Real"
 
-[[transactions.items.AddTransformation.ExplicitTransformation.from.children.children]]
+[[transactions.items.AddAxiom.ExplicitTransformation.from.children.children]]
 children = []
 
-[transactions.items.AddTransformation.ExplicitTransformation.from.children.children.root.Symbol]
+[transactions.items.AddAxiom.ExplicitTransformation.from.children.children.root.Symbol]
 name = "z"
 
-[transactions.items.AddTransformation.ExplicitTransformation.from.children.children.root.Symbol.evaluates_to_type]
+[transactions.items.AddAxiom.ExplicitTransformation.from.children.children.root.Symbol.evaluates_to_type]
 kind = "namedType"
 value = "Real"
 
-[transactions.items.AddTransformation.ExplicitTransformation.to.root.Symbol]
+[transactions.items.AddAxiom.ExplicitTransformation.to.root.Symbol]
 name = "*"
 
-[transactions.items.AddTransformation.ExplicitTransformation.to.root.Symbol.evaluates_to_type]
+[transactions.items.AddAxiom.ExplicitTransformation.to.root.Symbol.evaluates_to_type]
 kind = "namedType"
 value = "*"
 
-[[transactions.items.AddTransformation.ExplicitTransformation.to.children]]
+[[transactions.items.AddAxiom.ExplicitTransformation.to.children]]
 
-[transactions.items.AddTransformation.ExplicitTransformation.to.children.root.Symbol]
+[transactions.items.AddAxiom.ExplicitTransformation.to.children.root.Symbol]
 name = "^"
 
-[transactions.items.AddTransformation.ExplicitTransformation.to.children.root.Symbol.evaluates_to_type]
+[transactions.items.AddAxiom.ExplicitTransformation.to.children.root.Symbol.evaluates_to_type]
 kind = "namedType"
 value = "Real"
 
-[[transactions.items.AddTransformation.ExplicitTransformation.to.children.children]]
+[[transactions.items.AddAxiom.ExplicitTransformation.to.children.children]]
 children = []
 
-[transactions.items.AddTransformation.ExplicitTransformation.to.children.children.root.Symbol]
+[transactions.items.AddAxiom.ExplicitTransformation.to.children.children.root.Symbol]
 name = "x"
 
-[transactions.items.AddTransformation.ExplicitTransformation.to.children.children.root.Symbol.evaluates_to_type]
+[transactions.items.AddAxiom.ExplicitTransformation.to.children.children.root.Symbol.evaluates_to_type]
 kind = "namedType"
 value = "Real"
 
-[[transactions.items.AddTransformation.ExplicitTransformation.to.children.children]]
+[[transactions.items.AddAxiom.ExplicitTransformation.to.children.children]]
 children = []
 
-[transactions.items.AddTransformation.ExplicitTransformation.to.children.children.root.Symbol]
+[transactions.items.AddAxiom.ExplicitTransformation.to.children.children.root.Symbol]
 name = "y"
 
-[transactions.items.AddTransformation.ExplicitTransformation.to.children.children.root.Symbol.evaluates_to_type]
+[transactions.items.AddAxiom.ExplicitTransformation.to.children.children.root.Symbol.evaluates_to_type]
 kind = "namedType"
 value = "Real"
 
-[[transactions.items.AddTransformation.ExplicitTransformation.to.children]]
+[[transactions.items.AddAxiom.ExplicitTransformation.to.children]]
 
-[transactions.items.AddTransformation.ExplicitTransformation.to.children.root.Symbol]
+[transactions.items.AddAxiom.ExplicitTransformation.to.children.root.Symbol]
 name = "^"
 
-[transactions.items.AddTransformation.ExplicitTransformation.to.children.root.Symbol.evaluates_to_type]
+[transactions.items.AddAxiom.ExplicitTransformation.to.children.root.Symbol.evaluates_to_type]
 kind = "namedType"
 value = "Real"
 
-[[transactions.items.AddTransformation.ExplicitTransformation.to.children.children]]
+[[transactions.items.AddAxiom.ExplicitTransformation.to.children.children]]
 children = []
 
-[transactions.items.AddTransformation.ExplicitTransformation.to.children.children.root.Symbol]
+[transactions.items.AddAxiom.ExplicitTransformation.to.children.children.root.Symbol]
 name = "x"
 
-[transactions.items.AddTransformation.ExplicitTransformation.to.children.children.root.Symbol.evaluates_to_type]
+[transactions.items.AddAxiom.ExplicitTransformation.to.children.children.root.Symbol.evaluates_to_type]
 kind = "namedType"
 value = "Real"
 
-[[transactions.items.AddTransformation.ExplicitTransformation.to.children.children]]
+[[transactions.items.AddAxiom.ExplicitTransformation.to.children.children]]
 children = []
 
-[transactions.items.AddTransformation.ExplicitTransformation.to.children.children.root.Symbol]
+[transactions.items.AddAxiom.ExplicitTransformation.to.children.children.root.Symbol]
 name = "z"
 
-[transactions.items.AddTransformation.ExplicitTransformation.to.children.children.root.Symbol.evaluates_to_type]
+[transactions.items.AddAxiom.ExplicitTransformation.to.children.children.root.Symbol.evaluates_to_type]
 kind = "namedType"
 value = "Real"
 
 [[transactions.items]]
 
-[transactions.items.AddTransformation.ExplicitTransformation.from.root.Symbol]
+[transactions.items.AddAxiom.ExplicitTransformation.from.root.Symbol]
 name = "*"
 
-[transactions.items.AddTransformation.ExplicitTransformation.from.root.Symbol.evaluates_to_type]
+[transactions.items.AddAxiom.ExplicitTransformation.from.root.Symbol.evaluates_to_type]
 kind = "namedType"
 value = "*"
 
-[[transactions.items.AddTransformation.ExplicitTransformation.from.children]]
+[[transactions.items.AddAxiom.ExplicitTransformation.from.children]]
 
-[transactions.items.AddTransformation.ExplicitTransformation.from.children.root.Symbol]
+[transactions.items.AddAxiom.ExplicitTransformation.from.children.root.Symbol]
 name = "^"
 
-[transactions.items.AddTransformation.ExplicitTransformation.from.children.root.Symbol.evaluates_to_type]
+[transactions.items.AddAxiom.ExplicitTransformation.from.children.root.Symbol.evaluates_to_type]
 kind = "namedType"
 value = "Real"
 
-[[transactions.items.AddTransformation.ExplicitTransformation.from.children.children]]
+[[transactions.items.AddAxiom.ExplicitTransformation.from.children.children]]
 children = []
 
-[transactions.items.AddTransformation.ExplicitTransformation.from.children.children.root.Symbol]
+[transactions.items.AddAxiom.ExplicitTransformation.from.children.children.root.Symbol]
 name = "x"
 
-[transactions.items.AddTransformation.ExplicitTransformation.from.children.children.root.Symbol.evaluates_to_type]
+[transactions.items.AddAxiom.ExplicitTransformation.from.children.children.root.Symbol.evaluates_to_type]
 kind = "namedType"
 value = "Real"
 
-[[transactions.items.AddTransformation.ExplicitTransformation.from.children.children]]
+[[transactions.items.AddAxiom.ExplicitTransformation.from.children.children]]
 children = []
 
-[transactions.items.AddTransformation.ExplicitTransformation.from.children.children.root.Symbol]
+[transactions.items.AddAxiom.ExplicitTransformation.from.children.children.root.Symbol]
 name = "y"
 
-[transactions.items.AddTransformation.ExplicitTransformation.from.children.children.root.Symbol.evaluates_to_type]
+[transactions.items.AddAxiom.ExplicitTransformation.from.children.children.root.Symbol.evaluates_to_type]
 kind = "namedType"
 value = "Real"
 
-[[transactions.items.AddTransformation.ExplicitTransformation.from.children]]
+[[transactions.items.AddAxiom.ExplicitTransformation.from.children]]
 
-[transactions.items.AddTransformation.ExplicitTransformation.from.children.root.Symbol]
+[transactions.items.AddAxiom.ExplicitTransformation.from.children.root.Symbol]
 name = "^"
 
-[transactions.items.AddTransformation.ExplicitTransformation.from.children.root.Symbol.evaluates_to_type]
+[transactions.items.AddAxiom.ExplicitTransformation.from.children.root.Symbol.evaluates_to_type]
 kind = "namedType"
 value = "Real"
 
-[[transactions.items.AddTransformation.ExplicitTransformation.from.children.children]]
+[[transactions.items.AddAxiom.ExplicitTransformation.from.children.children]]
 children = []
 
-[transactions.items.AddTransformation.ExplicitTransformation.from.children.children.root.Symbol]
+[transactions.items.AddAxiom.ExplicitTransformation.from.children.children.root.Symbol]
 name = "x"
 
-[transactions.items.AddTransformation.ExplicitTransformation.from.children.children.root.Symbol.evaluates_to_type]
+[transactions.items.AddAxiom.ExplicitTransformation.from.children.children.root.Symbol.evaluates_to_type]
 kind = "namedType"
 value = "Real"
 
-[[transactions.items.AddTransformation.ExplicitTransformation.from.children.children]]
+[[transactions.items.AddAxiom.ExplicitTransformation.from.children.children]]
 children = []
 
-[transactions.items.AddTransformation.ExplicitTransformation.from.children.children.root.Symbol]
+[transactions.items.AddAxiom.ExplicitTransformation.from.children.children.root.Symbol]
 name = "z"
 
-[transactions.items.AddTransformation.ExplicitTransformation.from.children.children.root.Symbol.evaluates_to_type]
+[transactions.items.AddAxiom.ExplicitTransformation.from.children.children.root.Symbol.evaluates_to_type]
 kind = "namedType"
 value = "Real"
 
-[transactions.items.AddTransformation.ExplicitTransformation.to.root.Symbol]
+[transactions.items.AddAxiom.ExplicitTransformation.to.root.Symbol]
 name = "^"
 
-[transactions.items.AddTransformation.ExplicitTransformation.to.root.Symbol.evaluates_to_type]
+[transactions.items.AddAxiom.ExplicitTransformation.to.root.Symbol.evaluates_to_type]
 kind = "namedType"
 value = "Real"
 
-[[transactions.items.AddTransformation.ExplicitTransformation.to.children]]
+[[transactions.items.AddAxiom.ExplicitTransformation.to.children]]
 children = []
 
-[transactions.items.AddTransformation.ExplicitTransformation.to.children.root.Symbol]
+[transactions.items.AddAxiom.ExplicitTransformation.to.children.root.Symbol]
 name = "x"
 
-[transactions.items.AddTransformation.ExplicitTransformation.to.children.root.Symbol.evaluates_to_type]
+[transactions.items.AddAxiom.ExplicitTransformation.to.children.root.Symbol.evaluates_to_type]
 kind = "namedType"
 value = "Real"
 
-[[transactions.items.AddTransformation.ExplicitTransformation.to.children]]
+[[transactions.items.AddAxiom.ExplicitTransformation.to.children]]
 
-[transactions.items.AddTransformation.ExplicitTransformation.to.children.root.Symbol]
+[transactions.items.AddAxiom.ExplicitTransformation.to.children.root.Symbol]
 name = "+"
 
-[transactions.items.AddTransformation.ExplicitTransformation.to.children.root.Symbol.evaluates_to_type]
+[transactions.items.AddAxiom.ExplicitTransformation.to.children.root.Symbol.evaluates_to_type]
 kind = "namedType"
 value = "+"
 
-[[transactions.items.AddTransformation.ExplicitTransformation.to.children.children]]
+[[transactions.items.AddAxiom.ExplicitTransformation.to.children.children]]
 children = []
 
-[transactions.items.AddTransformation.ExplicitTransformation.to.children.children.root.Symbol]
+[transactions.items.AddAxiom.ExplicitTransformation.to.children.children.root.Symbol]
 name = "y"
 
-[transactions.items.AddTransformation.ExplicitTransformation.to.children.children.root.Symbol.evaluates_to_type]
+[transactions.items.AddAxiom.ExplicitTransformation.to.children.children.root.Symbol.evaluates_to_type]
 kind = "namedType"
 value = "Real"
 
-[[transactions.items.AddTransformation.ExplicitTransformation.to.children.children]]
+[[transactions.items.AddAxiom.ExplicitTransformation.to.children.children]]
 children = []
 
-[transactions.items.AddTransformation.ExplicitTransformation.to.children.children.root.Symbol]
+[transactions.items.AddAxiom.ExplicitTransformation.to.children.children.root.Symbol]
 name = "z"
 
-[transactions.items.AddTransformation.ExplicitTransformation.to.children.children.root.Symbol.evaluates_to_type]
+[transactions.items.AddAxiom.ExplicitTransformation.to.children.children.root.Symbol.evaluates_to_type]
 kind = "namedType"
 value = "Real"
 
@@ -2974,75 +2974,75 @@ kind = "object"
 
 [[transactions.items.Derive]]
 
-[transactions.items.Derive.ExplicitTransformation.from.root.Symbol]
+[transactions.items.Derive.Axiom.ExplicitTransformation.from.root.Symbol]
 name = "="
 
-[transactions.items.Derive.ExplicitTransformation.from.root.Symbol.evaluates_to_type]
+[transactions.items.Derive.Axiom.ExplicitTransformation.from.root.Symbol.evaluates_to_type]
 kind = "namedType"
 value = "="
 
-[[transactions.items.Derive.ExplicitTransformation.from.children]]
+[[transactions.items.Derive.Axiom.ExplicitTransformation.from.children]]
 children = []
 
-[transactions.items.Derive.ExplicitTransformation.from.children.root.Symbol]
+[transactions.items.Derive.Axiom.ExplicitTransformation.from.children.root.Symbol]
 name = "x"
 
-[transactions.items.Derive.ExplicitTransformation.from.children.root.Symbol.evaluates_to_type]
+[transactions.items.Derive.Axiom.ExplicitTransformation.from.children.root.Symbol.evaluates_to_type]
 kind = "namedType"
 value = "Real"
 
-[[transactions.items.Derive.ExplicitTransformation.from.children]]
+[[transactions.items.Derive.Axiom.ExplicitTransformation.from.children]]
 children = []
 
-[transactions.items.Derive.ExplicitTransformation.from.children.root.Symbol]
+[transactions.items.Derive.Axiom.ExplicitTransformation.from.children.root.Symbol]
 name = "y"
 
-[transactions.items.Derive.ExplicitTransformation.from.children.root.Symbol.evaluates_to_type]
+[transactions.items.Derive.Axiom.ExplicitTransformation.from.children.root.Symbol.evaluates_to_type]
 kind = "namedType"
 value = "Real"
 
-[transactions.items.Derive.ExplicitTransformation.to.root.Symbol]
+[transactions.items.Derive.Axiom.ExplicitTransformation.to.root.Symbol]
 name = "="
 
-[transactions.items.Derive.ExplicitTransformation.to.root.Symbol.evaluates_to_type]
+[transactions.items.Derive.Axiom.ExplicitTransformation.to.root.Symbol.evaluates_to_type]
 kind = "namedType"
 value = "="
 
-[[transactions.items.Derive.ExplicitTransformation.to.children]]
+[[transactions.items.Derive.Axiom.ExplicitTransformation.to.children]]
 
-[transactions.items.Derive.ExplicitTransformation.to.children.root.Arbitrary]
+[transactions.items.Derive.Axiom.ExplicitTransformation.to.children.root.Arbitrary]
 name = "Any"
 
-[transactions.items.Derive.ExplicitTransformation.to.children.root.Arbitrary.evaluates_to_type]
+[transactions.items.Derive.Axiom.ExplicitTransformation.to.children.root.Arbitrary.evaluates_to_type]
 kind = "namedType"
 value = "Real"
 
-[[transactions.items.Derive.ExplicitTransformation.to.children.children]]
+[[transactions.items.Derive.Axiom.ExplicitTransformation.to.children.children]]
 children = []
 
-[transactions.items.Derive.ExplicitTransformation.to.children.children.root.Symbol]
+[transactions.items.Derive.Axiom.ExplicitTransformation.to.children.children.root.Symbol]
 name = "x"
 
-[transactions.items.Derive.ExplicitTransformation.to.children.children.root.Symbol.evaluates_to_type]
+[transactions.items.Derive.Axiom.ExplicitTransformation.to.children.children.root.Symbol.evaluates_to_type]
 kind = "namedType"
 value = "Real"
 
-[[transactions.items.Derive.ExplicitTransformation.to.children]]
+[[transactions.items.Derive.Axiom.ExplicitTransformation.to.children]]
 
-[transactions.items.Derive.ExplicitTransformation.to.children.root.Arbitrary]
+[transactions.items.Derive.Axiom.ExplicitTransformation.to.children.root.Arbitrary]
 name = "Any"
 
-[transactions.items.Derive.ExplicitTransformation.to.children.root.Arbitrary.evaluates_to_type]
+[transactions.items.Derive.Axiom.ExplicitTransformation.to.children.root.Arbitrary.evaluates_to_type]
 kind = "namedType"
 value = "Real"
 
-[[transactions.items.Derive.ExplicitTransformation.to.children.children]]
+[[transactions.items.Derive.Axiom.ExplicitTransformation.to.children.children]]
 children = []
 
-[transactions.items.Derive.ExplicitTransformation.to.children.children.root.Symbol]
+[transactions.items.Derive.Axiom.ExplicitTransformation.to.children.children.root.Symbol]
 name = "y"
 
-[transactions.items.Derive.ExplicitTransformation.to.children.children.root.Symbol.evaluates_to_type]
+[transactions.items.Derive.Axiom.ExplicitTransformation.to.children.children.root.Symbol.evaluates_to_type]
 kind = "namedType"
 value = "Real"
 

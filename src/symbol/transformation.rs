@@ -15,7 +15,7 @@ use super::symbol_type::{GeneratedType, TypeHierarchy};
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub struct TransformationLattice {
     statements: HashSet<SymbolNode>,
-    available_transformations: HashSet<Transformation>,
+    available_transformations: HashSet<AvailableTransformation>,
     transformations_from: HashMap<SymbolNode, Vec<Transformation>>,
     transformations_to: HashMap<(SymbolNode, Transformation), SymbolNode>,
 }
@@ -23,7 +23,7 @@ pub struct TransformationLattice {
 impl TransformationLattice {
     pub fn new(
         statements: HashSet<SymbolNode>,
-        available_transformations: HashSet<Transformation>,
+        available_transformations: HashSet<AvailableTransformation>,
         transformations_from: HashMap<SymbolNode, Vec<Transformation>>,
         transformations_to: HashMap<(SymbolNode, Transformation), SymbolNode>,
     ) -> Self {
@@ -45,7 +45,7 @@ impl TransformationLattice {
     }
 
     pub fn from_transformations(
-        transformations: HashSet<Transformation>,
+        transformations: HashSet<AvailableTransformation>,
     ) -> Result<Self, TransformationError> {
         let mut to_return = Self::empty();
         to_return.add_available_transformations(transformations)?;
@@ -68,7 +68,7 @@ impl TransformationLattice {
     pub fn scope_down(
         &self,
         maybe_scoped_statements: Option<HashSet<SymbolNode>>,
-        maybe_scoped_transformations: Option<HashSet<Transformation>>,
+        maybe_scoped_transformations: Option<HashSet<AvailableTransformation>>,
     ) -> Result<Self, TransformationError> {
         let scoped_statements = match maybe_scoped_statements {
             None => self.statements.clone(),
@@ -121,15 +121,15 @@ impl TransformationLattice {
         to_return
     }
 
-    pub fn get_available_transformations(&self) -> &HashSet<Transformation> {
+    pub fn get_available_transformations(&self) -> &HashSet<AvailableTransformation> {
         &self.available_transformations
     }
 
     pub fn verify_available_transformations(
         &self,
-        to_verify: HashSet<Transformation>,
-    ) -> Result<HashSet<Transformation>, TransformationError> {
-        let missing_transformation: Vec<&Transformation> = to_verify
+        to_verify: HashSet<AvailableTransformation>,
+    ) -> Result<HashSet<AvailableTransformation>, TransformationError> {
+        let missing_transformation: Vec<&AvailableTransformation> = to_verify
             .iter()
             .filter(|t| !self.available_transformations.contains(t))
             .collect();
@@ -138,13 +138,17 @@ impl TransformationLattice {
         } else {
             Err(
                 TransformationError::MissingTransformationsInTransformationLattice(
-                    missing_transformation.into_iter().cloned().collect(),
+                    missing_transformation
+                        .into_iter()
+                        .map(|t| t.get_transformation())
+                        .cloned()
+                        .collect(),
                 ),
             )
         }
     }
 
-    pub fn get_ordered_available_transformations(&self) -> Vec<Transformation> {
+    pub fn get_ordered_available_transformations(&self) -> Vec<AvailableTransformation> {
         let mut to_return = self
             .get_available_transformations()
             .into_iter()
@@ -205,8 +209,17 @@ impl TransformationLattice {
         self.statements.contains(statement)
     }
 
-    pub fn contains_transformation(&self, transformation: &Transformation) -> bool {
+    pub fn contains_available_transformation(
+        &self,
+        transformation: &AvailableTransformation,
+    ) -> bool {
         self.available_transformations.contains(transformation)
+    }
+
+    pub fn contains_transformation(&self, transformation: &Transformation) -> bool {
+        self.available_transformations
+            .iter()
+            .any(|t| t.get_transformation() == transformation)
     }
 
     pub fn add_hypothesis(&mut self, hypothesis: SymbolNode) -> Result<(), TransformationError> {
@@ -222,7 +235,7 @@ impl TransformationLattice {
 
     pub fn add_available_transformations(
         &mut self,
-        transformations: HashSet<Transformation>,
+        transformations: HashSet<AvailableTransformation>,
     ) -> Result<(), TransformationError> {
         transformations
             .into_iter()
@@ -231,11 +244,11 @@ impl TransformationLattice {
 
     pub fn add_available_transformation(
         &mut self,
-        transformation: Transformation,
+        transformation: AvailableTransformation,
     ) -> Result<(), TransformationError> {
-        if self.contains_transformation(&transformation) {
+        if self.contains_available_transformation(&transformation) {
             Err(TransformationError::AlreadyContainsTransformation(
-                transformation.clone(),
+                transformation.get_transformation().clone(),
             ))
         } else {
             self.available_transformations.insert(transformation);
@@ -247,7 +260,7 @@ impl TransformationLattice {
         &mut self,
         types: &TypeHierarchy,
         desired: SymbolNode,
-    ) -> Result<(SymbolNode, Transformation, SymbolNode), TransformationError> {
+    ) -> Result<(SymbolNode, AvailableTransformation, SymbolNode), TransformationError> {
         if self.contains_statement(&desired) {
             return Err(TransformationError::AlreadyContainsStatement(
                 desired.clone(),
@@ -268,16 +281,20 @@ impl TransformationLattice {
                 .into_iter()
                 .map(|(instantiated, arbitrary)| format!(
                     "{} ({})",
-                    instantiated.to_symbol_string(),
-                    arbitrary.to_symbol_string()
+                    instantiated.get_transformation().to_symbol_string(),
+                    arbitrary.get_transformation().to_symbol_string()
                 ))
                 .collect::<Vec<_>>()
                 .join("\n")
         );
         for (instantiated_transform, arbitrary_transform) in instantiated_transformations {
-            let statements = self.get_candidate_statements(&instantiated_transform);
+            let statements =
+                self.get_candidate_statements(instantiated_transform.get_transformation());
             for statement in statements.into_iter() {
-                match instantiated_transform.try_transform_into(types, &statement, &desired) {
+                match instantiated_transform
+                    .get_transformation()
+                    .try_transform_into(types, &statement, &desired)
+                {
                     Ok(output) => {
                         // TODO Log the instantiated transform too and show it in the front end
                         self.force_apply_transformation(
@@ -285,7 +302,7 @@ impl TransformationLattice {
                             arbitrary_transform.clone(),
                             output.clone(),
                         );
-                        return Ok((statement, arbitrary_transform, output));
+                        return Ok((statement, arbitrary_transform.clone(), output));
                     }
                     Err(_) => {
                         // Do nothing, keep trying transformations
@@ -308,11 +325,11 @@ impl TransformationLattice {
     pub fn force_apply_transformation(
         &mut self,
         from: SymbolNode,
-        transformation: Transformation,
+        transformation: AvailableTransformation,
         to: SymbolNode,
     ) {
         self.statements.insert(to.clone());
-        if !self.contains_transformation(&transformation) {
+        if !self.contains_available_transformation(&transformation) {
             warn!(
                 "force_apply_transformation was used without the transformation being available."
             );
@@ -324,15 +341,28 @@ impl TransformationLattice {
         self.transformations_from
             .entry(from.clone())
             .or_default()
-            .push(transformation.clone());
-        self.transformations_to.insert((from, transformation), to);
+            .push(transformation.get_transformation().clone());
+        self.transformations_to
+            .insert((from, transformation.get_transformation().clone()), to);
+    }
+
+    pub fn force_derive_theorem(
+        &mut self,
+        transformation: Transformation,
+        provenance: TransformationProvenance,
+    ) {
+        self.available_transformations
+            .insert(AvailableTransformation::Theorem((
+                transformation,
+                provenance,
+            )));
     }
 
     pub fn get_instantiated_transformations_with_arbitrary(
         &self,
         types: &TypeHierarchy,
         maybe_desired: Option<SymbolNode>,
-    ) -> Result<Vec<(Transformation, Transformation)>, TransformationError> {
+    ) -> Result<Vec<(AvailableTransformation, AvailableTransformation)>, TransformationError> {
         let statements = if let Some(desired) = maybe_desired {
             let mut statements = vec![desired];
             statements.append(&mut self.get_ordered_statements().clone());
@@ -377,18 +407,21 @@ impl TransformationLattice {
         return Ok(to_return);
     }
 
-    fn get_arbitrary_transformations(&self) -> HashSet<Transformation> {
-        self.get_available_transformations()
-            .iter()
-            .filter(|t| t.contains_arbitrary_nodes())
-            .cloned()
-            .collect()
+    fn get_arbitrary_transformations(&self) -> HashSet<AvailableTransformation> {
+        self.get_transformations_filtered_on_arbitrariness(true)
     }
 
-    fn get_non_arbitrary_transformations(&self) -> HashSet<Transformation> {
+    fn get_non_arbitrary_transformations(&self) -> HashSet<AvailableTransformation> {
+        self.get_transformations_filtered_on_arbitrariness(false)
+    }
+
+    fn get_transformations_filtered_on_arbitrariness(
+        &self,
+        is_arbitrary: bool,
+    ) -> HashSet<AvailableTransformation> {
         self.get_available_transformations()
             .iter()
-            .filter(|t| !t.contains_arbitrary_nodes())
+            .filter(|t| t.get_transformation().contains_arbitrary_nodes() == is_arbitrary)
             .cloned()
             .collect()
     }
@@ -417,6 +450,132 @@ impl TransformationLattice {
             }
         }
         to_return
+    }
+
+    pub fn derive_theorem(
+        &mut self,
+        conclusion: &SymbolNode,
+    ) -> Result<(Transformation, TransformationProvenance), TransformationError> {
+        let hypotheses = self.get_ancestor_hypotheses(conclusion)?;
+
+        let theorem = if hypotheses.len() == 1 {
+            let hypothesis = hypotheses
+                .iter()
+                .next()
+                .expect("There is guaranteed to be one.");
+            Transformation::ExplicitTransformation((hypothesis.clone(), conclusion.clone()).into())
+        } else if hypotheses.len() == 2 {
+            let two_hypotheses = hypotheses.iter().take(2).collect::<Vec<_>>();
+            Transformation::ExplicitTransformation(
+                (
+                    two_hypotheses[0].clone().join(two_hypotheses[1].clone()),
+                    conclusion.clone(),
+                )
+                    .into(),
+            )
+        } else {
+            return Err(TransformationError::MoreThanTwoHypothesesForTheorem(
+                hypotheses.into_iter().collect(),
+                conclusion.clone(),
+            ));
+        };
+
+        if self.contains_transformation(&theorem) {
+            return Err(TransformationError::AlreadyContainsTransformation(
+                theorem.clone(),
+            ));
+        }
+        let provenance = TransformationProvenance::new(conclusion.clone());
+        self.add_available_transformation(AvailableTransformation::Theorem((
+            theorem.clone(),
+            provenance.clone(),
+        )))?;
+        Ok((theorem, provenance))
+    }
+
+    fn get_ancestor_hypotheses(
+        &self,
+        conclusion: &SymbolNode,
+    ) -> Result<HashSet<SymbolNode>, TransformationError> {
+        if !self.contains_statement(conclusion) {
+            return Err(
+                TransformationError::MissingStatementsInTransformationLattice(vec![
+                    conclusion.clone()
+                ]),
+            );
+        }
+        match self.get_upstream_statement_and_transformation(conclusion) {
+            None => Ok(vec![conclusion.clone()].into_iter().collect()),
+            Some((parent, _)) => {
+                if parent.is_join() {
+                    let children = parent.get_children();
+                    assert_eq!(children.len(), 2, "Joins must have two children.");
+                    let (left, right) = (children[0].clone(), children[1].clone());
+                    let left_hypotheses = self.get_ancestor_hypotheses(&left)?;
+                    let right_hypotheses = self.get_ancestor_hypotheses(&right)?;
+                    let hypotheses = left_hypotheses.union(&right_hypotheses).cloned().collect();
+                    Ok(hypotheses)
+                } else {
+                    Ok(self.get_ancestor_hypotheses(&parent)?)
+                }
+            }
+        }
+    }
+}
+
+#[derive(Clone, Debug, Hash, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
+pub enum AvailableTransformation {
+    Axiom(Transformation),
+    Theorem((Transformation, TransformationProvenance)),
+}
+
+impl AvailableTransformation {
+    pub fn get_transformation(&self) -> &Transformation {
+        match self {
+            Self::Axiom(t) => t,
+            Self::Theorem((t, _)) => t,
+        }
+    }
+
+    pub fn to_symbol_string(&self) -> String {
+        match self {
+            Self::Axiom(t) => format!("{} (Axiom)", t.to_symbol_string()),
+            Self::Theorem((t, _)) => format!("{} (Theorem)", t.to_symbol_string()),
+        }
+    }
+
+    pub fn is_algorithm(&self) -> bool {
+        self.get_transformation().is_algorithm()
+    }
+
+    pub fn instantiate_arbitrary_nodes(
+        &self,
+        hierarchy: &TypeHierarchy,
+        substatements: &HashSet<SymbolNode>,
+    ) -> Result<HashSet<Self>, TransformationError> {
+        match self {
+            Self::Axiom(t) => Ok(t
+                .instantiate_arbitrary_nodes(hierarchy, substatements)?
+                .into_iter()
+                .map(|r| Self::Axiom(r))
+                .collect()),
+            Self::Theorem((t, provenance)) => Ok(t
+                .instantiate_arbitrary_nodes(hierarchy, substatements)?
+                .into_iter()
+                .map(|r| Self::Theorem((r, provenance.clone())))
+                .collect()),
+        }
+    }
+}
+
+#[derive(Clone, Debug, Hash, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
+pub struct TransformationProvenance {
+    pub conclusion: SymbolNode,
+}
+
+impl TransformationProvenance {
+    pub fn new(conclusion: SymbolNode) -> Self {
+        Self { conclusion }
     }
 }
 
@@ -1448,6 +1607,7 @@ impl ExplicitTransformation {
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum TransformationError {
+    MoreThanTwoHypothesesForTheorem(Vec<SymbolNode>, SymbolNode),
     ConflictingTypes(String, Type, Type),
     InvalidSymbolNodeError(SymbolNodeError),
     InvalidFunctionCalledOn(SymbolNodeRoot),

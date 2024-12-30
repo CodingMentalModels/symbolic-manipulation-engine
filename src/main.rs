@@ -55,6 +55,7 @@ fn main() {
         }
         Some(("hypothesize", sub_matches)) => cli.hypothesize(sub_matches),
         Some(("derive", sub_matches)) => cli.derive(sub_matches),
+        Some(("derive-theorem", sub_matches)) => cli.derive_theorem(sub_matches),
         Some(("undo", _sub_matches)) => cli.undo(),
         Some(("redo", _sub_matches)) => cli.redo(),
         Some(("evaluate", sub_matches)) => {

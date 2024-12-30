@@ -186,20 +186,20 @@ value = "Real"
 
 [[transactions.items]]
 
-[transactions.items.AddTransformation.AlgorithmTransformation]
+[transactions.items.AddAxiom.AlgorithmTransformation]
 algorithm_type = "Addition"
 
-[transactions.items.AddTransformation.AlgorithmTransformation.operator]
+[transactions.items.AddAxiom.AlgorithmTransformation.operator]
 name = "+"
 
-[transactions.items.AddTransformation.AlgorithmTransformation.operator.evaluates_to_type]
+[transactions.items.AddAxiom.AlgorithmTransformation.operator.evaluates_to_type]
 kind = "namedType"
 value = "+"
 
-[transactions.items.AddTransformation.AlgorithmTransformation.input_type.condition]
+[transactions.items.AddAxiom.AlgorithmTransformation.input_type.condition]
 kind = "isNumeric"
 
-[[transactions.items.AddTransformation.AlgorithmTransformation.input_type.parents]]
+[[transactions.items.AddAxiom.AlgorithmTransformation.input_type.parents]]
 kind = "namedType"
 value = "Real"
 
@@ -207,20 +207,20 @@ value = "Real"
 
 [[transactions.items]]
 
-[transactions.items.AddTransformation.AlgorithmTransformation]
+[transactions.items.AddAxiom.AlgorithmTransformation]
 algorithm_type = "Subtraction"
 
-[transactions.items.AddTransformation.AlgorithmTransformation.operator]
+[transactions.items.AddAxiom.AlgorithmTransformation.operator]
 name = "-"
 
-[transactions.items.AddTransformation.AlgorithmTransformation.operator.evaluates_to_type]
+[transactions.items.AddAxiom.AlgorithmTransformation.operator.evaluates_to_type]
 kind = "namedType"
 value = "-"
 
-[transactions.items.AddTransformation.AlgorithmTransformation.input_type.condition]
+[transactions.items.AddAxiom.AlgorithmTransformation.input_type.condition]
 kind = "isNumeric"
 
-[[transactions.items.AddTransformation.AlgorithmTransformation.input_type.parents]]
+[[transactions.items.AddAxiom.AlgorithmTransformation.input_type.parents]]
 kind = "namedType"
 value = "Real"
 
@@ -228,20 +228,20 @@ value = "Real"
 
 [[transactions.items]]
 
-[transactions.items.AddTransformation.AlgorithmTransformation]
+[transactions.items.AddAxiom.AlgorithmTransformation]
 algorithm_type = "Multiplication"
 
-[transactions.items.AddTransformation.AlgorithmTransformation.operator]
+[transactions.items.AddAxiom.AlgorithmTransformation.operator]
 name = "*"
 
-[transactions.items.AddTransformation.AlgorithmTransformation.operator.evaluates_to_type]
+[transactions.items.AddAxiom.AlgorithmTransformation.operator.evaluates_to_type]
 kind = "namedType"
 value = "*"
 
-[transactions.items.AddTransformation.AlgorithmTransformation.input_type.condition]
+[transactions.items.AddAxiom.AlgorithmTransformation.input_type.condition]
 kind = "isNumeric"
 
-[[transactions.items.AddTransformation.AlgorithmTransformation.input_type.parents]]
+[[transactions.items.AddAxiom.AlgorithmTransformation.input_type.parents]]
 kind = "namedType"
 value = "Real"
 
@@ -249,20 +249,20 @@ value = "Real"
 
 [[transactions.items]]
 
-[transactions.items.AddTransformation.AlgorithmTransformation]
+[transactions.items.AddAxiom.AlgorithmTransformation]
 algorithm_type = "Division"
 
-[transactions.items.AddTransformation.AlgorithmTransformation.operator]
+[transactions.items.AddAxiom.AlgorithmTransformation.operator]
 name = "/"
 
-[transactions.items.AddTransformation.AlgorithmTransformation.operator.evaluates_to_type]
+[transactions.items.AddAxiom.AlgorithmTransformation.operator.evaluates_to_type]
 kind = "namedType"
 value = "/"
 
-[transactions.items.AddTransformation.AlgorithmTransformation.input_type.condition]
+[transactions.items.AddAxiom.AlgorithmTransformation.input_type.condition]
 kind = "isNumeric"
 
-[[transactions.items.AddTransformation.AlgorithmTransformation.input_type.parents]]
+[[transactions.items.AddAxiom.AlgorithmTransformation.input_type.parents]]
 kind = "namedType"
 value = "Real"
 
