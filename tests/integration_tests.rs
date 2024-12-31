@@ -245,3 +245,23 @@ fn test_gets_valid_transformations_large_expression_scoped_2() {
         .unwrap();
     assert_eq!(result, "[\"((((a*(x_0^2))+(b*x_0))+c)=(((a*(((Negative(b)+(((b^2)-((4*a)*c))^(1/2)))/(2*a))^2))+(b*((Negative(b)+(((b^2)-((4*a)*c))^(1/2)))/(2*a))))+c))\"]");
 }
+
+#[test]
+fn test_substitutes_with_multiple_variables() {
+    let root_dir = current_dir().unwrap();
+    let dir = root_dir.join(Path::new(
+        "C:\\Users\\cmsdu\\repos\\symbolic-manipulation-engine\\tests\\assets\\test_substitutes_with_multiple_variables",
+    ));
+    let filesystem = FileSystem::new(dir);
+    let cli = Cli::new(filesystem, CliMode::Testing);
+    let matches = build_cli().get_matches_from(vec![
+        "symbolic-manipulation-engine",
+        "get-transformations",
+        "--",
+        "((((6*r+r)+y)+b)=25)",
+    ]);
+    let result = cli
+        .get_transformations(matches.subcommand_matches("get-transformations").unwrap())
+        .unwrap();
+    assert_eq!(result, "((((6*r+r)+y)+b)=25)");
+}
