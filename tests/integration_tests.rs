@@ -258,10 +258,10 @@ fn test_substitutes_with_multiple_variables() {
         "symbolic-manipulation-engine",
         "get-transformations",
         "--",
-        "((((6*r+r)+y)+b)=25)",
+        "((((g+r)+y)+b)=((((6*r)+r)+y)+b))",
     ]);
     let result = cli
         .get_transformations(matches.subcommand_matches("get-transformations").unwrap())
         .unwrap();
-    assert_eq!(result, "((((6*r+r)+y)+b)=25)");
+    assert_eq!(result, "[\"((((g+r)+y)+b)=((((6*r)+r)+y)+b))\"]");
 }
