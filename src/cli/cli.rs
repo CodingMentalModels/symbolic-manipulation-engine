@@ -524,7 +524,7 @@ impl Cli {
 
     pub fn remove_statement(&self, sub_matches: &ArgMatches) -> Result<String, String> {
         let mut workspace_store = self.load_workspace_store()?;
-        let workspace = workspace_store.compile();
+        let mut workspace = workspace_store.compile();
         match sub_matches.get_one::<String>("statement-index") {
             None => Err("No statement index provided.".to_string()),
             Some(index_string) => match index_string.parse::<usize>() {
@@ -534,7 +534,7 @@ impl Cli {
                         .map_err(|e| format!("Workspace error: {:?}", e))?
                         .clone();
                     let mut result = workspace
-                        .remove_statement(statement)
+                        .remove_statement_and_all_dependents(&statement)
                         .map_err(|e| format!("Error removing statement: {:?}", e))?
                         .into_iter()
                         .map(|n| {

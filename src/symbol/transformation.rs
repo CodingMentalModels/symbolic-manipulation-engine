@@ -267,6 +267,63 @@ impl TransformationLattice {
             .collect())
     }
 
+    fn get_all_dependent_statements(
+        &self,
+        statement: &SymbolNode,
+    ) -> Result<HashSet<SymbolNode>, TransformationError> {
+        let downstream = self.get_downstream_statements(statement)?;
+        let to_return = downstream.clone();
+        let mut further_downstream = downstream
+            .into_iter()
+            .map(|s| self.get_downstream_statements(&s));
+        if further_downstream.any(|s| s.is_err()) {
+            return Err(further_downstream
+                .filter(|s| s.is_err())
+                .map(|e| e.unwrap_err())
+                .next()
+                .unwrap());
+        }
+        let further_downstream: HashSet<SymbolNode> =
+            further_downstream.map(|s| s.unwrap()).flatten().collect();
+        Ok(to_return.union(&further_downstream).cloned().collect())
+    }
+
+    fn get_downstream_statements(
+        &self,
+        statement: &SymbolNode,
+    ) -> Result<HashSet<SymbolNode>, TransformationError> {
+        if !self.contains_statement(statement) {
+            return Err(
+                TransformationError::MissingStatementsInTransformationLattice(vec![
+                    statement.clone()
+                ]),
+            );
+        }
+        Ok(self
+            .transformations_to
+            .iter()
+            .filter(|((from, _), _)| from == statement)
+            .map(|((_, _), to)| to)
+            .cloned()
+            .collect())
+    }
+
+    fn force_remove_statement(&mut self, statement: &SymbolNode) {
+        self.statements.remove(statement);
+        self.transformations_from = self
+            .transformations_from
+            .iter()
+            .filter(|(s, _t)| s == &statement)
+            .map(|(s, t)| (s.clone(), t.clone()))
+            .collect();
+        self.transformations_to = self
+            .transformations_to
+            .iter()
+            .filter(|((s, _t), _to)| s == statement)
+            .map(|((s, t), to)| ((s.clone(), t.clone()), to.clone()))
+            .collect();
+    }
+
     pub fn try_transform_into(
         &mut self,
         types: &TypeHierarchy,
