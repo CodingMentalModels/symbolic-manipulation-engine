@@ -299,6 +299,14 @@ impl Workspace {
         self.transformation_lattice.contains_statement(statement)
     }
 
+    pub fn remove_statement_and_all_dependents(
+        &mut self,
+        statement: &SymbolNode,
+    ) -> Result<HashSet<SymbolNode>, WorkspaceError> {
+        self.transformation_lattice
+            .remove_statement_and_all_dependents(statement)
+    }
+
     pub fn get_available_transformations(&self) -> &HashSet<AvailableTransformation> {
         self.transformation_lattice.get_available_transformations()
     }

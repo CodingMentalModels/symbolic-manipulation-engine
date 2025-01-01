@@ -148,6 +148,11 @@ pub fn build_cli() -> Command {
                     Arg::new("conclusion").help("Conclusion of theorem to derive. Its hypotheses will be computed automatically.").required(true)
                 )
             )
+        .subcommand(Command::new("remove-statement").about("Remove the given statement and all dependent statements.")
+                .arg(
+                    Arg::new("statement-index").help("Statement index of the statement to get valid transformations from.")
+                )
+            )
         .subcommand(Command::new("undo").about("Undoes the previous command (if possible)."))
         .subcommand(Command::new("redo").about("Redoes the previous undo (if possible)."))
         .subcommand(Command::new("evaluate").about("Applies available algorithms to the statement provided.")

@@ -256,6 +256,17 @@ impl TransformationLattice {
         }
     }
 
+    pub fn remove_statement_and_all_dependents(
+        &mut self,
+        statement: &SymbolNode,
+    ) -> Result<HashSet<SymbolNode>, TransformationError> {
+        Ok(self
+            .get_all_dependent_statements(statement)?
+            .into_iter()
+            .map(|s| force_remove_statement(s))
+            .collect())
+    }
+
     pub fn try_transform_into(
         &mut self,
         types: &TypeHierarchy,
