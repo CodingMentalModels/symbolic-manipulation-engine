@@ -2058,7 +2058,7 @@ mod test_workspace {
     }
 
     #[test]
-    fn test_workspace_derive_theorem() {
+    fn test_workspace_derives_theorem_and_deletes_statements() {
         let mut types = TypeHierarchy::chain(vec!["Real".into(), "Integer".into()]).unwrap();
         types
             .add_child_to_parent("=".into(), "Real".into())
@@ -2111,12 +2111,37 @@ mod test_workspace {
         let invalid_derivation = workspace_store.try_derive_theorem_parsed("a+b");
         assert!(invalid_derivation.is_err(), "{:#?}", invalid_derivation);
 
-        workspace_store.add_parsed_hypothesis("b+a").unwrap();
+        let a_plus_b = workspace_store.add_parsed_hypothesis("b+a").unwrap();
         workspace_store
             .try_transform_into_parsed("a+b", None, None)
             .unwrap();
         // Derive b+a -> a+b
         workspace_store.try_derive_theorem_parsed("a+b").unwrap();
+
+        assert_eq!(
+            workspace_store
+                .compile()
+                .get_available_transformations()
+                .len(),
+            2
+        );
+        assert_eq!(workspace_store.compile().get_statements().len(), 4);
+
+        let c = workspace_store.add_parsed_hypothesis("c").unwrap();
+        assert_eq!(workspace_store.compile().get_statements().len(), 5);
+        assert_eq!(
+            workspace_store
+                .remove_statement_and_all_dependents(&c.clone())
+                .unwrap(),
+            vec![c].into_iter().collect()
+        );
+        assert_eq!(workspace_store.compile().get_statements().len(), 4);
+
+        workspace_store
+            .remove_statement_and_all_dependents(&a_plus_b.clone())
+            .unwrap();
+
+        assert_eq!(workspace_store.compile().get_statements().len(), 2);
 
         assert_eq!(
             workspace_store
