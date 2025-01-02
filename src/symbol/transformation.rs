@@ -260,11 +260,9 @@ impl TransformationLattice {
         &mut self,
         statement: &SymbolNode,
     ) -> Result<HashSet<SymbolNode>, TransformationError> {
-        Ok(self
-            .get_all_dependent_statements(statement)?
-            .into_iter()
-            .map(|s| force_remove_statement(s))
-            .collect())
+        let statements_to_remove = self.get_all_dependent_statements(statement)?;
+        self.force_remove_statements(&statements_to_remove);
+        Ok(statements_to_remove)
     }
 
     fn get_all_dependent_statements(
@@ -306,6 +304,12 @@ impl TransformationLattice {
             .map(|((_, _), to)| to)
             .cloned()
             .collect())
+    }
+
+    pub fn force_remove_statements(&mut self, statements: &HashSet<SymbolNode>) {
+        statements
+            .iter()
+            .for_each(|s| self.force_remove_statement(s))
     }
 
     fn force_remove_statement(&mut self, statement: &SymbolNode) {

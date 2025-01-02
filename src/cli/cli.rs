@@ -533,7 +533,7 @@ impl Cli {
                         .get_statement(statement_index)
                         .map_err(|e| format!("Workspace error: {:?}", e))?
                         .clone();
-                    let mut result = workspace
+                    let mut result = workspace_store
                         .remove_statement_and_all_dependents(&statement)
                         .map_err(|e| format!("Error removing statement: {:?}", e))?
                         .into_iter()
@@ -543,6 +543,7 @@ impl Cli {
                         .collect::<Vec<_>>();
                     result.sort_by(|a, b| a.len().cmp(&b.len()));
                     let serialized_result = to_string(&result).map_err(|e| e.to_string())?;
+                    self.update_workspace_store(workspace_store);
                     Ok(serialized_result)
                 }
                 Err(_) => Err(format!("Unable to parse index: {}", index_string).to_string()),

@@ -305,6 +305,7 @@ impl Workspace {
     ) -> Result<HashSet<SymbolNode>, WorkspaceError> {
         self.transformation_lattice
             .remove_statement_and_all_dependents(statement)
+            .map_err(|e| e.into())
     }
 
     pub fn get_available_transformations(&self) -> &HashSet<AvailableTransformation> {
@@ -445,6 +446,11 @@ impl Workspace {
     ) {
         self.transformation_lattice
             .force_derive_theorem(transformation, provenance);
+    }
+
+    fn force_remove_statements(&mut self, statements: HashSet<SymbolNode>) {
+        self.transformation_lattice
+            .force_remove_statements(&statements)
     }
 
     fn get_upstream_statement_and_transformation(
@@ -782,6 +788,9 @@ impl WorkspaceTransactionStore {
             WorkspaceTransactionItem::AddHypothesis(hypothesis) => {
                 workspace.add_hypothesis(hypothesis)?;
             }
+            WorkspaceTransactionItem::RemoveStatements(statements) => {
+                workspace.force_remove_statements(statements)
+            }
             WorkspaceTransactionItem::AddAxiom(transformation) => {
                 workspace.add_axiom(transformation)?;
             }
@@ -989,6 +998,17 @@ impl WorkspaceTransactionStore {
         Ok(conclusion)
     }
 
+    pub fn remove_statement_and_all_dependents(
+        &mut self,
+        statement: &SymbolNode,
+    ) -> Result<HashSet<SymbolNode>, WorkspaceError> {
+        let mut workspace = self.compile();
+        let to_remove = workspace.remove_statement_and_all_dependents(statement)?;
+        let transaction = WorkspaceTransactionItem::RemoveStatements(to_remove.clone()).into();
+        self.add(transaction)?;
+        Ok(to_remove)
+    }
+
     fn get_type_hierarchy_with_transaction_applied(
         &mut self,
         transaction: &WorkspaceTransaction,
@@ -1113,6 +1133,7 @@ pub enum WorkspaceTransactionItem {
     UpdateInterpretation((InterpretationIndex, Interpretation)),
     RemoveInterpretation(InterpretationIndex),
     AddHypothesis(SymbolNode),
+    RemoveStatements(HashSet<SymbolNode>),
     AddAxiom(Transformation),
     AddTheorem((Transformation, TransformationProvenance)),
     Derive((SymbolNode, AvailableTransformation, SymbolNode)),
@@ -1428,6 +1449,7 @@ pub enum WorkspaceError {
     UnableToSerialize(String),
     TransformationError(TransformationError),
     StatementContainsTypesNotInHierarchy(HashSet<Type>),
+    MissingStatementsInTransformationLattice(Vec<SymbolNode>),
     IncompatibleTypeRelationships(HashSet<Type>),
     ConflictingTypes(String, Type, Type),
     StatementsAlreadyInclude(SymbolNode),
@@ -1462,6 +1484,9 @@ impl From<TransformationError> for WorkspaceError {
             }
             TransformationError::ArbitraryNodeHasNonOneChildren => {
                 Self::ArbitraryNodeHasNonOneChildren
+            }
+            TransformationError::MissingStatementsInTransformationLattice(statements) => {
+                Self::MissingStatementsInTransformationLattice(statements)
             }
             e => Self::InvalidTransformationError(e),
         }
