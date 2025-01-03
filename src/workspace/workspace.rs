@@ -2111,7 +2111,7 @@ mod test_workspace {
         let invalid_derivation = workspace_store.try_derive_theorem_parsed("a+b");
         assert!(invalid_derivation.is_err(), "{:#?}", invalid_derivation);
 
-        let a_plus_b = workspace_store.add_parsed_hypothesis("b+a").unwrap();
+        let b_plus_a = workspace_store.add_parsed_hypothesis("b+a").unwrap();
         workspace_store
             .try_transform_into_parsed("a+b", None, None)
             .unwrap();
@@ -2138,7 +2138,7 @@ mod test_workspace {
         assert_eq!(workspace_store.compile().get_statements().len(), 4);
 
         workspace_store
-            .remove_statement_and_all_dependents(&a_plus_b.clone())
+            .remove_statement_and_all_dependents(&b_plus_a.clone())
             .unwrap();
 
         assert_eq!(workspace_store.compile().get_statements().len(), 2);

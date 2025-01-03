@@ -270,7 +270,11 @@ impl TransformationLattice {
         statement: &SymbolNode,
     ) -> Result<HashSet<SymbolNode>, TransformationError> {
         let downstream = self.get_downstream_statements(statement)?;
-        let to_return = downstream.clone();
+        let mut to_return = downstream.clone();
+
+        // N.B. get_downstream_statements would have errored already if statement was not in the
+        // lattice
+        to_return.insert(statement.clone());
         let mut further_downstream = downstream
             .into_iter()
             .map(|s| self.get_downstream_statements(&s));
