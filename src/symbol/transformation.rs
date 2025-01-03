@@ -301,6 +301,7 @@ impl TransformationLattice {
                 ]),
             );
         }
+        assert!(false, "{:#?}", self);
         Ok(self
             .transformations_to
             .iter()
@@ -1899,6 +1900,57 @@ mod test_transformation {
             transformation.instantiate_arbitrary_nodes(&types, &substatements),
             Err(TransformationError::MultipleArbitraryNodeSymbols)
         );
+    }
+
+    #[test]
+    fn test_transformation_lattice_removes_statements() {
+        let hierarchy = TypeHierarchy::chain(vec!["Proposition".into()]).unwrap();
+        let parser = Parser::new(vec![
+            Interpretation::singleton("p", "Proposition".into()),
+            Interpretation::singleton("q", "Proposition".into()),
+            Interpretation::infix_operator("^".into(), 1, "Proposition".into()),
+            Interpretation::infix_operator("=>".into(), 2, "Proposition".into()),
+            Interpretation::singleton("a", "Proposition".into()),
+            Interpretation::singleton("b", "Proposition".into()),
+            Interpretation::singleton("c", "Proposition".into()),
+        ]);
+
+        let as_proposition =
+            |name: &str| Symbol::new(name.to_string(), "Proposition".into()).into();
+
+        let mut lattice = TransformationLattice::empty();
+
+        let from = SymbolNode::new(
+            SymbolNodeRoot::Join,
+            vec![as_proposition("p"), as_proposition("q")],
+        );
+        let p_and_q = parser
+            .parse_from_string(vec!["^".to_string()], "p^q")
+            .unwrap();
+        let transform: Transformation = ExplicitTransformation::new(from, p_and_q.clone()).into();
+        lattice
+            .add_available_transformation(AvailableTransformation::Axiom(transform))
+            .unwrap();
+        lattice.add_hypothesis(as_proposition("p")).unwrap();
+        lattice.add_hypothesis(as_proposition("q")).unwrap();
+        lattice
+            .try_transform_into(&hierarchy, p_and_q.clone())
+            .unwrap();
+
+        let downstream = lattice
+            .get_downstream_statements(&as_proposition("p"))
+            .unwrap();
+        assert_eq!(downstream, vec![p_and_q.clone()].into_iter().collect());
+
+        let removed = lattice
+            .remove_statement_and_all_dependents(&as_proposition("p"))
+            .unwrap();
+        assert_eq!(
+            removed,
+            vec![as_proposition("p"), p_and_q.clone()]
+                .into_iter()
+                .collect()
+        )
     }
 
     #[test]
