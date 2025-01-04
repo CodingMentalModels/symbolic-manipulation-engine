@@ -301,11 +301,23 @@ impl TransformationLattice {
                 ]),
             );
         }
-        assert!(false, "{:#?}", self);
+        debug!(
+            "{:#?}",
+            self.transformations_to
+                .iter()
+                .map(|((from, t), to)| format!(
+                    "from: {:?}\nt: {:?}\nto: {:?}",
+                    from.to_symbol_string(),
+                    t.to_symbol_string(),
+                    to.to_symbol_string()
+                ))
+                .collect::<Vec<_>>()
+                .join("\n")
+        );
         Ok(self
             .transformations_to
             .iter()
-            .filter(|((from, _), _)| from == statement)
+            .filter(|((from, _), _)| from == statement || from.is_join_containing(statement))
             .map(|((_, _), to)| to)
             .cloned()
             .collect())
@@ -1908,8 +1920,9 @@ mod test_transformation {
         let parser = Parser::new(vec![
             Interpretation::singleton("p", "Proposition".into()),
             Interpretation::singleton("q", "Proposition".into()),
-            Interpretation::infix_operator("^".into(), 1, "Proposition".into()),
-            Interpretation::infix_operator("=>".into(), 2, "Proposition".into()),
+            Interpretation::infix_operator("|".into(), 1, "Proposition".into()),
+            Interpretation::infix_operator("^".into(), 2, "Proposition".into()),
+            Interpretation::infix_operator("=>".into(), 3, "Proposition".into()),
             Interpretation::singleton("a", "Proposition".into()),
             Interpretation::singleton("b", "Proposition".into()),
             Interpretation::singleton("c", "Proposition".into()),
@@ -1950,7 +1963,33 @@ mod test_transformation {
             vec![as_proposition("p"), p_and_q.clone()]
                 .into_iter()
                 .collect()
-        )
+        );
+        assert_eq!(
+            lattice.get_statements(),
+            &vec![as_proposition("q")].into_iter().collect()
+        );
+
+        let q_or_p = parser
+            .parse_from_string(vec!["|".to_string()], "q|p")
+            .unwrap();
+        let transform: Transformation =
+            ExplicitTransformation::new(as_proposition("q"), q_or_p.clone()).into();
+        lattice
+            .add_available_transformation(AvailableTransformation::Axiom(transform))
+            .unwrap();
+        lattice
+            .try_transform_into(&hierarchy, q_or_p.clone())
+            .unwrap();
+        let removed = lattice
+            .remove_statement_and_all_dependents(&as_proposition("q"))
+            .unwrap();
+        assert_eq!(
+            removed,
+            vec![as_proposition("q"), q_or_p.clone()]
+                .into_iter()
+                .collect()
+        );
+        assert_eq!(lattice.get_statements(), &HashSet::new());
     }
 
     #[test]

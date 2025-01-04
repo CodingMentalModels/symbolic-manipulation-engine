@@ -291,6 +291,13 @@ impl SymbolNode {
         self.root.is_join()
     }
 
+    pub fn is_join_containing(&self, statement: &SymbolNode) -> bool {
+        match self.root {
+            SymbolNodeRoot::Join => self.get_children().contains(statement),
+            _ => false,
+        }
+    }
+
     pub fn join(self, other: Self) -> Self {
         Self::new(SymbolNodeRoot::Join, vec![self, other])
     }

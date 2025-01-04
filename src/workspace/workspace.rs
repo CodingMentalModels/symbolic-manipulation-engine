@@ -2135,13 +2135,35 @@ mod test_workspace {
                 .unwrap(),
             vec![c].into_iter().collect()
         );
-        assert_eq!(workspace_store.compile().get_statements().len(), 4);
+        assert_eq!(
+            workspace_store.compile().get_statements().len(),
+            4,
+            "{}",
+            workspace_store
+                .compile()
+                .get_statements()
+                .iter()
+                .map(|s| s.to_symbol_string())
+                .collect::<Vec<_>>()
+                .join("\n")
+        );
 
         workspace_store
             .remove_statement_and_all_dependents(&b_plus_a.clone())
             .unwrap();
 
-        assert_eq!(workspace_store.compile().get_statements().len(), 2);
+        assert_eq!(
+            workspace_store.compile().get_statements().len(),
+            2,
+            "\n{}",
+            workspace_store
+                .compile()
+                .get_statements()
+                .iter()
+                .map(|s| s.to_symbol_string())
+                .collect::<Vec<_>>()
+                .join("\n")
+        );
 
         assert_eq!(
             workspace_store
