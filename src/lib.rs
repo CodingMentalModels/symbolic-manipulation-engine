@@ -150,7 +150,7 @@ pub fn build_cli() -> Command {
             )
         .subcommand(Command::new("remove-statement").about("Remove the given statement and all dependent statements.")
                 .arg(
-                    Arg::new("statement-index").help("Statement index of the statement to get valid transformations from.")
+                    Arg::new("statement-index").help("Index of statement to remove.")
                 )
             )
         .subcommand(Command::new("undo").about("Undoes the previous command (if possible)."))
