@@ -1526,6 +1526,8 @@ impl From<TypeError> for WorkspaceError {
 #[cfg(test)]
 mod test_workspace {
 
+    use std::iter;
+
     use crate::{
         context::context::Context,
         parsing::{interpretation::Interpretation, parser::Parser},
@@ -1536,6 +1538,43 @@ mod test_workspace {
     };
 
     use super::*;
+
+    #[test]
+    fn test_workspace_store_serializes() {
+        let mut store = WorkspaceTransactionStore::empty();
+        store
+            .add(WorkspaceTransactionItem::AddType(("Real".into(), Type::Object)).into())
+            .unwrap();
+        store
+            .add(
+                WorkspaceTransactionItem::AddInterpretation(Interpretation::singleton(
+                    "x".into(),
+                    "Real".into(),
+                ))
+                .into(),
+            )
+            .unwrap();
+        store
+            .add(
+                WorkspaceTransactionItem::AddInterpretation(Interpretation::infix_operator(
+                    "+".into(),
+                    1,
+                    "Real".into(),
+                ))
+                .into(),
+            )
+            .unwrap();
+        let mut x_generator = iter::repeat("x".to_string());
+        for i in 0..100 {
+            let sum = x_generator.take(i).collect::<Vec<_>>().join("+");
+            store
+                .add(WorkspaceTransactionItem::AddHypothesis(parse(sum)).into())
+                .unwrap();
+        }
+        let serialized = store.serialize().unwrap();
+        let deserialized = toml::from_str(&serialized).unwrap();
+        assert_eq!(serialized, deserialized);
+    }
 
     #[test]
     fn test_truncation_store_snapshots_all_if_truncation_is_too_much() {
