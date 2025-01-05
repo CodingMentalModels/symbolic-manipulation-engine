@@ -541,9 +541,10 @@ impl Cli {
                             n.to_interpreted_string(workspace_store.compile().get_interpretations())
                         })
                         .collect::<Vec<_>>();
-                    result.sort_by(|a, b| a.len().cmp(&b.len()));
+                    result.sort_by(|a, b| a.cmp(&b));
                     let serialized_result = to_string(&result).map_err(|e| e.to_string())?;
-                    self.update_workspace_store(workspace_store);
+                    self.update_workspace_store(workspace_store)
+                        .map_err(|e| format!("Error updating workspace store: {:?}", e))?;
                     Ok(serialized_result)
                 }
                 Err(_) => Err(format!("Unable to parse index: {}", index_string).to_string()),

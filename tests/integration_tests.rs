@@ -283,5 +283,8 @@ fn test_removes_statements_and_dependents() {
     let result = cli
         .remove_statement(matches.subcommand_matches("remove-statement").unwrap())
         .unwrap();
-    assert_eq!(result, "[]");
+    assert_eq!(
+        result,
+        "[\"((x*z)+(y*z))\",\"((x+y)*z)\",\"((z*x)+(z*y))\",\"(z*(x+y))\"]"
+    );
 }
