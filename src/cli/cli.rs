@@ -521,6 +521,36 @@ impl Cli {
             }
         }
     }
+
+    pub fn remove_statement(&self, sub_matches: &ArgMatches) -> Result<String, String> {
+        let mut workspace_store = self.load_workspace_store()?;
+        let mut workspace = workspace_store.compile();
+        match sub_matches.get_one::<String>("statement-index") {
+            None => Err("No statement index provided.".to_string()),
+            Some(index_string) => match index_string.parse::<usize>() {
+                Ok(statement_index) => {
+                    let statement = workspace
+                        .get_statement(statement_index)
+                        .map_err(|e| format!("Workspace error: {:?}", e))?
+                        .clone();
+                    let mut result = workspace_store
+                        .remove_statement_and_all_dependents(&statement)
+                        .map_err(|e| format!("Error removing statement: {:?}", e))?
+                        .into_iter()
+                        .map(|n| {
+                            n.to_interpreted_string(workspace_store.compile().get_interpretations())
+                        })
+                        .collect::<Vec<_>>();
+                    result.sort_by(|a, b| a.len().cmp(&b.len()));
+                    let serialized_result = to_string(&result).map_err(|e| e.to_string())?;
+                    self.update_workspace_store(workspace_store);
+                    Ok(serialized_result)
+                }
+                Err(_) => Err(format!("Unable to parse index: {}", index_string).to_string()),
+            },
+        }
+    }
+
     pub fn undo(&self) -> Result<String, String> {
         let mut workspace_store = self.load_workspace_store()?;
         let did_undo = workspace_store.undo().is_some();

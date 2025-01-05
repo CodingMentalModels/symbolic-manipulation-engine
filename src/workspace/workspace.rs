@@ -299,6 +299,15 @@ impl Workspace {
         self.transformation_lattice.contains_statement(statement)
     }
 
+    pub fn remove_statement_and_all_dependents(
+        &mut self,
+        statement: &SymbolNode,
+    ) -> Result<HashSet<SymbolNode>, WorkspaceError> {
+        self.transformation_lattice
+            .remove_statement_and_all_dependents(statement)
+            .map_err(|e| e.into())
+    }
+
     pub fn get_available_transformations(&self) -> &HashSet<AvailableTransformation> {
         self.transformation_lattice.get_available_transformations()
     }
@@ -437,6 +446,11 @@ impl Workspace {
     ) {
         self.transformation_lattice
             .force_derive_theorem(transformation, provenance);
+    }
+
+    fn force_remove_statements(&mut self, statements: HashSet<SymbolNode>) {
+        self.transformation_lattice
+            .force_remove_statements(&statements)
     }
 
     fn get_upstream_statement_and_transformation(
@@ -774,6 +788,9 @@ impl WorkspaceTransactionStore {
             WorkspaceTransactionItem::AddHypothesis(hypothesis) => {
                 workspace.add_hypothesis(hypothesis)?;
             }
+            WorkspaceTransactionItem::RemoveStatements(statements) => {
+                workspace.force_remove_statements(statements)
+            }
             WorkspaceTransactionItem::AddAxiom(transformation) => {
                 workspace.add_axiom(transformation)?;
             }
@@ -981,6 +998,17 @@ impl WorkspaceTransactionStore {
         Ok(conclusion)
     }
 
+    pub fn remove_statement_and_all_dependents(
+        &mut self,
+        statement: &SymbolNode,
+    ) -> Result<HashSet<SymbolNode>, WorkspaceError> {
+        let mut workspace = self.compile();
+        let to_remove = workspace.remove_statement_and_all_dependents(statement)?;
+        let transaction = WorkspaceTransactionItem::RemoveStatements(to_remove.clone()).into();
+        self.add(transaction)?;
+        Ok(to_remove)
+    }
+
     fn get_type_hierarchy_with_transaction_applied(
         &mut self,
         transaction: &WorkspaceTransaction,
@@ -1105,6 +1133,7 @@ pub enum WorkspaceTransactionItem {
     UpdateInterpretation((InterpretationIndex, Interpretation)),
     RemoveInterpretation(InterpretationIndex),
     AddHypothesis(SymbolNode),
+    RemoveStatements(HashSet<SymbolNode>),
     AddAxiom(Transformation),
     AddTheorem((Transformation, TransformationProvenance)),
     Derive((SymbolNode, AvailableTransformation, SymbolNode)),
@@ -1420,6 +1449,7 @@ pub enum WorkspaceError {
     UnableToSerialize(String),
     TransformationError(TransformationError),
     StatementContainsTypesNotInHierarchy(HashSet<Type>),
+    MissingStatementsInTransformationLattice(Vec<SymbolNode>),
     IncompatibleTypeRelationships(HashSet<Type>),
     ConflictingTypes(String, Type, Type),
     StatementsAlreadyInclude(SymbolNode),
@@ -1454,6 +1484,9 @@ impl From<TransformationError> for WorkspaceError {
             }
             TransformationError::ArbitraryNodeHasNonOneChildren => {
                 Self::ArbitraryNodeHasNonOneChildren
+            }
+            TransformationError::MissingStatementsInTransformationLattice(statements) => {
+                Self::MissingStatementsInTransformationLattice(statements)
             }
             e => Self::InvalidTransformationError(e),
         }
@@ -2025,7 +2058,7 @@ mod test_workspace {
     }
 
     #[test]
-    fn test_workspace_derive_theorem() {
+    fn test_workspace_derives_theorem_and_deletes_statements() {
         let mut types = TypeHierarchy::chain(vec!["Real".into(), "Integer".into()]).unwrap();
         types
             .add_child_to_parent("=".into(), "Real".into())
@@ -2078,12 +2111,59 @@ mod test_workspace {
         let invalid_derivation = workspace_store.try_derive_theorem_parsed("a+b");
         assert!(invalid_derivation.is_err(), "{:#?}", invalid_derivation);
 
-        workspace_store.add_parsed_hypothesis("b+a").unwrap();
+        let b_plus_a = workspace_store.add_parsed_hypothesis("b+a").unwrap();
         workspace_store
             .try_transform_into_parsed("a+b", None, None)
             .unwrap();
         // Derive b+a -> a+b
-        workspace_store.try_derive_theorem_parsed("a+b").unwrap();
+        let a_plus_b = workspace_store.try_derive_theorem_parsed("a+b").unwrap();
+
+        assert_eq!(
+            workspace_store
+                .compile()
+                .get_available_transformations()
+                .len(),
+            2
+        );
+        assert_eq!(workspace_store.compile().get_statements().len(), 4);
+
+        let c = workspace_store.add_parsed_hypothesis("c").unwrap();
+        assert_eq!(workspace_store.compile().get_statements().len(), 5);
+        assert_eq!(
+            workspace_store
+                .remove_statement_and_all_dependents(&c.clone())
+                .unwrap(),
+            vec![c].into_iter().collect()
+        );
+        assert_eq!(
+            workspace_store.compile().get_statements().len(),
+            4,
+            "\n{}",
+            workspace_store
+                .compile()
+                .get_statements()
+                .iter()
+                .map(|s| s.to_symbol_string())
+                .collect::<Vec<_>>()
+                .join("\n")
+        );
+
+        workspace_store
+            .remove_statement_and_all_dependents(&b_plus_a.clone())
+            .unwrap();
+
+        assert_eq!(
+            workspace_store.compile().get_statements().len(),
+            2,
+            "\n{}",
+            workspace_store
+                .compile()
+                .get_statements()
+                .iter()
+                .map(|s| s.to_symbol_string())
+                .collect::<Vec<_>>()
+                .join("\n")
+        );
 
         assert_eq!(
             workspace_store

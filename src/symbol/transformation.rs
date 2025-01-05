@@ -256,6 +256,96 @@ impl TransformationLattice {
         }
     }
 
+    pub fn remove_statement_and_all_dependents(
+        &mut self,
+        statement: &SymbolNode,
+    ) -> Result<HashSet<SymbolNode>, TransformationError> {
+        let statements_to_remove = self.get_all_dependent_statements(statement)?;
+        self.force_remove_statements(&statements_to_remove);
+        Ok(statements_to_remove)
+    }
+
+    fn get_all_dependent_statements(
+        &self,
+        statement: &SymbolNode,
+    ) -> Result<HashSet<SymbolNode>, TransformationError> {
+        let downstream = self.get_downstream_statements(statement)?;
+        let mut to_return = downstream.clone();
+
+        // N.B. get_downstream_statements would have errored already if statement was not in the
+        // lattice
+        to_return.insert(statement.clone());
+        let mut further_downstream = downstream
+            .into_iter()
+            .map(|s| self.get_downstream_statements(&s));
+        if further_downstream.any(|s| s.is_err()) {
+            return Err(further_downstream
+                .filter(|s| s.is_err())
+                .map(|e| e.unwrap_err())
+                .next()
+                .unwrap());
+        }
+        let further_downstream: HashSet<SymbolNode> =
+            further_downstream.map(|s| s.unwrap()).flatten().collect();
+        Ok(to_return.union(&further_downstream).cloned().collect())
+    }
+
+    fn get_downstream_statements(
+        &self,
+        statement: &SymbolNode,
+    ) -> Result<HashSet<SymbolNode>, TransformationError> {
+        if !self.contains_statement(statement) {
+            return Err(
+                TransformationError::MissingStatementsInTransformationLattice(vec![
+                    statement.clone()
+                ]),
+            );
+        }
+        debug!(
+            "get_downstream_statements:\nstatement: {}\ntransformations_to:\n{:#?}",
+            statement.to_symbol_string(),
+            self.transformations_to
+                .iter()
+                .map(|((from, t), to)| format!(
+                    "\nfrom: {:?}\nt: {:?}\nto: {:?}",
+                    from.to_symbol_string(),
+                    t.to_symbol_string(),
+                    to.to_symbol_string()
+                ))
+                .collect::<Vec<_>>()
+                .join("\n")
+        );
+        Ok(self
+            .transformations_to
+            .iter()
+            .filter(|((from, _), _)| from == statement || from.is_join_containing(statement))
+            .map(|((_, _), to)| to)
+            .cloned()
+            .collect())
+    }
+
+    pub fn force_remove_statements(&mut self, statements: &HashSet<SymbolNode>) {
+        statements
+            .iter()
+            .for_each(|s| self.force_remove_statement(s))
+    }
+
+    fn force_remove_statement(&mut self, statement: &SymbolNode) {
+        self.statements.remove(statement);
+        self.transformations_from = self
+            .transformations_from
+            .iter()
+            .filter(|(s, _t)| s != &statement)
+            .map(|(s, t)| (s.clone(), t.clone()))
+            .collect();
+        self.transformations_to = self
+            .transformations_to
+            .iter()
+            .filter(|((s, _t), to)| s != statement && to != &statement)
+            .map(|((s, t), to)| ((s.clone(), t.clone()), to.clone()))
+            .collect();
+    }
+
     pub fn try_transform_into(
         &mut self,
         types: &TypeHierarchy,
@@ -1823,6 +1913,84 @@ mod test_transformation {
             transformation.instantiate_arbitrary_nodes(&types, &substatements),
             Err(TransformationError::MultipleArbitraryNodeSymbols)
         );
+    }
+
+    #[test]
+    fn test_transformation_lattice_removes_statements() {
+        let hierarchy = TypeHierarchy::chain(vec!["Proposition".into()]).unwrap();
+        let parser = Parser::new(vec![
+            Interpretation::singleton("p", "Proposition".into()),
+            Interpretation::singleton("q", "Proposition".into()),
+            Interpretation::infix_operator("|".into(), 1, "Proposition".into()),
+            Interpretation::infix_operator("^".into(), 2, "Proposition".into()),
+            Interpretation::infix_operator("=>".into(), 3, "Proposition".into()),
+            Interpretation::singleton("a", "Proposition".into()),
+            Interpretation::singleton("b", "Proposition".into()),
+            Interpretation::singleton("c", "Proposition".into()),
+        ]);
+
+        let as_proposition =
+            |name: &str| Symbol::new(name.to_string(), "Proposition".into()).into();
+
+        let mut lattice = TransformationLattice::empty();
+
+        let from = SymbolNode::new(
+            SymbolNodeRoot::Join,
+            vec![as_proposition("p"), as_proposition("q")],
+        );
+        let p_and_q = parser
+            .parse_from_string(vec!["^".to_string()], "p^q")
+            .unwrap();
+        let transform: Transformation = ExplicitTransformation::new(from, p_and_q.clone()).into();
+        lattice
+            .add_available_transformation(AvailableTransformation::Axiom(transform))
+            .unwrap();
+        lattice.add_hypothesis(as_proposition("p")).unwrap();
+        lattice.add_hypothesis(as_proposition("q")).unwrap();
+        lattice
+            .try_transform_into(&hierarchy, p_and_q.clone())
+            .unwrap();
+
+        let downstream = lattice
+            .get_downstream_statements(&as_proposition("p"))
+            .unwrap();
+        assert_eq!(downstream, vec![p_and_q.clone()].into_iter().collect());
+
+        let removed = lattice
+            .remove_statement_and_all_dependents(&as_proposition("p"))
+            .unwrap();
+        assert_eq!(
+            removed,
+            vec![as_proposition("p"), p_and_q.clone()]
+                .into_iter()
+                .collect()
+        );
+        assert_eq!(
+            lattice.get_statements(),
+            &vec![as_proposition("q")].into_iter().collect()
+        );
+
+        let q_or_p = parser
+            .parse_from_string(vec!["|".to_string()], "q|p")
+            .unwrap();
+        let transform: Transformation =
+            ExplicitTransformation::new(as_proposition("q"), q_or_p.clone()).into();
+        lattice
+            .add_available_transformation(AvailableTransformation::Axiom(transform))
+            .unwrap();
+        lattice
+            .try_transform_into(&hierarchy, q_or_p.clone())
+            .unwrap();
+        let removed = lattice
+            .remove_statement_and_all_dependents(&as_proposition("q"))
+            .unwrap();
+        assert_eq!(
+            removed,
+            vec![as_proposition("q"), q_or_p.clone()]
+                .into_iter()
+                .collect()
+        );
+        assert_eq!(lattice.get_statements(), &HashSet::new());
     }
 
     #[test]
