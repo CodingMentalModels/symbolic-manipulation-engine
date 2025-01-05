@@ -269,7 +269,19 @@ impl TransformationLattice {
         &self,
         statement: &SymbolNode,
     ) -> Result<HashSet<SymbolNode>, TransformationError> {
+        trace!(
+            "get_all_dependent_statements: {}",
+            statement.to_symbol_string()
+        );
         let downstream = self.get_downstream_statements(statement)?;
+        trace!(
+            "downstream: {}",
+            downstream
+                .iter()
+                .map(|s| s.to_symbol_string())
+                .collect::<Vec<_>>()
+                .join("\n")
+        );
         let mut to_return = downstream.clone();
 
         // N.B. get_downstream_statements would have errored already if statement was not in the
@@ -277,17 +289,34 @@ impl TransformationLattice {
         to_return.insert(statement.clone());
         let mut further_downstream = downstream
             .into_iter()
-            .map(|s| self.get_downstream_statements(&s));
-        if further_downstream.any(|s| s.is_err()) {
+            .map(|s| self.get_all_dependent_statements(&s))
+            .collect::<Vec<_>>();
+        if further_downstream.iter().any(|s| s.is_err()) {
             return Err(further_downstream
+                .into_iter()
                 .filter(|s| s.is_err())
                 .map(|e| e.unwrap_err())
                 .next()
                 .unwrap());
         }
-        let further_downstream: HashSet<SymbolNode> =
-            further_downstream.map(|s| s.unwrap()).flatten().collect();
-        Ok(to_return.union(&further_downstream).cloned().collect())
+        let further_downstream: HashSet<SymbolNode> = further_downstream
+            .into_iter()
+            .map(|s| s.unwrap())
+            .flatten()
+            .collect();
+        let to_return = to_return
+            .union(&further_downstream)
+            .cloned()
+            .collect::<HashSet<_>>();
+        trace!(
+            "get_all_dependent_statements returning:\n{}",
+            to_return
+                .iter()
+                .map(|s| s.to_symbol_string())
+                .collect::<Vec<_>>()
+                .join("\n")
+        );
+        Ok(to_return)
     }
 
     fn get_downstream_statements(

@@ -265,3 +265,26 @@ fn test_substitutes_with_multiple_variables() {
         .unwrap();
     assert_eq!(result, "[\"((((g+r)+y)+b)=((((6*r)+r)+y)+b))\"]");
 }
+
+#[test]
+fn test_removes_statements_and_dependents() {
+    let root_dir = current_dir().unwrap();
+    let dir = root_dir.join(Path::new(
+        "C:\\Users\\cmsdu\\repos\\symbolic-manipulation-engine\\tests\\assets\\test_removes_statements_and_dependents",
+    ));
+    let filesystem = FileSystem::new(dir);
+    let cli = Cli::new(filesystem, CliMode::Testing);
+    let matches = build_cli().get_matches_from(vec![
+        "symbolic-manipulation-engine",
+        "remove-statement",
+        "--",
+        "0",
+    ]);
+    let result = cli
+        .remove_statement(matches.subcommand_matches("remove-statement").unwrap())
+        .unwrap();
+    assert_eq!(
+        result,
+        "[\"((x*z)+(y*z))\",\"((x+y)*z)\",\"((z*x)+(z*y))\",\"(z*(x+y))\"]"
+    );
+}
