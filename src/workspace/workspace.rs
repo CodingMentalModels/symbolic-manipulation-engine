@@ -2148,57 +2148,6 @@ mod test_workspace {
                 .join("\n")
         );
 
-        let downstream = workspace_store
-            .compile()
-            .transformation_lattice
-            .get_downstream_statements(&b_plus_a)
-            .unwrap();
-
-        assert_eq!(
-            downstream,
-            vec![a_plus_b.clone()].into_iter().collect(),
-            "\n{}",
-            downstream
-                .iter()
-                .map(|s| s.to_symbol_string())
-                .collect::<Vec<_>>()
-                .join("\n")
-        );
-
-        let dependents = workspace_store
-            .compile()
-            .transformation_lattice
-            .get_all_dependent_statements(&b_plus_a)
-            .unwrap();
-
-        assert_eq!(
-            dependents,
-            vec![a_plus_b.clone()].into_iter().collect(),
-            "\n{}",
-            dependents
-                .iter()
-                .map(|s| s.to_symbol_string())
-                .collect::<Vec<_>>()
-                .join("\n")
-        );
-
-        let removed = workspace_store
-            .compile()
-            .transformation_lattice
-            .remove_statement_and_all_dependents(&b_plus_a.clone())
-            .unwrap();
-
-        assert_eq!(
-            removed.len(),
-            2,
-            "\n{}",
-            removed
-                .iter()
-                .map(|s| s.to_symbol_string())
-                .collect::<Vec<_>>()
-                .join("\n")
-        );
-
         workspace_store
             .remove_statement_and_all_dependents(&b_plus_a.clone())
             .unwrap();

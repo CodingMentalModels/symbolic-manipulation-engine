@@ -265,7 +265,7 @@ impl TransformationLattice {
         Ok(statements_to_remove)
     }
 
-    pub fn get_all_dependent_statements(
+    fn get_all_dependent_statements(
         &self,
         statement: &SymbolNode,
     ) -> Result<HashSet<SymbolNode>, TransformationError> {
@@ -290,7 +290,7 @@ impl TransformationLattice {
         Ok(to_return.union(&further_downstream).cloned().collect())
     }
 
-    pub fn get_downstream_statements(
+    fn get_downstream_statements(
         &self,
         statement: &SymbolNode,
     ) -> Result<HashSet<SymbolNode>, TransformationError> {
@@ -335,13 +335,13 @@ impl TransformationLattice {
         self.transformations_from = self
             .transformations_from
             .iter()
-            .filter(|(s, _t)| s == &statement)
+            .filter(|(s, _t)| s != &statement)
             .map(|(s, t)| (s.clone(), t.clone()))
             .collect();
         self.transformations_to = self
             .transformations_to
             .iter()
-            .filter(|((s, _t), _to)| s == statement)
+            .filter(|((s, _t), to)| s != statement && to != &statement)
             .map(|((s, t), to)| ((s.clone(), t.clone()), to.clone()))
             .collect();
     }
