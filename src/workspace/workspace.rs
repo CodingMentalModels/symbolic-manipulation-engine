@@ -1564,16 +1564,18 @@ mod test_workspace {
                 .into(),
             )
             .unwrap();
-        let mut x_generator = iter::repeat("x".to_string());
-        for i in 0..100 {
-            let sum = x_generator.take(i).collect::<Vec<_>>().join("+");
+        let workspace = store.compile();
+        let parse = |s: &str| workspace.parse_from_string(s).unwrap();
+        let mut sum = "x".to_string();
+        for _ in 1..50 {
+            sum = format!("{}{}", sum, "+x");
             store
-                .add(WorkspaceTransactionItem::AddHypothesis(parse(sum)).into())
+                .add(WorkspaceTransactionItem::AddHypothesis(parse(&sum)).into())
                 .unwrap();
         }
         let serialized = store.serialize().unwrap();
-        let deserialized = toml::from_str(&serialized).unwrap();
-        assert_eq!(serialized, deserialized);
+        let deserialized: WorkspaceTransactionStore = toml::from_str(&serialized).unwrap();
+        assert_eq!(deserialized, store);
     }
 
     #[test]

@@ -3,6 +3,7 @@ use std::collections::{HashMap, HashSet};
 use std::isize;
 
 use crate::constants::MAX_ADDITIONAL_VALID_TRANSFORMATION_DEPTH;
+use crate::custom_serde::{deserialize_vector_as_hashmap, serialize_hashmap_as_vector};
 use crate::parsing::interpretation::Interpretation;
 use crate::symbol::symbol_node::{Symbol, SymbolNode, SymbolNodeError};
 use crate::symbol::symbol_type::{Type, TypeError};
@@ -16,7 +17,15 @@ use super::symbol_type::{GeneratedType, TypeHierarchy};
 pub struct TransformationLattice {
     statements: HashSet<SymbolNode>,
     available_transformations: HashSet<AvailableTransformation>,
+    #[serde(
+        serialize_with = "serialize_hashmap_as_vector",
+        deserialize_with = "deserialize_vector_as_hashmap"
+    )]
     transformations_from: HashMap<SymbolNode, Vec<Transformation>>,
+    #[serde(
+        serialize_with = "serialize_hashmap_as_vector",
+        deserialize_with = "deserialize_vector_as_hashmap"
+    )]
     transformations_to: HashMap<(SymbolNode, Transformation), SymbolNode>,
 }
 
@@ -287,7 +296,7 @@ impl TransformationLattice {
         // N.B. get_downstream_statements would have errored already if statement was not in the
         // lattice
         to_return.insert(statement.clone());
-        let mut further_downstream = downstream
+        let further_downstream = downstream
             .into_iter()
             .map(|s| self.get_all_dependent_statements(&s))
             .collect::<Vec<_>>();

@@ -3,6 +3,7 @@ pub mod config;
 pub mod constants;
 
 mod context;
+mod custom_serde;
 mod parsing;
 mod symbol;
 mod workspace;
