@@ -317,6 +317,8 @@ value = "Real"
 
 [transactions.items.Snapshot.transformation_lattice]
 statements = []
+transformations_from = []
+transformations_to = []
 
 [[transactions.items.Snapshot.transformation_lattice.available_transformations]]
 
@@ -393,10 +395,6 @@ kind = "isNumeric"
 [[transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.AlgorithmTransformation.input_type.parents]]
 kind = "namedType"
 value = "Real"
-
-[transactions.items.Snapshot.transformation_lattice.transformations_from]
-
-[transactions.items.Snapshot.transformation_lattice.transformations_to]
 
 [[transactions]]
 

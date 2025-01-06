@@ -1528,7 +1528,7 @@ mod test_workspace {
 
     use crate::{
         context::context::Context,
-        parsing::{interpretation::Interpretation, parser::Parser},
+        parsing::interpretation::Interpretation,
         symbol::{
             symbol_node::Symbol,
             symbol_type::{GeneratedType, GeneratedTypeCondition, TypeHierarchy},
@@ -1536,6 +1536,45 @@ mod test_workspace {
     };
 
     use super::*;
+
+    #[test]
+    fn test_workspace_store_serializes() {
+        let mut store = WorkspaceTransactionStore::empty();
+        store
+            .add(WorkspaceTransactionItem::AddType(("Real".into(), Type::Object)).into())
+            .unwrap();
+        store
+            .add(
+                WorkspaceTransactionItem::AddInterpretation(Interpretation::singleton(
+                    "x".into(),
+                    "Real".into(),
+                ))
+                .into(),
+            )
+            .unwrap();
+        store
+            .add(
+                WorkspaceTransactionItem::AddInterpretation(Interpretation::infix_operator(
+                    "+".into(),
+                    1,
+                    "Real".into(),
+                ))
+                .into(),
+            )
+            .unwrap();
+        let workspace = store.compile();
+        let parse = |s: &str| workspace.parse_from_string(s).unwrap();
+        let mut sum = "x".to_string();
+        for _ in 1..50 {
+            sum = format!("{}{}", sum, "+x");
+            store
+                .add(WorkspaceTransactionItem::AddHypothesis(parse(&sum)).into())
+                .unwrap();
+        }
+        let serialized = store.serialize().unwrap();
+        let deserialized: WorkspaceTransactionStore = toml::from_str(&serialized).unwrap();
+        assert_eq!(deserialized, store);
+    }
 
     #[test]
     fn test_truncation_store_snapshots_all_if_truncation_is_too_much() {
