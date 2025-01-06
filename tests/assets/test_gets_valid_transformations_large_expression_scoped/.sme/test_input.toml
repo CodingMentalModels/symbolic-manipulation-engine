@@ -437,6 +437,8 @@ value = "Negative"
 
 [transactions.items.Snapshot.transformation_lattice]
 statements = []
+transformations_from = []
+transformations_to = []
 
 [[transactions.items.Snapshot.transformation_lattice.available_transformations]]
 
@@ -2089,10 +2091,6 @@ name = "x"
 [transactions.items.Snapshot.transformation_lattice.available_transformations.Axiom.ExplicitTransformation.to.root.Symbol.evaluates_to_type]
 kind = "namedType"
 value = "Real"
-
-[transactions.items.Snapshot.transformation_lattice.transformations_from]
-
-[transactions.items.Snapshot.transformation_lattice.transformations_to]
 
 [[transactions]]
 
