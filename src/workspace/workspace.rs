@@ -1526,11 +1526,9 @@ impl From<TypeError> for WorkspaceError {
 #[cfg(test)]
 mod test_workspace {
 
-    use std::iter;
-
     use crate::{
         context::context::Context,
-        parsing::{interpretation::Interpretation, parser::Parser},
+        parsing::interpretation::Interpretation,
         symbol::{
             symbol_node::Symbol,
             symbol_type::{GeneratedType, GeneratedTypeCondition, TypeHierarchy},
