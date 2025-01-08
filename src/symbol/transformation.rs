@@ -5,36 +5,35 @@ use std::isize;
 use crate::constants::MAX_ADDITIONAL_VALID_TRANSFORMATION_DEPTH;
 use crate::custom_serde::{deserialize_vector_as_hashmap, serialize_hashmap_as_vector};
 use crate::parsing::interpretation::Interpretation;
-use crate::symbol::symbol_node::{Symbol, SymbolNode, SymbolNodeError};
-use crate::symbol::symbol_type::{Type, TypeError};
+use crate::symbol::algorithm::AlgorithmType;
+use crate::symbol::symbol_node::{
+    Symbol, SymbolName, SymbolNode, SymbolNodeAddress, SymbolNodeError, SymbolNodeRoot,
+};
+use crate::symbol::symbol_type::{GeneratedType, Type, TypeError, TypeHierarchy};
 use serde::{Deserialize, Serialize};
-
-use super::algorithm::AlgorithmType;
-use super::symbol_node::{SymbolName, SymbolNodeAddress, SymbolNodeRoot};
-use super::symbol_type::{GeneratedType, TypeHierarchy};
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub struct TransformationLattice {
-    statements: HashSet<SymbolNode>,
+    statements: HashSet<Transformation>,
     available_transformations: HashSet<AvailableTransformation>,
     #[serde(
         serialize_with = "serialize_hashmap_as_vector",
         deserialize_with = "deserialize_vector_as_hashmap"
     )]
-    transformations_from: HashMap<SymbolNode, Vec<Transformation>>,
+    transformations_from: HashMap<Transformation, Vec<Transformation>>,
     #[serde(
         serialize_with = "serialize_hashmap_as_vector",
         deserialize_with = "deserialize_vector_as_hashmap"
     )]
-    transformations_to: HashMap<(SymbolNode, Transformation), SymbolNode>,
+    transformations_to: HashMap<(Transformation, Transformation), Transformation>,
 }
 
 impl TransformationLattice {
     pub fn new(
-        statements: HashSet<SymbolNode>,
+        statements: HashSet<Transformation>,
         available_transformations: HashSet<AvailableTransformation>,
-        transformations_from: HashMap<SymbolNode, Vec<Transformation>>,
-        transformations_to: HashMap<(SymbolNode, Transformation), SymbolNode>,
+        transformations_from: HashMap<Transformation, Vec<Transformation>>,
+        transformations_to: HashMap<(Transformation, Transformation), Transformation>,
     ) -> Self {
         Self {
             statements,
@@ -76,7 +75,7 @@ impl TransformationLattice {
 
     pub fn scope_down(
         &self,
-        maybe_scoped_statements: Option<HashSet<SymbolNode>>,
+        maybe_scoped_statements: Option<HashSet<Transformation>>,
         maybe_scoped_transformations: Option<HashSet<AvailableTransformation>>,
     ) -> Result<Self, TransformationError> {
         let scoped_statements = match maybe_scoped_statements {
@@ -99,9 +98,9 @@ impl TransformationLattice {
 
     pub fn verify_statements(
         &self,
-        to_verify: HashSet<SymbolNode>,
-    ) -> Result<HashSet<SymbolNode>, TransformationError> {
-        let missing_statements: Vec<&SymbolNode> = to_verify
+        to_verify: HashSet<Transformation>,
+    ) -> Result<HashSet<Transformation>, TransformationError> {
+        let missing_statements: Vec<&Transformation> = to_verify
             .iter()
             .filter(|s| !self.statements.contains(s))
             .collect();
@@ -116,11 +115,11 @@ impl TransformationLattice {
         }
     }
 
-    pub fn get_statements(&self) -> &HashSet<SymbolNode> {
+    pub fn get_statements(&self) -> &HashSet<Transformation> {
         &self.statements
     }
 
-    pub fn get_ordered_statements(&self) -> Vec<SymbolNode> {
+    pub fn get_ordered_statements(&self) -> Vec<Transformation> {
         let mut to_return = self
             .get_statements()
             .into_iter()
@@ -167,14 +166,14 @@ impl TransformationLattice {
         to_return
     }
 
-    pub fn get_transformations_from(&self, statement: &SymbolNode) -> Vec<&Transformation> {
+    pub fn get_transformations_from(&self, statement: &Transformation) -> Vec<&Transformation> {
         self.transformations_from
             .get(statement)
             .map(|v| v.iter().collect())
             .unwrap_or_else(Vec::new)
     }
 
-    pub fn get_transformations_to(&self, statement: &SymbolNode) -> Vec<&Transformation> {
+    pub fn get_transformations_to(&self, statement: &Transformation) -> Vec<&Transformation> {
         self.transformations_to
             .iter()
             .filter(|((_, _), to)| *to == statement)
@@ -184,8 +183,8 @@ impl TransformationLattice {
 
     pub fn get_upstream_statement_and_transformation(
         &self,
-        statement: &SymbolNode,
-    ) -> Option<(SymbolNode, Transformation)> {
+        statement: &Transformation,
+    ) -> Option<(Transformation, Transformation)> {
         let statements_and_transformations: Vec<_> = self
             .transformations_to
             .iter()
@@ -203,7 +202,7 @@ impl TransformationLattice {
 
     pub fn get_ordered_applied_transformations(
         &self,
-    ) -> Vec<(SymbolNode, Transformation, SymbolNode)> {
+    ) -> Vec<(Transformation, Transformation, Transformation)> {
         let mut mapped = self
             .transformations_to
             .clone()
@@ -214,7 +213,7 @@ impl TransformationLattice {
         mapped
     }
 
-    pub fn contains_statement(&self, statement: &SymbolNode) -> bool {
+    pub fn contains_statement(&self, statement: &Transformation) -> bool {
         self.statements.contains(statement)
     }
 
@@ -231,7 +230,10 @@ impl TransformationLattice {
             .any(|t| t.get_transformation() == transformation)
     }
 
-    pub fn add_hypothesis(&mut self, hypothesis: SymbolNode) -> Result<(), TransformationError> {
+    pub fn add_hypothesis(
+        &mut self,
+        hypothesis: Transformation,
+    ) -> Result<(), TransformationError> {
         if self.contains_statement(&hypothesis) {
             Err(TransformationError::AlreadyContainsStatement(
                 hypothesis.clone(),
@@ -265,10 +267,138 @@ impl TransformationLattice {
         }
     }
 
+    pub fn remove_transformation_and_all_dependents(
+        &mut self,
+        transformation: &Transformation,
+    ) -> Result<(HashSet<Transformation>, HashSet<Transformation>), TransformationError> {
+        let (transformations_to_remove, statements_to_remove) =
+            self.get_all_dependent_transformations_and_statements(transformation)?;
+        self.force_remove_transformations(&transformations_to_remove);
+        self.force_remove_statements(&statements_to_remove);
+        Ok((transformations_to_remove, statements_to_remove))
+    }
+
+    fn get_all_dependent_transformations_and_statements(
+        &self,
+        transformation: &Transformation,
+    ) -> Result<(HashSet<Transformation>, HashSet<SymbolNode>), TransformationError> {
+        trace!(
+            "get_all_dependent_transformations_and_statements: {}",
+            transformation.to_symbol_string()
+        );
+        let dependent_theorems = self.get_all_dependent_theorems(transformation)?;
+        trace!(
+            "downstream_transformations: {}",
+            dependent_theorems
+                .iter()
+                .map(|s| s.to_symbol_string())
+                .collect::<Vec<_>>()
+                .join("\n")
+        );
+        let mut theorems_to_return = dependent_theorems;
+        theorems_to_return.push(transformation.clone());
+        let downstream_statements = theorems_to_return
+            .iter()
+            .map(|t| self.get_statements_derived_from(t))
+            .collect();
+
+        let to_return = (theorems_to_return, downstream_statements);
+
+        Ok(to_return)
+    }
+
+    fn get_all_dependent_theorems(
+        &self,
+        transformation: &Transformation,
+    ) -> Result<HashSet<Transformation>, TransformationError> {
+        let downstream_theorems = self.get_downstream_theorems(transformation);
+        let dependent_theorem_results = downstream_theorems
+            .iter()
+            .map(|t| self.get_all_dependent_theorems(t))
+            .flatten()
+            .collect();
+        if dependent_theorem_results.iter().any(|r| r.is_err()) {
+            return Err(dependent_theorem_results
+                .iter()
+                .filter(|r| r.is_err())
+                .first()
+                .expect("We just checked that there is an error.")
+                .unwrap_err());
+        }
+        let mut to_return = dependent_theorem_results
+            .into_iter()
+            .map(|r| r.unwrap())
+            .collect();
+        to_return.push(transformation);
+        Ok(to_return)
+    }
+
+    fn get_downstream_theorems(
+        &self,
+        transformation: &Transformation,
+    ) -> Result<HashSet<Transformation>, TransformationError> {
+        if !self.contains_transformation(transformation) {
+            return Err(
+                TransformationError::MissingAvailableTransformationInTransformationLattice(vec![
+                    transformation.clone(),
+                ]),
+            );
+        }
+        debug!(
+            "get_downstream_theorems:\ntransformation: {}\navailable_transformations:\n{:#?}",
+            transformation.to_symbol_string(),
+            self.available_transformations
+                .iter()
+                .map(|t| t.to_symbol_string())
+                .collect::<Vec<_>>()
+                .join("\n")
+        );
+        Ok(self
+            .available_transformations
+            .iter()
+            .filter(|t| match t {
+                AvailableTransformation::Theorem((theorem, provenance)) => {
+                    provenance.contains_transformation(transformation)
+                }
+                _ => false,
+            })
+            .map(|t| t.get_transformation())
+            .cloned()
+            .collect())
+    }
+
+    pub fn force_remove_transformations(&mut self, transformations: &HashSet<Transformation>) {
+        transformations
+            .iter()
+            .for_each(|s| self.force_remove_transformation(s))
+    }
+
+    fn force_remove_transformation(&mut self, transformation: &Transformation) {
+        // TODO See whether we need to handle the case where we filter out all t from
+        // transformation_from for some entry
+        self.available_transformations.remove(transformation);
+        self.transformations_from = self
+            .transformations_from
+            .iter()
+            .map(|(s, t)| {
+                (
+                    s.clone(),
+                    t.clone().into_iter().filter(|t| t != t).collect(),
+                )
+            })
+            .collect();
+        self.transformations_to = self
+            .transformations_to
+            .iter()
+            .filter(|((_s, t), _to)| t != transformation)
+            .map(|((s, t), to)| ((s.clone(), t.clone()), to.clone()))
+            .collect();
+    }
+
     pub fn remove_statement_and_all_dependents(
         &mut self,
-        statement: &SymbolNode,
-    ) -> Result<HashSet<SymbolNode>, TransformationError> {
+        statement: &Transformation,
+    ) -> Result<HashSet<Transformation>, TransformationError> {
         let statements_to_remove = self.get_all_dependent_statements(statement)?;
         self.force_remove_statements(&statements_to_remove);
         Ok(statements_to_remove)
@@ -276,8 +406,8 @@ impl TransformationLattice {
 
     fn get_all_dependent_statements(
         &self,
-        statement: &SymbolNode,
-    ) -> Result<HashSet<SymbolNode>, TransformationError> {
+        statement: &Transformation,
+    ) -> Result<HashSet<Transformation>, TransformationError> {
         trace!(
             "get_all_dependent_statements: {}",
             statement.to_symbol_string()
@@ -308,7 +438,7 @@ impl TransformationLattice {
                 .next()
                 .unwrap());
         }
-        let further_downstream: HashSet<SymbolNode> = further_downstream
+        let further_downstream: HashSet<Transformation> = further_downstream
             .into_iter()
             .map(|s| s.unwrap())
             .flatten()
@@ -330,8 +460,8 @@ impl TransformationLattice {
 
     fn get_downstream_statements(
         &self,
-        statement: &SymbolNode,
-    ) -> Result<HashSet<SymbolNode>, TransformationError> {
+        statement: &Transformation,
+    ) -> Result<HashSet<Transformation>, TransformationError> {
         if !self.contains_statement(statement) {
             return Err(
                 TransformationError::MissingStatementsInTransformationLattice(vec![
@@ -362,13 +492,13 @@ impl TransformationLattice {
             .collect())
     }
 
-    pub fn force_remove_statements(&mut self, statements: &HashSet<SymbolNode>) {
+    pub fn force_remove_statements(&mut self, statements: &HashSet<Transformation>) {
         statements
             .iter()
             .for_each(|s| self.force_remove_statement(s))
     }
 
-    fn force_remove_statement(&mut self, statement: &SymbolNode) {
+    fn force_remove_statement(&mut self, statement: &Transformation) {
         self.statements.remove(statement);
         self.transformations_from = self
             .transformations_from
@@ -387,8 +517,9 @@ impl TransformationLattice {
     pub fn try_transform_into(
         &mut self,
         types: &TypeHierarchy,
-        desired: SymbolNode,
-    ) -> Result<(SymbolNode, AvailableTransformation, SymbolNode), TransformationError> {
+        desired: Transformation,
+    ) -> Result<(Transformation, AvailableTransformation, Transformation), TransformationError>
+    {
         if self.contains_statement(&desired) {
             return Err(TransformationError::AlreadyContainsStatement(
                 desired.clone(),
@@ -441,7 +572,7 @@ impl TransformationLattice {
         return Err(TransformationError::NoValidTransformationsPossible);
     }
 
-    fn get_candidate_statements(&mut self, transform: &Transformation) -> HashSet<SymbolNode> {
+    fn get_candidate_statements(&mut self, transform: &Transformation) -> HashSet<Transformation> {
         let statements = if transform.is_joint_transform() {
             self.get_statement_pairs()
         } else {
@@ -452,9 +583,9 @@ impl TransformationLattice {
 
     pub fn force_apply_transformation(
         &mut self,
-        from: SymbolNode,
+        from: Transformation,
         transformation: AvailableTransformation,
-        to: SymbolNode,
+        to: Transformation,
     ) {
         self.statements.insert(to.clone());
         if !self.contains_available_transformation(&transformation) {
@@ -489,7 +620,7 @@ impl TransformationLattice {
     pub fn get_instantiated_transformations_with_arbitrary(
         &self,
         types: &TypeHierarchy,
-        maybe_desired: Option<SymbolNode>,
+        maybe_desired: Option<Transformation>,
     ) -> Result<Vec<(AvailableTransformation, AvailableTransformation)>, TransformationError> {
         let statements = if let Some(desired) = maybe_desired {
             let mut statements = vec![desired];
@@ -554,14 +685,14 @@ impl TransformationLattice {
             .collect()
     }
 
-    pub fn get_statement_pairs(&self) -> HashSet<SymbolNode> {
+    pub fn get_statement_pairs(&self) -> HashSet<Transformation> {
         self.get_statement_pairs_including(None)
     }
 
     pub fn get_statement_pairs_including(
         &self,
-        statement: Option<&SymbolNode>,
-    ) -> HashSet<SymbolNode> {
+        statement: Option<&Transformation>,
+    ) -> HashSet<Transformation> {
         // Returns pairs of statements for use in joint transforms
         // Returns both orders as well as duplicates since those are valid joint transform args
         let left = self.get_ordered_statements();
@@ -582,7 +713,7 @@ impl TransformationLattice {
 
     pub fn derive_theorem(
         &mut self,
-        conclusion: &SymbolNode,
+        conclusion: &Transformation,
     ) -> Result<(Transformation, TransformationProvenance), TransformationError> {
         let hypotheses = self.get_ancestor_hypotheses(conclusion)?;
 
@@ -623,8 +754,8 @@ impl TransformationLattice {
 
     fn get_ancestor_hypotheses(
         &self,
-        conclusion: &SymbolNode,
-    ) -> Result<HashSet<SymbolNode>, TransformationError> {
+        conclusion: &Transformation,
+    ) -> Result<HashSet<Transformation>, TransformationError> {
         if !self.contains_statement(conclusion) {
             return Err(
                 TransformationError::MissingStatementsInTransformationLattice(vec![
@@ -679,7 +810,7 @@ impl AvailableTransformation {
     pub fn instantiate_arbitrary_nodes(
         &self,
         hierarchy: &TypeHierarchy,
-        substatements: &HashSet<SymbolNode>,
+        substatements: &HashSet<Transformation>,
     ) -> Result<HashSet<Self>, TransformationError> {
         match self {
             Self::Axiom(t) => Ok(t
@@ -698,11 +829,11 @@ impl AvailableTransformation {
 
 #[derive(Clone, Debug, Hash, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
 pub struct TransformationProvenance {
-    pub conclusion: SymbolNode,
+    pub conclusion: Transformation,
 }
 
 impl TransformationProvenance {
-    pub fn new(conclusion: SymbolNode) -> Self {
+    pub fn new(conclusion: Transformation) -> Self {
         Self { conclusion }
     }
 }
@@ -765,8 +896,8 @@ impl Transformation {
     pub fn transform(
         &self,
         hierarchy: &TypeHierarchy,
-        statement: &SymbolNode,
-    ) -> Result<SymbolNode, TransformationError> {
+        statement: &Transformation,
+    ) -> Result<Transformation, TransformationError> {
         match self {
             Self::ExplicitTransformation(t) => t.typed_relabel_and_transform(hierarchy, statement),
             Self::AlgorithmTransformation(t) => t.transform(hierarchy, statement),
@@ -785,9 +916,9 @@ impl Transformation {
     pub fn joint_transform(
         &self,
         hierarchy: &TypeHierarchy,
-        left: &SymbolNode,
-        right: &SymbolNode,
-    ) -> Result<SymbolNode, TransformationError> {
+        left: &Transformation,
+        right: &Transformation,
+    ) -> Result<Transformation, TransformationError> {
         let statement = left.clone().join(right.clone());
         let in_order = self.transform(hierarchy, &statement);
         if in_order.is_ok() {
@@ -808,9 +939,9 @@ impl Transformation {
     pub fn try_transform_into(
         &self,
         hierarchy: &TypeHierarchy,
-        from: &SymbolNode,
-        to: &SymbolNode,
-    ) -> Result<SymbolNode, TransformationError> {
+        from: &Transformation,
+        to: &Transformation,
+    ) -> Result<Transformation, TransformationError> {
         if from.contains_arbitrary_nodes() {
             return Err(TransformationError::StatementContainsArbitraryNode(
                 from.clone(),
@@ -832,9 +963,9 @@ impl Transformation {
     pub fn get_valid_transformations(
         &self,
         hierarchy: &TypeHierarchy,
-        from_statement: &SymbolNode,
-        maybe_to_statement: Option<&SymbolNode>,
-    ) -> HashSet<SymbolNode> {
+        from_statement: &Transformation,
+        maybe_to_statement: Option<&Transformation>,
+    ) -> HashSet<Transformation> {
         // Getting valid transformations can recurse indefinitely, so we use
         // MAX_ADDITIONAL_VALID_TRANSFORMATION_DEPTH to limit.
         // We also implement our own call stack to avoid stack overflows and make it easier to
@@ -852,8 +983,8 @@ impl Transformation {
         }
 
         let mut call_stack = vec![(from_statement.clone(), true, false, 0)];
-        let mut already_processed: HashSet<SymbolNode> = HashSet::new();
-        let mut child_to_valid_transformations: HashMap<SymbolNode, HashSet<SymbolNode>> =
+        let mut already_processed: HashSet<Transformation> = HashSet::new();
+        let mut child_to_valid_transformations: HashMap<Transformation, HashSet<Transformation>> =
             HashMap::new();
         let mut to_return = HashSet::new();
         let max_depth = from_statement.get_depth() + MAX_ADDITIONAL_VALID_TRANSFORMATION_DEPTH;
@@ -893,7 +1024,7 @@ impl Transformation {
                         // Also push the transformed statement on so that it gets processed
                         valid_roots.insert(result.clone());
 
-                        let to_statement_might_contain = |substatement: &SymbolNode| {
+                        let to_statement_might_contain = |substatement: &Transformation| {
                             maybe_to_statement.map_or(true, |to_statement| {
                                 to_statement.contains_substatement(substatement)
                             })
@@ -962,16 +1093,17 @@ impl Transformation {
     }
 
     fn apply_valid_transformations_to_children(
-        child_to_valid_transformations: &HashMap<SymbolNode, HashSet<SymbolNode>>,
-        statement: &SymbolNode,
+        child_to_valid_transformations: &HashMap<Transformation, HashSet<Transformation>>,
+        statement: &Transformation,
         max_additional_depth: Option<usize>,
-    ) -> HashSet<SymbolNode> {
+    ) -> HashSet<Transformation> {
         let children = statement.get_children();
-        let filtered_map: HashMap<SymbolNode, HashSet<SymbolNode>> = child_to_valid_transformations
-            .clone()
-            .into_iter()
-            .filter(|(k, _)| children.contains(k))
-            .collect();
+        let filtered_map: HashMap<Transformation, HashSet<Transformation>> =
+            child_to_valid_transformations
+                .clone()
+                .into_iter()
+                .filter(|(k, _)| children.contains(k))
+                .collect();
 
         let mut new_statements = vec![statement.clone()].into_iter().collect::<HashSet<_>>();
 
@@ -1019,9 +1151,9 @@ impl Transformation {
     pub fn transform_at(
         &self,
         hierarchy: &TypeHierarchy,
-        statement: &SymbolNode,
+        statement: &Transformation,
         address: SymbolNodeAddress,
-    ) -> Result<SymbolNode, TransformationError> {
+    ) -> Result<Transformation, TransformationError> {
         let substatement_to_transform = statement.get_node(address.clone()).ok_or_else(|| {
             TransformationError::InvalidSymbolNodeError(SymbolNodeError::InvalidAddress)
         })?;
@@ -1050,7 +1182,7 @@ impl Transformation {
         }
     }
 
-    pub fn get_arbitrary_nodes(&self) -> HashSet<SymbolNode> {
+    pub fn get_arbitrary_nodes(&self) -> HashSet<Transformation> {
         match self {
             Self::AlgorithmTransformation(_) => HashSet::new(),
             Self::ExplicitTransformation(t) => t.get_arbitrary_nodes(),
@@ -1061,7 +1193,7 @@ impl Transformation {
     pub fn instantiate_arbitrary_nodes(
         &self,
         hierarchy: &TypeHierarchy,
-        substatements: &HashSet<SymbolNode>,
+        substatements: &HashSet<Transformation>,
     ) -> Result<HashSet<Self>, TransformationError> {
         match self {
             Self::AlgorithmTransformation(_) => Ok(vec![self.clone()].into_iter().collect()),
@@ -1081,8 +1213,8 @@ impl Transformation {
     fn cant_possibly_transform_into(
         &self,
         hierarchy: &TypeHierarchy,
-        from_statement: &SymbolNode,
-        maybe_to_statement: Option<&SymbolNode>,
+        from_statement: &Transformation,
+        maybe_to_statement: Option<&Transformation>,
     ) -> bool {
         match self {
             Self::ExplicitTransformation(t) => {
@@ -1221,8 +1353,8 @@ impl AlgorithmTransformation {
     pub fn transform(
         &self,
         hierarchy: &TypeHierarchy,
-        statement: &SymbolNode,
-    ) -> Result<SymbolNode, TransformationError> {
+        statement: &Transformation,
+    ) -> Result<Transformation, TransformationError> {
         if !statement.has_children() {
             if self.input_type.satisfies_condition(statement.get_symbol()?) {
                 return Ok(statement.clone());
@@ -1249,7 +1381,7 @@ impl AlgorithmTransformation {
         let final_value = self
             .algorithm_type
             .transform(&left.get_root_as_string(), &right.get_root_as_string())?;
-        let to_return = SymbolNode::leaf(Symbol::new_with_same_type_as_value(&final_value));
+        let to_return = Transformation::leaf(Symbol::new_with_same_type_as_value(&final_value));
         Ok(to_return)
     }
 
@@ -1313,8 +1445,8 @@ impl ApplyToBothSidesTransformation {
     pub fn transform(
         &self,
         hierarchy: &TypeHierarchy,
-        statement: &SymbolNode,
-    ) -> Result<SymbolNode, TransformationError> {
+        statement: &Transformation,
+    ) -> Result<Transformation, TransformationError> {
         if statement.get_symbol()? != &self.symbol {
             return Err(TransformationError::SymbolDoesntMatch(
                 statement.get_symbol()?.clone(),
@@ -1337,7 +1469,7 @@ impl ApplyToBothSidesTransformation {
             .transformation
             .typed_relabel_and_transform(hierarchy, &right)?;
 
-        Ok(SymbolNode::new(
+        Ok(Transformation::new(
             self.symbol.clone().into(),
             vec![left_transformed, right_transformed],
         ))
@@ -1354,7 +1486,7 @@ impl ApplyToBothSidesTransformation {
     pub fn instantiate_arbitrary_nodes(
         &self,
         hierarchy: &TypeHierarchy,
-        substatements: &HashSet<SymbolNode>,
+        substatements: &HashSet<Transformation>,
     ) -> Result<HashSet<Self>, TransformationError> {
         Ok(self
             .get_transformation()
@@ -1367,32 +1499,32 @@ impl ApplyToBothSidesTransformation {
 
 #[derive(Clone, Debug, Hash, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
 pub struct ExplicitTransformation {
-    pub from: SymbolNode,
-    pub to: SymbolNode,
+    pub from: Transformation,
+    pub to: Transformation,
 }
 
-impl From<(SymbolNode, SymbolNode)> for ExplicitTransformation {
-    fn from(value: (SymbolNode, SymbolNode)) -> Self {
+impl From<(Transformation, Transformation)> for ExplicitTransformation {
+    fn from(value: (Transformation, Transformation)) -> Self {
         Self::new(value.0, value.1)
     }
 }
 
-impl From<(Symbol, SymbolNode)> for ExplicitTransformation {
-    fn from(value: (Symbol, SymbolNode)) -> Self {
+impl From<(Symbol, Transformation)> for ExplicitTransformation {
+    fn from(value: (Symbol, Transformation)) -> Self {
         Self::new(value.0.into(), value.1)
     }
 }
 
 impl ExplicitTransformation {
-    pub fn new(from: SymbolNode, to: SymbolNode) -> ExplicitTransformation {
+    pub fn new(from: Transformation, to: Transformation) -> ExplicitTransformation {
         ExplicitTransformation { from, to }
     }
 
-    pub fn get_from(&self) -> &SymbolNode {
+    pub fn get_from(&self) -> &Transformation {
         &self.from
     }
 
-    pub fn get_to(&self) -> &SymbolNode {
+    pub fn get_to(&self) -> &Transformation {
         &self.to
     }
 
@@ -1408,8 +1540,8 @@ impl ExplicitTransformation {
         object_name: String,
         object_type: Type,
     ) -> Self {
-        let object = SymbolNode::leaf(Symbol::new(object_name, object_type));
-        let node = SymbolNode::new(
+        let object = Transformation::leaf(Symbol::new(object_name, object_type));
+        let node = Transformation::new(
             Symbol::new(operator_name, operator_type).into(),
             vec![object.clone(), object.clone()],
         );
@@ -1422,11 +1554,11 @@ impl ExplicitTransformation {
         object_names: (String, String),
         object_type: Type,
     ) -> Self {
-        let left = SymbolNode::leaf(Symbol::new(object_names.0, object_type.clone()));
-        let right = SymbolNode::leaf(Symbol::new(object_names.1, object_type));
+        let left = Transformation::leaf(Symbol::new(object_names.0, object_type.clone()));
+        let right = Transformation::leaf(Symbol::new(object_names.1, object_type));
         let operator = Symbol::new(operator_name, operator_type);
-        let from = SymbolNode::new(operator.clone().into(), vec![left.clone(), right.clone()]);
-        let to = SymbolNode::new(operator.into(), vec![right.clone(), left.clone()]);
+        let from = Transformation::new(operator.clone().into(), vec![left.clone(), right.clone()]);
+        let to = Transformation::new(operator.into(), vec![right.clone(), left.clone()]);
         ExplicitTransformation::new(from, to)
     }
 
@@ -1445,16 +1577,16 @@ impl ExplicitTransformation {
         object_names: (String, String, String),
         object_type: Type,
     ) -> Self {
-        let a = SymbolNode::leaf(Symbol::new(object_names.0, object_type.clone()));
-        let b = SymbolNode::leaf(Symbol::new(object_names.1, object_type.clone()));
-        let c = SymbolNode::leaf(Symbol::new(object_names.2, object_type));
+        let a = Transformation::leaf(Symbol::new(object_names.0, object_type.clone()));
+        let b = Transformation::leaf(Symbol::new(object_names.1, object_type.clone()));
+        let c = Transformation::leaf(Symbol::new(object_names.2, object_type));
         let operator = Symbol::new(operator_name, operator_type);
 
-        let a_b = SymbolNode::new(operator.clone().into(), vec![a.clone(), b.clone()]);
-        let a_b_then_c = SymbolNode::new(operator.clone().into(), vec![a_b.clone(), c.clone()]);
+        let a_b = Transformation::new(operator.clone().into(), vec![a.clone(), b.clone()]);
+        let a_b_then_c = Transformation::new(operator.clone().into(), vec![a_b.clone(), c.clone()]);
 
-        let b_c = SymbolNode::new(operator.clone().into(), vec![b.clone(), c.clone()]);
-        let a_then_b_c = SymbolNode::new(operator.clone().into(), vec![a.clone(), b_c.clone()]);
+        let b_c = Transformation::new(operator.clone().into(), vec![b.clone(), c.clone()]);
+        let a_then_b_c = Transformation::new(operator.clone().into(), vec![a.clone(), b_c.clone()]);
 
         ExplicitTransformation::new(a_b_then_c, a_then_b_c)
     }
@@ -1493,7 +1625,7 @@ impl ExplicitTransformation {
         self.from.contains_arbitrary_nodes() || self.to.contains_arbitrary_nodes()
     }
 
-    pub fn get_arbitrary_nodes(&self) -> HashSet<SymbolNode> {
+    pub fn get_arbitrary_nodes(&self) -> HashSet<Transformation> {
         self.from
             .get_arbitrary_nodes()
             .union(&mut self.to.get_arbitrary_nodes())
@@ -1504,7 +1636,7 @@ impl ExplicitTransformation {
     pub fn instantiate_arbitrary_nodes(
         &self,
         hierarchy: &TypeHierarchy,
-        substatements: &HashSet<SymbolNode>,
+        substatements: &HashSet<Transformation>,
     ) -> Result<HashSet<Self>, TransformationError> {
         debug!(
             "instantiate_arbitrary_nodes for {}",
@@ -1578,9 +1710,9 @@ impl ExplicitTransformation {
 
     fn relabel_and_transform_at(
         &self,
-        statement: &SymbolNode,
+        statement: &Transformation,
         address: SymbolNodeAddress,
-    ) -> Result<SymbolNode, TransformationError> {
+    ) -> Result<Transformation, TransformationError> {
         let substatement_to_transform = statement.get_node(address.clone()).ok_or_else(|| {
             TransformationError::InvalidSymbolNodeError(SymbolNodeError::InvalidAddress)
         })?;
@@ -1594,8 +1726,8 @@ impl ExplicitTransformation {
     pub fn typed_relabel_and_transform(
         &self,
         hierarchy: &TypeHierarchy,
-        statement: &SymbolNode,
-    ) -> Result<SymbolNode, TransformationError> {
+        statement: &Transformation,
+    ) -> Result<Transformation, TransformationError> {
         if self.contains_arbitrary_nodes() {
             return Err(TransformationError::TransformCalledOnArbitrary);
         }
@@ -1605,8 +1737,8 @@ impl ExplicitTransformation {
 
     fn relabel_and_transform(
         &self,
-        statement: &SymbolNode,
-    ) -> Result<SymbolNode, TransformationError> {
+        statement: &Transformation,
+    ) -> Result<Transformation, TransformationError> {
         match self.from.get_relabelling(&statement) {
             Ok(relabellings) => self.transform(&statement, &relabellings),
             Err(e) => Err(TransformationError::InvalidSymbolNodeError(e)),
@@ -1616,7 +1748,7 @@ impl ExplicitTransformation {
     fn generalize_to_fit(
         &self,
         hierarchy: &TypeHierarchy,
-        statement: &SymbolNode,
+        statement: &Transformation,
     ) -> Result<Self, TransformationError> {
         let new_from = hierarchy
             .instantiate(&self.from, statement)
@@ -1631,18 +1763,18 @@ impl ExplicitTransformation {
 
     fn transform_all(
         &self,
-        statement: &SymbolNode,
+        statement: &Transformation,
         relabellings: &HashMap<String, String>,
-    ) -> Result<(SymbolNode, Vec<SymbolNodeAddress>), TransformationError> {
+    ) -> Result<(Transformation, Vec<SymbolNodeAddress>), TransformationError> {
         self.transform_all_from_address(statement, relabellings, Vec::new())
     }
 
     fn transform_all_from_address(
         &self,
-        statement: &SymbolNode,
+        statement: &Transformation,
         relabellings: &HashMap<String, String>,
         address: SymbolNodeAddress,
-    ) -> Result<(SymbolNode, Vec<SymbolNodeAddress>), TransformationError> {
+    ) -> Result<(Transformation, Vec<SymbolNodeAddress>), TransformationError> {
         let children_transformation_result = statement
             .get_children()
             .iter()
@@ -1652,7 +1784,8 @@ impl ExplicitTransformation {
                 child_address.push(i);
                 self.transform_all_from_address(c, relabellings, child_address)
             })
-            .collect::<Result<Vec<(SymbolNode, Vec<SymbolNodeAddress>)>, TransformationError>>()?;
+            .collect::<Result<Vec<(Transformation, Vec<SymbolNodeAddress>)>, TransformationError>>(
+            )?;
         let (transformed_children, transformed_children_addresses) = children_transformation_result
             .into_iter()
             .unzip::<_, _, Vec<_>, Vec<_>>();
@@ -1661,7 +1794,7 @@ impl ExplicitTransformation {
             .flatten()
             .collect();
 
-        let new_statement = SymbolNode::new(statement.get_root().clone(), transformed_children);
+        let new_statement = Transformation::new(statement.get_root().clone(), transformed_children);
 
         match self.try_transform(&new_statement, relabellings) {
             Ok((transformed, true)) => {
@@ -1684,9 +1817,9 @@ impl ExplicitTransformation {
 
     fn try_transform(
         &self,
-        statement: &SymbolNode,
+        statement: &Transformation,
         relabelling: &HashMap<String, String>,
-    ) -> Result<(SymbolNode, bool), TransformationError> {
+    ) -> Result<(Transformation, bool), TransformationError> {
         match self.transform(statement, relabelling) {
             Ok(transformed) => Ok((transformed, true)),
             Err(TransformationError::StatementDoesNotMatch(_, _)) => Ok((statement.clone(), false)),
@@ -1696,9 +1829,9 @@ impl ExplicitTransformation {
 
     fn transform_strict(
         &self,
-        statement: &SymbolNode,
+        statement: &Transformation,
         relabellings: &HashMap<String, String>,
-    ) -> Result<SymbolNode, TransformationError> {
+    ) -> Result<Transformation, TransformationError> {
         if self.get_variables() != relabellings.keys().cloned().collect() {
             return Err(TransformationError::RelabellingsKeysMismatch);
         }
@@ -1708,9 +1841,9 @@ impl ExplicitTransformation {
 
     fn transform(
         &self,
-        statement: &SymbolNode,
+        statement: &Transformation,
         relabellings: &HashMap<String, String>,
-    ) -> Result<SymbolNode, TransformationError> {
+    ) -> Result<Transformation, TransformationError> {
         statement
             .validate()
             .map_err(|e| TransformationError::InvalidSymbolNodeError(e))?;
@@ -1735,20 +1868,20 @@ impl ExplicitTransformation {
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum TransformationError {
-    MoreThanTwoHypothesesForTheorem(Vec<SymbolNode>, SymbolNode),
+    MoreThanTwoHypothesesForTheorem(Vec<Transformation>, Transformation),
     ConflictingTypes(String, Type, Type),
     InvalidSymbolNodeError(SymbolNodeError),
     InvalidFunctionCalledOn(SymbolNodeRoot),
     InvalidTypes(TypeError),
-    AlreadyContainsStatement(SymbolNode),
+    AlreadyContainsStatement(Transformation),
     AlreadyContainsTransformation(Transformation),
     RelabellingsKeysMismatch,
-    StatementDoesNotMatch(SymbolNode, SymbolNode),
-    StatementContainsArbitraryNode(SymbolNode),
+    StatementDoesNotMatch(Transformation, Transformation),
+    StatementContainsArbitraryNode(Transformation),
     SymbolDoesntMatch(Symbol),
     ApplyToBothSidesCalledOnNChildren(usize),
     StatementTypesDoNotMatch,
-    MissingStatementsInTransformationLattice(Vec<SymbolNode>),
+    MissingStatementsInTransformationLattice(Vec<Transformation>),
     MissingTransformationsInTransformationLattice(Vec<Transformation>),
     NoValidTransformationsPossible,
     GeneratedTypeConditionFailedDuringAlgorithm(Symbol),
@@ -1972,7 +2105,7 @@ mod test_transformation {
 
         let mut lattice = TransformationLattice::empty();
 
-        let from = SymbolNode::new(
+        let from = Transformation::new(
             SymbolNodeRoot::Join,
             vec![as_proposition("p"), as_proposition("q")],
         );
@@ -2046,7 +2179,7 @@ mod test_transformation {
 
         let as_proposition =
             |name: &str| Symbol::new(name.to_string(), "Proposition".into()).into();
-        let from = SymbolNode::new(
+        let from = Transformation::new(
             SymbolNodeRoot::Join,
             vec![as_proposition("p"), as_proposition("q")],
         );
@@ -2078,7 +2211,7 @@ mod test_transformation {
         let p_implies_q = parser
             .parse_from_string(vec!["=>".to_string()], "p=>q")
             .unwrap();
-        let from = SymbolNode::new(
+        let from = Transformation::new(
             SymbolNodeRoot::Join,
             vec![as_proposition("p"), p_implies_q.clone()],
         );
@@ -2135,7 +2268,10 @@ mod test_transformation {
             .unwrap();
         assert_eq!(
             algorithm.transform(&hierarchy, &from),
-            Ok(SymbolNode::leaf(Symbol::new("3".to_string(), "3".into())))
+            Ok(Transformation::leaf(Symbol::new(
+                "3".to_string(),
+                "3".into()
+            )))
         );
     }
 
@@ -2297,10 +2433,12 @@ mod test_transformation {
 
     #[test]
     fn test_transformation_transforms() {
-        let transformation =
-            ExplicitTransformation::new(SymbolNode::leaf_object("a"), SymbolNode::leaf_object("b"));
+        let transformation = ExplicitTransformation::new(
+            Transformation::leaf_object("a"),
+            Transformation::leaf_object("b"),
+        );
 
-        let statement = SymbolNode::leaf_object("c");
+        let statement = Transformation::leaf_object("c");
 
         let transformed = transformation.transform_strict(
             &statement,
@@ -2311,22 +2449,31 @@ mod test_transformation {
             .into_iter()
             .collect(),
         );
-        assert_eq!(transformed, Ok(SymbolNode::leaf_object("d")));
+        assert_eq!(transformed, Ok(Transformation::leaf_object("d")));
 
         let transformation = ExplicitTransformation::new(
-            SymbolNode::new(
+            Transformation::new(
                 "=".into(),
-                vec![SymbolNode::leaf_object("a"), SymbolNode::leaf_object("b")],
+                vec![
+                    Transformation::leaf_object("a"),
+                    Transformation::leaf_object("b"),
+                ],
             ),
-            SymbolNode::new(
+            Transformation::new(
                 "=".into(),
-                vec![SymbolNode::leaf_object("b"), SymbolNode::leaf_object("a")],
+                vec![
+                    Transformation::leaf_object("b"),
+                    Transformation::leaf_object("a"),
+                ],
             ),
         );
 
-        let self_equals_statement = SymbolNode::new(
+        let self_equals_statement = Transformation::new(
             "=".into(),
-            vec![SymbolNode::leaf_object("a"), SymbolNode::leaf_object("a")],
+            vec![
+                Transformation::leaf_object("a"),
+                Transformation::leaf_object("a"),
+            ],
         );
 
         let transformed = transformation.transform_strict(
@@ -2345,24 +2492,33 @@ mod test_transformation {
     #[test]
     fn test_transformation_transforms_all() {
         let commutativity = ExplicitTransformation::new(
-            SymbolNode::new(
+            Transformation::new(
                 "=".into(),
-                vec![SymbolNode::leaf_object("a"), SymbolNode::leaf_object("b")],
+                vec![
+                    Transformation::leaf_object("a"),
+                    Transformation::leaf_object("b"),
+                ],
             ),
-            SymbolNode::new(
+            Transformation::new(
                 "=".into(),
-                vec![SymbolNode::leaf_object("b"), SymbolNode::leaf_object("a")],
+                vec![
+                    Transformation::leaf_object("b"),
+                    Transformation::leaf_object("a"),
+                ],
             ),
         );
 
-        let statement = SymbolNode::new(
+        let statement = Transformation::new(
             "=".into(),
             vec![
-                SymbolNode::new(
+                Transformation::new(
                     "=".into(),
-                    vec![SymbolNode::leaf_object("a"), SymbolNode::leaf_object("b")],
+                    vec![
+                        Transformation::leaf_object("a"),
+                        Transformation::leaf_object("b"),
+                    ],
                 ),
-                SymbolNode::leaf_object("c"),
+                Transformation::leaf_object("c"),
             ],
         );
 
@@ -2380,14 +2536,17 @@ mod test_transformation {
             )
             .unwrap();
 
-        let expected = SymbolNode::new(
+        let expected = Transformation::new(
             "=".into(),
             vec![
-                SymbolNode::new(
+                Transformation::new(
                     "=".into(),
-                    vec![SymbolNode::leaf_object("b"), SymbolNode::leaf_object("a")],
+                    vec![
+                        Transformation::leaf_object("b"),
+                        Transformation::leaf_object("a"),
+                    ],
                 ),
-                SymbolNode::leaf_object("c"),
+                Transformation::leaf_object("c"),
             ],
         );
         assert_eq!(transformed, expected);
@@ -2397,19 +2556,23 @@ mod test_transformation {
     #[test]
     fn test_transformation_generalizes_to_fit() {
         let hierarchy = TypeHierarchy::chain(vec!["Integer".into(), "=".into()]).unwrap();
-        let trivial_t =
-            ExplicitTransformation::new(SymbolNode::leaf_object("c"), SymbolNode::leaf_object("d"));
+        let trivial_t = ExplicitTransformation::new(
+            Transformation::leaf_object("c"),
+            Transformation::leaf_object("d"),
+        );
 
-        let trivial = SymbolNode::leaf_object("c");
+        let trivial = Transformation::leaf_object("c");
         assert_eq!(
             trivial_t.generalize_to_fit(&hierarchy, &trivial).unwrap(),
             trivial_t
         );
 
-        let different_t =
-            ExplicitTransformation::new(SymbolNode::leaf_object("a"), SymbolNode::leaf_object("d"));
+        let different_t = ExplicitTransformation::new(
+            Transformation::leaf_object("a"),
+            Transformation::leaf_object("d"),
+        );
 
-        let different_name = SymbolNode::leaf_object("a");
+        let different_name = Transformation::leaf_object("a");
         assert_eq!(
             different_t
                 .generalize_to_fit(&hierarchy, &different_name)
@@ -2417,9 +2580,11 @@ mod test_transformation {
             different_t
         );
 
-        let overloaded_t =
-            ExplicitTransformation::new(SymbolNode::leaf_object("d"), SymbolNode::leaf_object("d"));
-        let overloaded_name = SymbolNode::leaf_object("d");
+        let overloaded_t = ExplicitTransformation::new(
+            Transformation::leaf_object("d"),
+            Transformation::leaf_object("d"),
+        );
+        let overloaded_name = Transformation::leaf_object("d");
         assert_eq!(
             overloaded_t
                 .generalize_to_fit(&hierarchy, &overloaded_name)
@@ -2510,43 +2675,57 @@ mod test_transformation {
     fn test_transformation_typed_transforms_at() {
         let hierarchy =
             TypeHierarchy::chain(vec!["Real".into(), "Integer".into(), "=".into()]).unwrap();
-        let transformation: Transformation =
-            ExplicitTransformation::new(SymbolNode::leaf_object("c"), SymbolNode::leaf_object("d"))
-                .into();
+        let transformation: Transformation = ExplicitTransformation::new(
+            Transformation::leaf_object("c"),
+            Transformation::leaf_object("d"),
+        )
+        .into();
 
-        let a_equals_b = SymbolNode::new(
+        let a_equals_b = Transformation::new(
             "=".into(),
-            vec![SymbolNode::leaf_object("a"), SymbolNode::leaf_object("b")],
+            vec![
+                Transformation::leaf_object("a"),
+                Transformation::leaf_object("b"),
+            ],
         );
 
-        let d_equals_b = SymbolNode::new(
+        let d_equals_b = Transformation::new(
             "=".into(),
-            vec![SymbolNode::leaf_object("d"), SymbolNode::leaf_object("b")],
+            vec![
+                Transformation::leaf_object("d"),
+                Transformation::leaf_object("b"),
+            ],
         );
 
         let transformed = transformation.transform_at(&hierarchy, &a_equals_b, vec![0]);
 
         assert_eq!(transformed, Ok(d_equals_b));
 
-        let a_equals_b_equals_c = SymbolNode::new(
+        let a_equals_b_equals_c = Transformation::new(
             "=".into(),
             vec![
-                SymbolNode::new(
+                Transformation::new(
                     "=".into(),
-                    vec![SymbolNode::leaf_object("a"), SymbolNode::leaf_object("b")],
+                    vec![
+                        Transformation::leaf_object("a"),
+                        Transformation::leaf_object("b"),
+                    ],
                 ),
-                SymbolNode::leaf_object("c"),
+                Transformation::leaf_object("c"),
             ],
         );
 
-        let a_equals_d_equals_c = SymbolNode::new(
+        let a_equals_d_equals_c = Transformation::new(
             "=".into(),
             vec![
-                SymbolNode::new(
+                Transformation::new(
                     "=".into(),
-                    vec![SymbolNode::leaf_object("a"), SymbolNode::leaf_object("d")],
+                    vec![
+                        Transformation::leaf_object("a"),
+                        Transformation::leaf_object("d"),
+                    ],
                 ),
-                SymbolNode::leaf_object("c"),
+                Transformation::leaf_object("c"),
             ],
         );
         let transformed = transformation.transform_at(&hierarchy, &a_equals_b_equals_c, vec![0, 1]);
@@ -2625,42 +2804,56 @@ mod test_transformation {
 
     #[test]
     fn test_transformation_transforms_at() {
-        let transformation =
-            ExplicitTransformation::new(SymbolNode::leaf_object("c"), SymbolNode::leaf_object("d"));
-
-        let a_equals_b = SymbolNode::new(
-            "=".into(),
-            vec![SymbolNode::leaf_object("a"), SymbolNode::leaf_object("b")],
+        let transformation = ExplicitTransformation::new(
+            Transformation::leaf_object("c"),
+            Transformation::leaf_object("d"),
         );
 
-        let d_equals_b = SymbolNode::new(
+        let a_equals_b = Transformation::new(
             "=".into(),
-            vec![SymbolNode::leaf_object("d"), SymbolNode::leaf_object("b")],
+            vec![
+                Transformation::leaf_object("a"),
+                Transformation::leaf_object("b"),
+            ],
+        );
+
+        let d_equals_b = Transformation::new(
+            "=".into(),
+            vec![
+                Transformation::leaf_object("d"),
+                Transformation::leaf_object("b"),
+            ],
         );
 
         let transformed = transformation.relabel_and_transform_at(&a_equals_b, vec![0]);
 
         assert_eq!(transformed, Ok(d_equals_b));
 
-        let a_equals_b_equals_c = SymbolNode::new(
+        let a_equals_b_equals_c = Transformation::new(
             "=".into(),
             vec![
-                SymbolNode::new(
+                Transformation::new(
                     "=".into(),
-                    vec![SymbolNode::leaf_object("a"), SymbolNode::leaf_object("b")],
+                    vec![
+                        Transformation::leaf_object("a"),
+                        Transformation::leaf_object("b"),
+                    ],
                 ),
-                SymbolNode::leaf_object("c"),
+                Transformation::leaf_object("c"),
             ],
         );
 
-        let a_equals_d_equals_c = SymbolNode::new(
+        let a_equals_d_equals_c = Transformation::new(
             "=".into(),
             vec![
-                SymbolNode::new(
+                Transformation::new(
                     "=".into(),
-                    vec![SymbolNode::leaf_object("a"), SymbolNode::leaf_object("d")],
+                    vec![
+                        Transformation::leaf_object("a"),
+                        Transformation::leaf_object("d"),
+                    ],
                 ),
-                SymbolNode::leaf_object("c"),
+                Transformation::leaf_object("c"),
             ],
         );
         let transformed = transformation.relabel_and_transform_at(&a_equals_b_equals_c, vec![0, 1]);
