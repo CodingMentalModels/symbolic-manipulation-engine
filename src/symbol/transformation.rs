@@ -270,7 +270,7 @@ impl TransformationLattice {
     pub fn remove_transformation_and_all_dependents(
         &mut self,
         transformation: &Transformation,
-    ) -> Result<(HashSet<Transformation>, HashSet<Transformation>), TransformationError> {
+    ) -> Result<(HashSet<Transformation>, HashSet<SymbolNode>), TransformationError> {
         let (transformations_to_remove, statements_to_remove) =
             self.get_all_dependent_transformations_and_statements(transformation)?;
         self.force_remove_transformations(&transformations_to_remove);
@@ -296,7 +296,7 @@ impl TransformationLattice {
                 .join("\n")
         );
         let mut theorems_to_return = dependent_theorems;
-        theorems_to_return.push(transformation.clone());
+        theorems_to_return.insert(transformation.clone());
         let downstream_statements = theorems_to_return
             .iter()
             .map(|t| self.get_statements_derived_from(t))
@@ -311,25 +311,26 @@ impl TransformationLattice {
         &self,
         transformation: &Transformation,
     ) -> Result<HashSet<Transformation>, TransformationError> {
-        let downstream_theorems = self.get_downstream_theorems(transformation);
-        let dependent_theorem_results = downstream_theorems
+        let downstream_theorems = self.get_downstream_theorems(transformation)?;
+
+        let dependent_theorems: Vec<_> = downstream_theorems
             .iter()
             .map(|t| self.get_all_dependent_theorems(t))
-            .flatten()
             .collect();
-        if dependent_theorem_results.iter().any(|r| r.is_err()) {
-            return Err(dependent_theorem_results
+        if dependent_theorems.iter().any(|r| r.is_err()) {
+            return Err(dependent_theorems
                 .iter()
                 .filter(|r| r.is_err())
-                .first()
+                .next()
                 .expect("We just checked that there is an error.")
                 .unwrap_err());
         }
-        let mut to_return = dependent_theorem_results
+        let mut to_return: HashSet<_> = dependent_theorems
             .into_iter()
             .map(|r| r.unwrap())
+            .flatten()
             .collect();
-        to_return.push(transformation);
+        to_return.insert(transformation.clone());
         Ok(to_return)
     }
 
@@ -339,7 +340,7 @@ impl TransformationLattice {
     ) -> Result<HashSet<Transformation>, TransformationError> {
         if !self.contains_transformation(transformation) {
             return Err(
-                TransformationError::MissingAvailableTransformationInTransformationLattice(vec![
+                TransformationError::MissingTransformationsInTransformationLattice(vec![
                     transformation.clone(),
                 ]),
             );
@@ -367,6 +368,13 @@ impl TransformationLattice {
             .collect())
     }
 
+    pub fn get_statements_derived_from(
+        &self,
+        transformation: &Transformation,
+    ) -> Result<HashSet<SymbolNode>, TransformationError> {
+        todo!()
+    }
+
     pub fn force_remove_transformations(&mut self, transformations: &HashSet<Transformation>) {
         transformations
             .iter()
@@ -376,7 +384,7 @@ impl TransformationLattice {
     fn force_remove_transformation(&mut self, transformation: &Transformation) {
         // TODO See whether we need to handle the case where we filter out all t from
         // transformation_from for some entry
-        self.available_transformations.remove(transformation);
+        self.remove_available_transformation_by_transformation(transformation);
         self.transformations_from = self
             .transformations_from
             .iter()
@@ -392,6 +400,18 @@ impl TransformationLattice {
             .iter()
             .filter(|((_s, t), _to)| t != transformation)
             .map(|((s, t), to)| ((s.clone(), t.clone()), to.clone()))
+            .collect();
+    }
+
+    fn remove_available_transformation_by_transformation(
+        &mut self,
+        transformation: &Transformation,
+    ) {
+        self.available_transformations = self
+            .available_transformations
+            .clone()
+            .into_iter()
+            .filter(|t| t.get_transformation() != transformation)
             .collect();
     }
 
