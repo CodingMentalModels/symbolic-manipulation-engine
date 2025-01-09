@@ -872,11 +872,19 @@ impl AvailableTransformation {
 #[derive(Clone, Debug, Hash, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
 pub struct TransformationProvenance {
     pub conclusion: SymbolNode,
+    pub steps: Vec<(SymbolNode, Transformation, SymbolNode)>,
 }
 
 impl TransformationProvenance {
-    pub fn new(conclusion: SymbolNode) -> Self {
-        Self { conclusion }
+    pub fn new(
+        conclusion: SymbolNode,
+        steps: Vec<(SymbolNode, Transformation, SymbolNode)>,
+    ) -> Self {
+        Self { conclusion, steps }
+    }
+
+    pub fn contains_transformation(&self, transformation: &Transformation) -> bool {
+        self.steps.iter().any(|(_, t, _)| t == transformation)
     }
 }
 
