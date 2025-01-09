@@ -356,7 +356,7 @@ impl Workspace {
     pub fn remove_transformation_and_all_dependents(
         &mut self,
         transformation: &Transformation,
-    ) -> Result<HashSet<Transformation>, WorkspaceError> {
+    ) -> Result<(HashSet<Transformation>, HashSet<SymbolNode>), WorkspaceError> {
         self.transformation_lattice
             .remove_transformation_and_all_dependents(transformation)
             .map_err(|e| e.into())
@@ -963,10 +963,16 @@ impl WorkspaceTransactionStore {
         transformation: &Transformation,
     ) -> Result<HashSet<Transformation>, WorkspaceError> {
         let mut workspace = self.compile();
-        let to_remove = workspace.remove_transformation_and_all_dependents(transformation)?;
-        let transaction = WorkspaceTransactionItem::RemoveTransformations(to_remove.clone()).into();
+        let (transformations_to_remove, statements_to_remove) =
+            workspace.remove_transformation_and_all_dependents(transformation)?;
+        let mut transaction: WorkspaceTransaction =
+            WorkspaceTransactionItem::RemoveTransformations(transformations_to_remove.clone())
+                .into();
+        transaction.add(WorkspaceTransactionItem::RemoveStatements(
+            statements_to_remove.clone(),
+        ));
         self.add(transaction)?;
-        Ok(to_remove)
+        Ok(transformations_to_remove)
     }
     pub fn try_transform_into_parsed(
         &mut self,
