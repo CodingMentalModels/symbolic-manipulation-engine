@@ -6660,6 +6660,7 @@ kind = "namedType"
 value = "Real"
 
 [[transactions.items.AddTheorem]]
+hypotheses = []
 steps = []
 
 [transactions.items.AddTheorem.conclusion.root.Symbol]

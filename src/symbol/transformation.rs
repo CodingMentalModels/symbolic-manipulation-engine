@@ -787,7 +787,9 @@ impl TransformationLattice {
                 theorem.clone(),
             ));
         }
-        let provenance = TransformationProvenance::new(conclusion.clone(), steps);
+        let mut hypotheses: Vec<_> = hypotheses.into_iter().collect();
+        hypotheses.sort();
+        let provenance = TransformationProvenance::new(hypotheses, conclusion.clone(), steps);
         self.add_available_transformation(AvailableTransformation::Theorem((
             theorem.clone(),
             provenance.clone(),
@@ -884,16 +886,22 @@ impl AvailableTransformation {
 
 #[derive(Clone, Debug, Hash, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
 pub struct TransformationProvenance {
+    pub hypotheses: Vec<SymbolNode>,
     pub conclusion: SymbolNode,
     pub steps: Vec<(SymbolNode, Transformation, SymbolNode)>,
 }
 
 impl TransformationProvenance {
     pub fn new(
+        hypotheses: Vec<SymbolNode>,
         conclusion: SymbolNode,
         steps: Vec<(SymbolNode, Transformation, SymbolNode)>,
     ) -> Self {
-        Self { conclusion, steps }
+        Self {
+            hypotheses,
+            conclusion,
+            steps,
+        }
     }
 
     pub fn contains_transformation(&self, transformation: &Transformation) -> bool {

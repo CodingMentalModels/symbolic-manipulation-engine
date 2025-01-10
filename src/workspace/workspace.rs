@@ -1466,8 +1466,24 @@ impl DisplayTransformationProvenance {
         provenance: TransformationProvenance,
     ) -> Self {
         Self::new(format!(
-            "Derivation of {}",
-            provenance.conclusion.to_interpreted_string(interpretations)
+            "Hypotheses: {}\nSteps: {}",
+            provenance
+                .hypotheses
+                .iter()
+                .map(|h| h.to_interpreted_string(interpretations))
+                .collect::<Vec<_>>()
+                .join("\n"),
+            provenance
+                .steps
+                .iter()
+                .map(|(from, t, to)| format!(
+                    "{} -> {} via {}",
+                    from.to_interpreted_string(interpretations),
+                    to.to_interpreted_string(interpretations),
+                    t.to_interpreted_string(interpretations)
+                ))
+                .collect::<Vec<_>>()
+                .join("\n")
         ))
     }
 }
