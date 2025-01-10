@@ -1466,7 +1466,7 @@ impl DisplayTransformationProvenance {
         provenance: TransformationProvenance,
     ) -> Self {
         Self::new(format!(
-            "Hypotheses: {}\nDerivation Steps: {}",
+            "Hypotheses:\n{}\nDerivation Steps:\n{}",
             provenance
                 .hypotheses
                 .iter()
