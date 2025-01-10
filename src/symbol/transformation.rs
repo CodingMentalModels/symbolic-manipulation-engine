@@ -766,7 +766,8 @@ impl TransformationLattice {
                 .expect("There is guaranteed to be one.");
             Transformation::ExplicitTransformation((hypothesis.clone(), conclusion.clone()).into())
         } else if hypotheses.len() == 2 {
-            let two_hypotheses = hypotheses.iter().take(2).collect::<Vec<_>>();
+            let mut two_hypotheses = hypotheses.iter().take(2).collect::<Vec<_>>();
+            two_hypotheses.sort();
             Transformation::ExplicitTransformation(
                 (
                     two_hypotheses[0].clone().join(two_hypotheses[1].clone()),
@@ -2218,6 +2219,17 @@ mod test_transformation {
             p.clone().join(q.clone()),
             p_and_p_and_q.clone(),
         ));
+        assert_eq!(
+            lattice
+                .available_transformations
+                .iter()
+                .map(|t| t.get_transformation())
+                .cloned()
+                .collect::<HashSet<_>>(),
+            vec![transform.clone(), theorem.clone()]
+                .into_iter()
+                .collect::<HashSet<_>>()
+        );
         let (removed_transformations, removed_statements) = lattice
             .remove_transformation_and_all_dependents(&theorem)
             .unwrap();
@@ -2228,7 +2240,7 @@ mod test_transformation {
         assert_eq!(removed_statements, HashSet::new());
         assert_eq!(
             lattice.statements,
-            vec![p.clone(), q.clone(), p_and_q.clone()]
+            vec![p.clone(), q.clone(), p_and_q.clone(), p_and_p_and_q.clone()]
                 .into_iter()
                 .collect()
         );
@@ -2239,7 +2251,7 @@ mod test_transformation {
                 .collect()
         );
 
-        lattice.derive_theorem(&p_and_q).unwrap();
+        lattice.derive_theorem(&p_and_p_and_q).unwrap();
         lattice.remove_statement_and_all_dependents(&p).unwrap();
         lattice.remove_statement_and_all_dependents(&q).unwrap();
         let (removed_transformations, removed_statements) = lattice
