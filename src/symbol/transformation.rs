@@ -405,8 +405,6 @@ impl TransformationLattice {
     }
 
     fn force_remove_transformation(&mut self, transformation: &Transformation) {
-        // TODO See whether we need to handle the case where we filter out all t from
-        // transformation_from for some entry
         self.remove_available_transformation_by_transformation(transformation);
         self.transformations_from = self
             .transformations_from
@@ -414,15 +412,17 @@ impl TransformationLattice {
             .map(|(s, t)| {
                 (
                     s.clone(),
-                    t.clone().into_iter().filter(|t| t != t).collect(),
+                    t.clone().into_iter().filter(|t| t != t).collect::<Vec<_>>(),
                 )
             })
+            .filter(|(_, t)| t.len() > 0)
             .collect();
         self.transformations_to = self
             .transformations_to
             .iter()
             .filter(|((_s, t), _to)| t != transformation)
             .map(|((s, t), to)| ((s.clone(), t.clone()), to.clone()))
+            .filter(|((_, _), to)| to.len() > 0)
             .collect();
     }
 
@@ -757,7 +757,7 @@ impl TransformationLattice {
         &mut self,
         conclusion: &SymbolNode,
     ) -> Result<(Transformation, TransformationProvenance), TransformationError> {
-        let hypotheses = self.get_ancestor_hypotheses(conclusion)?;
+        let (hypotheses, steps) = self.get_ancestor_hypotheses_and_steps(conclusion)?;
 
         let theorem = if hypotheses.len() == 1 {
             let hypothesis = hypotheses
@@ -786,7 +786,7 @@ impl TransformationLattice {
                 theorem.clone(),
             ));
         }
-        let provenance = TransformationProvenance::new(conclusion.clone());
+        let provenance = TransformationProvenance::new(conclusion.clone(), steps);
         self.add_available_transformation(AvailableTransformation::Theorem((
             theorem.clone(),
             provenance.clone(),
@@ -794,10 +794,16 @@ impl TransformationLattice {
         Ok((theorem, provenance))
     }
 
-    fn get_ancestor_hypotheses(
+    fn get_ancestor_hypotheses_and_steps(
         &self,
         conclusion: &SymbolNode,
-    ) -> Result<HashSet<SymbolNode>, TransformationError> {
+    ) -> Result<
+        (
+            HashSet<SymbolNode>,
+            Vec<(SymbolNode, Transformation, SymbolNode)>,
+        ),
+        TransformationError,
+    > {
         if !self.contains_statement(conclusion) {
             return Err(
                 TransformationError::MissingStatementsInTransformationLattice(vec![
@@ -806,18 +812,24 @@ impl TransformationLattice {
             );
         }
         match self.get_upstream_statement_and_transformation(conclusion) {
-            None => Ok(vec![conclusion.clone()].into_iter().collect()),
-            Some((parent, _)) => {
+            None => Ok((vec![conclusion.clone()].into_iter().collect(), Vec::new())),
+            Some((parent, transformation)) => {
                 if parent.is_join() {
                     let children = parent.get_children();
                     assert_eq!(children.len(), 2, "Joins must have two children.");
                     let (left, right) = (children[0].clone(), children[1].clone());
-                    let left_hypotheses = self.get_ancestor_hypotheses(&left)?;
-                    let right_hypotheses = self.get_ancestor_hypotheses(&right)?;
+                    let (left_hypotheses, mut left_steps): (HashSet<SymbolNode>, Vec<_>) =
+                        self.get_ancestor_hypotheses_and_steps(&left)?;
+                    let (right_hypotheses, right_steps): (HashSet<SymbolNode>, Vec<_>) =
+                        self.get_ancestor_hypotheses_and_steps(&right)?;
                     let hypotheses = left_hypotheses.union(&right_hypotheses).cloned().collect();
-                    Ok(hypotheses)
+                    left_steps.extend(right_steps);
+                    Ok((hypotheses, left_steps))
                 } else {
-                    Ok(self.get_ancestor_hypotheses(&parent)?)
+                    let (ancestor_hypotheses, mut steps) =
+                        self.get_ancestor_hypotheses_and_steps(&parent)?;
+                    steps.push((parent, transformation, conclusion.clone()));
+                    Ok((ancestor_hypotheses, steps))
                 }
             }
         }
@@ -2132,6 +2144,121 @@ mod test_transformation {
             transformation.instantiate_arbitrary_nodes(&types, &substatements),
             Err(TransformationError::MultipleArbitraryNodeSymbols)
         );
+    }
+
+    #[test]
+    fn test_transformation_lattice_removes_transformations() {
+        let hierarchy = TypeHierarchy::chain(vec!["Proposition".into()]).unwrap();
+        let parser = Parser::new(vec![
+            Interpretation::singleton("p", "Proposition".into()),
+            Interpretation::singleton("q", "Proposition".into()),
+            Interpretation::infix_operator("|".into(), 1, "Proposition".into()),
+            Interpretation::infix_operator("^".into(), 2, "Proposition".into()),
+            Interpretation::infix_operator("=>".into(), 3, "Proposition".into()),
+            Interpretation::singleton("a", "Proposition".into()),
+            Interpretation::singleton("b", "Proposition".into()),
+            Interpretation::singleton("c", "Proposition".into()),
+        ]);
+
+        let as_proposition =
+            |name: &str| Symbol::new(name.to_string(), "Proposition".into()).into();
+
+        let mut lattice = TransformationLattice::empty();
+
+        let from = SymbolNode::new(
+            SymbolNodeRoot::Join,
+            vec![as_proposition("p"), as_proposition("q")],
+        );
+        let p_and_q = parser
+            .parse_from_string(vec!["^".to_string()], "p^q")
+            .unwrap();
+        let transform: Transformation = ExplicitTransformation::new(from, p_and_q.clone()).into();
+        lattice
+            .add_available_transformation(AvailableTransformation::Axiom(transform.clone()))
+            .unwrap();
+        lattice
+            .remove_transformation_and_all_dependents(&transform)
+            .unwrap();
+        assert_eq!(lattice.available_transformations.len(), 0);
+        assert_eq!(lattice.statements.len(), 0);
+
+        lattice
+            .add_available_transformation(AvailableTransformation::Axiom(transform.clone()))
+            .unwrap();
+        let p = as_proposition("p");
+        let q = as_proposition("q");
+        lattice.add_hypothesis(p.clone()).unwrap();
+        lattice.add_hypothesis(q.clone()).unwrap();
+        lattice
+            .try_transform_into(&hierarchy, p_and_q.clone())
+            .unwrap();
+        lattice
+            .remove_transformation_and_all_dependents(&transform)
+            .unwrap();
+        assert_eq!(lattice.available_transformations.len(), 0);
+        assert_eq!(
+            lattice.statements,
+            vec![p.clone(), q.clone()].into_iter().collect()
+        );
+
+        lattice
+            .add_available_transformation(AvailableTransformation::Axiom(transform.clone()))
+            .unwrap();
+        lattice
+            .try_transform_into(&hierarchy, p_and_q.clone())
+            .unwrap();
+        let p_and_p_and_q = parser
+            .parse_from_string(vec!["^".to_string()], "p^(p^q)")
+            .unwrap();
+        lattice
+            .try_transform_into(&hierarchy, p_and_p_and_q.clone())
+            .unwrap();
+        lattice.derive_theorem(&p_and_p_and_q).unwrap();
+        let theorem = Transformation::ExplicitTransformation(ExplicitTransformation::new(
+            p.clone().join(q.clone()),
+            p_and_p_and_q.clone(),
+        ));
+        let (removed_transformations, removed_statements) = lattice
+            .remove_transformation_and_all_dependents(&theorem)
+            .unwrap();
+        assert_eq!(
+            removed_transformations,
+            vec![theorem.clone()].into_iter().collect()
+        );
+        assert_eq!(removed_statements, HashSet::new());
+        assert_eq!(
+            lattice.statements,
+            vec![p.clone(), q.clone(), p_and_q.clone()]
+                .into_iter()
+                .collect()
+        );
+        assert_eq!(
+            lattice.available_transformations,
+            vec![AvailableTransformation::Axiom(transform.clone())]
+                .into_iter()
+                .collect()
+        );
+
+        lattice.derive_theorem(&p_and_q).unwrap();
+        lattice.remove_statement_and_all_dependents(&p).unwrap();
+        lattice.remove_statement_and_all_dependents(&q).unwrap();
+        let (removed_transformations, removed_statements) = lattice
+            .remove_transformation_and_all_dependents(&theorem)
+            .unwrap();
+        assert_eq!(
+            removed_transformations,
+            vec![theorem.clone()].into_iter().collect()
+        );
+        assert_eq!(removed_statements, HashSet::new());
+        assert_eq!(lattice.statements, HashSet::new(),);
+        assert_eq!(
+            lattice.available_transformations,
+            vec![AvailableTransformation::Axiom(transform.clone())]
+                .into_iter()
+                .collect()
+        );
+        assert_eq!(lattice.transformations_from, HashMap::new());
+        assert_eq!(lattice.transformations_to, HashMap::new());
     }
 
     #[test]

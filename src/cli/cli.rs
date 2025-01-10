@@ -467,7 +467,7 @@ impl Cli {
 
     pub fn remove_transformation(&self, sub_matches: &ArgMatches) -> Result<String, String> {
         let mut workspace_store = self.load_workspace_store()?;
-        let mut workspace = workspace_store.compile();
+        let workspace = workspace_store.compile();
         match sub_matches.get_one::<String>("transformation-index") {
             None => Err("No transformation index provided.".to_string()),
             Some(index_string) => match index_string.parse::<usize>() {
@@ -477,7 +477,9 @@ impl Cli {
                         .map_err(|e| format!("Workspace error: {:?}", e))?
                         .clone();
                     let mut result = workspace_store
-                        .remove_available_transformation_and_all_dependents(&transformation)
+                        .remove_transformation_and_all_dependents(
+                            &transformation.get_transformation(),
+                        )
                         .map_err(|e| format!("Error removing transformation: {:?}", e))?
                         .into_iter()
                         .map(|n| {
