@@ -154,6 +154,11 @@ pub fn build_cli() -> Command {
                     Arg::new("statement-index").help("Index of statement to remove.")
                 )
             )
+        .subcommand(Command::new("remove-transformation").about("Remove the given transformation and all dependent theorems and statements.")
+                .arg(
+                    Arg::new("transformation-index").help("Index of transformation to remove.")
+                )
+            )
         .subcommand(Command::new("undo").about("Undoes the previous command (if possible)."))
         .subcommand(Command::new("redo").about("Redoes the previous undo (if possible)."))
         .subcommand(Command::new("evaluate").about("Applies available algorithms to the statement provided.")
