@@ -826,7 +826,12 @@ impl TransformationLattice {
                     let (right_hypotheses, right_steps): (HashSet<SymbolNode>, Vec<_>) =
                         self.get_ancestor_hypotheses_and_steps(&right)?;
                     let hypotheses = left_hypotheses.union(&right_hypotheses).cloned().collect();
-                    left_steps.extend(right_steps);
+                    let right_steps_deduplicated = right_steps
+                        .into_iter()
+                        .filter(|step| !left_steps.contains(&step))
+                        .collect::<Vec<_>>();
+                    left_steps.extend(right_steps_deduplicated);
+                    left_steps.push((parent, transformation, conclusion.clone()));
                     Ok((hypotheses, left_steps))
                 } else {
                     let (ancestor_hypotheses, mut steps) =
