@@ -53,6 +53,7 @@ fn main() {
             include_in_history = false;
             cli.get_transformations_from(sub_matches)
         }
+        Some(("remove-transformation", sub_matches)) => cli.remove_transformation(sub_matches),
         Some(("hypothesize", sub_matches)) => cli.hypothesize(sub_matches),
         Some(("derive", sub_matches)) => cli.derive(sub_matches),
         Some(("derive-theorem", sub_matches)) => cli.derive_theorem(sub_matches),

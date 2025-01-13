@@ -353,6 +353,15 @@ impl Workspace {
         }
     }
 
+    pub fn remove_transformation_and_all_dependents(
+        &mut self,
+        transformation: &Transformation,
+    ) -> Result<(HashSet<Transformation>, HashSet<SymbolNode>), WorkspaceError> {
+        self.transformation_lattice
+            .remove_transformation_and_all_dependents(transformation)
+            .map_err(|e| e.into())
+    }
+
     pub fn add_interpretation(
         &mut self,
         interpretation: Interpretation,
@@ -437,6 +446,11 @@ impl Workspace {
             transformation,
             to_statement,
         );
+    }
+
+    fn force_remove_transformations(&mut self, transformations: HashSet<Transformation>) {
+        self.transformation_lattice
+            .force_remove_transformations(&transformations)
     }
 
     fn force_derive_theorem(
@@ -797,6 +811,9 @@ impl WorkspaceTransactionStore {
             WorkspaceTransactionItem::AddTheorem((transformation, provenance)) => {
                 workspace.force_derive_theorem(transformation, provenance);
             }
+            WorkspaceTransactionItem::RemoveTransformations(transformations) => {
+                workspace.force_remove_transformations(transformations)
+            }
             WorkspaceTransactionItem::Derive((from_statement, transform, to_statement)) => {
                 workspace.force_apply_transformation(from_statement, transform, to_statement);
             }
@@ -941,6 +958,22 @@ impl WorkspaceTransactionStore {
         Ok(transformation)
     }
 
+    pub fn remove_transformation_and_all_dependents(
+        &mut self,
+        transformation: &Transformation,
+    ) -> Result<HashSet<Transformation>, WorkspaceError> {
+        let mut workspace = self.compile();
+        let (transformations_to_remove, statements_to_remove) =
+            workspace.remove_transformation_and_all_dependents(transformation)?;
+        let mut transaction: WorkspaceTransaction =
+            WorkspaceTransactionItem::RemoveTransformations(transformations_to_remove.clone())
+                .into();
+        transaction.add(WorkspaceTransactionItem::RemoveStatements(
+            statements_to_remove.clone(),
+        ));
+        self.add(transaction)?;
+        Ok(transformations_to_remove)
+    }
     pub fn try_transform_into_parsed(
         &mut self,
         desired: &str,
@@ -1136,6 +1169,7 @@ pub enum WorkspaceTransactionItem {
     RemoveStatements(HashSet<SymbolNode>),
     AddAxiom(Transformation),
     AddTheorem((Transformation, TransformationProvenance)),
+    RemoveTransformations(HashSet<Transformation>),
     Derive((SymbolNode, AvailableTransformation, SymbolNode)),
 }
 
@@ -1432,8 +1466,24 @@ impl DisplayTransformationProvenance {
         provenance: TransformationProvenance,
     ) -> Self {
         Self::new(format!(
-            "Derivation of {}",
-            provenance.conclusion.to_interpreted_string(interpretations)
+            "Hypotheses:\n{}\nDerivation Steps:\n{}",
+            provenance
+                .hypotheses
+                .iter()
+                .map(|h| h.to_interpreted_string(interpretations))
+                .collect::<Vec<_>>()
+                .join("\n"),
+            provenance
+                .steps
+                .iter()
+                .map(|(from, t, to)| format!(
+                    "{} -> {} via {}",
+                    from.to_interpreted_string(interpretations),
+                    to.to_interpreted_string(interpretations),
+                    t.to_interpreted_string(interpretations)
+                ))
+                .collect::<Vec<_>>()
+                .join("\n")
         ))
     }
 }

@@ -1,0 +1,518 @@
+next_index = 22
+
+[[transactions]]
+
+[[transactions.items]]
+
+[[transactions.items.AddType]]
+kind = "namedType"
+value = "Real"
+
+[[transactions.items.AddType]]
+kind = "object"
+
+[[transactions]]
+
+[[transactions.items]]
+
+[[transactions.items.AddType]]
+kind = "namedType"
+value = "Proposition"
+
+[[transactions.items.AddType]]
+kind = "object"
+
+[[transactions]]
+
+[[transactions.items]]
+
+[[transactions.items.AddType]]
+kind = "namedType"
+value = "="
+
+[[transactions.items.AddType]]
+kind = "namedType"
+value = "Proposition"
+
+[[transactions]]
+
+[[transactions.items]]
+
+[[transactions.items.AddType]]
+kind = "namedType"
+value = "*"
+
+[[transactions.items.AddType]]
+kind = "namedType"
+value = "Real"
+
+[[transactions]]
+
+[[transactions.items]]
+
+[[transactions.items.AddType]]
+kind = "namedType"
+value = "/"
+
+[[transactions.items.AddType]]
+kind = "namedType"
+value = "Real"
+
+[[transactions]]
+
+[[transactions.items]]
+
+[[transactions.items.AddType]]
+kind = "namedType"
+value = "+"
+
+[[transactions.items.AddType]]
+kind = "namedType"
+value = "Real"
+
+[[transactions]]
+
+[[transactions.items]]
+
+[[transactions.items.AddType]]
+kind = "namedType"
+value = "-"
+
+[[transactions.items.AddType]]
+kind = "namedType"
+value = "Real"
+
+[[transactions]]
+
+[[transactions.items]]
+
+[transactions.items.AddInterpretation]
+expression_precidence = 1
+
+[transactions.items.AddInterpretation.condition]
+kind = "matches"
+
+[transactions.items.AddInterpretation.condition.token]
+kind = "object"
+value = "="
+
+[transactions.items.AddInterpretation.expression_type]
+kind = "infix"
+
+[transactions.items.AddInterpretation.output_type]
+kind = "type"
+
+[transactions.items.AddInterpretation.output_type.type]
+kind = "namedType"
+value = "="
+
+[[transactions]]
+
+[[transactions.items]]
+
+[transactions.items.AddInterpretation]
+expression_precidence = 2
+
+[transactions.items.AddInterpretation.condition]
+kind = "matches"
+
+[transactions.items.AddInterpretation.condition.token]
+kind = "object"
+value = "+"
+
+[transactions.items.AddInterpretation.expression_type]
+kind = "infix"
+
+[transactions.items.AddInterpretation.output_type]
+kind = "type"
+
+[transactions.items.AddInterpretation.output_type.type]
+kind = "namedType"
+value = "+"
+
+[[transactions]]
+
+[[transactions.items]]
+
+[transactions.items.AddInterpretation]
+expression_precidence = 2
+
+[transactions.items.AddInterpretation.condition]
+kind = "matches"
+
+[transactions.items.AddInterpretation.condition.token]
+kind = "object"
+value = "-"
+
+[transactions.items.AddInterpretation.expression_type]
+kind = "infix"
+
+[transactions.items.AddInterpretation.output_type]
+kind = "type"
+
+[transactions.items.AddInterpretation.output_type.type]
+kind = "namedType"
+value = "-"
+
+[[transactions]]
+
+[[transactions.items]]
+
+[transactions.items.AddInterpretation]
+expression_precidence = 3
+
+[transactions.items.AddInterpretation.condition]
+kind = "matches"
+
+[transactions.items.AddInterpretation.condition.token]
+kind = "object"
+value = "*"
+
+[transactions.items.AddInterpretation.expression_type]
+kind = "infix"
+
+[transactions.items.AddInterpretation.output_type]
+kind = "type"
+
+[transactions.items.AddInterpretation.output_type.type]
+kind = "namedType"
+value = "*"
+
+[[transactions]]
+
+[[transactions.items]]
+
+[transactions.items.AddInterpretation]
+expression_precidence = 3
+
+[transactions.items.AddInterpretation.condition]
+kind = "matches"
+
+[transactions.items.AddInterpretation.condition.token]
+kind = "object"
+value = "/"
+
+[transactions.items.AddInterpretation.expression_type]
+kind = "infix"
+
+[transactions.items.AddInterpretation.output_type]
+kind = "type"
+
+[transactions.items.AddInterpretation.output_type.type]
+kind = "namedType"
+value = "/"
+
+[[transactions]]
+
+[[transactions.items]]
+
+[transactions.items.AddInterpretation]
+expression_precidence = 99
+
+[transactions.items.AddInterpretation.condition]
+kind = "matches"
+
+[transactions.items.AddInterpretation.condition.token]
+kind = "object"
+value = "x"
+
+[transactions.items.AddInterpretation.expression_type]
+kind = "singleton"
+
+[transactions.items.AddInterpretation.output_type]
+kind = "type"
+
+[transactions.items.AddInterpretation.output_type.type]
+kind = "namedType"
+value = "Real"
+
+[[transactions]]
+
+[[transactions.items]]
+DuplicateInterpretation = 5
+
+[[transactions.items]]
+UpdateInterpretation = [6, { condition = { kind = "matches", token = { kind = "object", value = "y" } }, expression_type = { kind = "singleton" }, expression_precidence = 99, output_type = { kind = "type", type = { kind = "namedType", value = "Real" } } }]
+
+[[transactions]]
+
+[[transactions.items]]
+DuplicateInterpretation = 5
+
+[[transactions.items]]
+UpdateInterpretation = [7, { condition = { kind = "matches", token = { kind = "object", value = "z" } }, expression_type = { kind = "singleton" }, expression_precidence = 99, output_type = { kind = "type", type = { kind = "namedType", value = "Real" } } }]
+
+[[transactions]]
+
+[[transactions.items]]
+
+[transactions.items.AddInterpretation]
+expression_precidence = 99
+
+[transactions.items.AddInterpretation.condition]
+kind = "matches"
+
+[transactions.items.AddInterpretation.condition.token]
+kind = "object"
+value = "Any"
+
+[transactions.items.AddInterpretation.expression_type]
+kind = "functional"
+
+[transactions.items.AddInterpretation.output_type]
+kind = "arbitraryReturning"
+
+[transactions.items.AddInterpretation.output_type.type]
+kind = "namedType"
+value = "Real"
+
+[[transactions]]
+
+[[transactions.items]]
+
+[transactions.items.AddAxiom.ExplicitTransformation.from.root.Arbitrary]
+name = "Any"
+
+[transactions.items.AddAxiom.ExplicitTransformation.from.root.Arbitrary.evaluates_to_type]
+kind = "namedType"
+value = "Real"
+
+[[transactions.items.AddAxiom.ExplicitTransformation.from.children]]
+children = []
+
+[transactions.items.AddAxiom.ExplicitTransformation.from.children.root.Symbol]
+name = "x"
+
+[transactions.items.AddAxiom.ExplicitTransformation.from.children.root.Symbol.evaluates_to_type]
+kind = "namedType"
+value = "Real"
+
+[transactions.items.AddAxiom.ExplicitTransformation.to.root.Symbol]
+name = "="
+
+[transactions.items.AddAxiom.ExplicitTransformation.to.root.Symbol.evaluates_to_type]
+kind = "namedType"
+value = "="
+
+[[transactions.items.AddAxiom.ExplicitTransformation.to.children]]
+children = []
+
+[transactions.items.AddAxiom.ExplicitTransformation.to.children.root.Symbol]
+name = "x"
+
+[transactions.items.AddAxiom.ExplicitTransformation.to.children.root.Symbol.evaluates_to_type]
+kind = "namedType"
+value = "Real"
+
+[[transactions.items.AddAxiom.ExplicitTransformation.to.children]]
+children = []
+
+[transactions.items.AddAxiom.ExplicitTransformation.to.children.root.Symbol]
+name = "x"
+
+[transactions.items.AddAxiom.ExplicitTransformation.to.children.root.Symbol.evaluates_to_type]
+kind = "namedType"
+value = "Real"
+
+[[transactions]]
+
+[[transactions.items]]
+
+[transactions.items.AddAxiom.ExplicitTransformation.from]
+root = "Join"
+
+[[transactions.items.AddAxiom.ExplicitTransformation.from.children]]
+
+[transactions.items.AddAxiom.ExplicitTransformation.from.children.root.Arbitrary]
+name = "Any"
+
+[transactions.items.AddAxiom.ExplicitTransformation.from.children.root.Arbitrary.evaluates_to_type]
+kind = "namedType"
+value = "Real"
+
+[[transactions.items.AddAxiom.ExplicitTransformation.from.children.children]]
+children = []
+
+[transactions.items.AddAxiom.ExplicitTransformation.from.children.children.root.Symbol]
+name = "x"
+
+[transactions.items.AddAxiom.ExplicitTransformation.from.children.children.root.Symbol.evaluates_to_type]
+kind = "namedType"
+value = "Real"
+
+[[transactions.items.AddAxiom.ExplicitTransformation.from.children]]
+
+[transactions.items.AddAxiom.ExplicitTransformation.from.children.root.Symbol]
+name = "="
+
+[transactions.items.AddAxiom.ExplicitTransformation.from.children.root.Symbol.evaluates_to_type]
+kind = "namedType"
+value = "="
+
+[[transactions.items.AddAxiom.ExplicitTransformation.from.children.children]]
+children = []
+
+[transactions.items.AddAxiom.ExplicitTransformation.from.children.children.root.Symbol]
+name = "x"
+
+[transactions.items.AddAxiom.ExplicitTransformation.from.children.children.root.Symbol.evaluates_to_type]
+kind = "namedType"
+value = "Real"
+
+[[transactions.items.AddAxiom.ExplicitTransformation.from.children.children]]
+children = []
+
+[transactions.items.AddAxiom.ExplicitTransformation.from.children.children.root.Symbol]
+name = "y"
+
+[transactions.items.AddAxiom.ExplicitTransformation.from.children.children.root.Symbol.evaluates_to_type]
+kind = "namedType"
+value = "Real"
+
+[transactions.items.AddAxiom.ExplicitTransformation.to.root.Arbitrary]
+name = "Any"
+
+[transactions.items.AddAxiom.ExplicitTransformation.to.root.Arbitrary.evaluates_to_type]
+kind = "namedType"
+value = "Real"
+
+[[transactions.items.AddAxiom.ExplicitTransformation.to.children]]
+children = []
+
+[transactions.items.AddAxiom.ExplicitTransformation.to.children.root.Symbol]
+name = "y"
+
+[transactions.items.AddAxiom.ExplicitTransformation.to.children.root.Symbol.evaluates_to_type]
+kind = "namedType"
+value = "Real"
+
+[[transactions]]
+
+[[transactions.items]]
+
+[transactions.items.AddInterpretation]
+expression_precidence = 99
+
+[transactions.items.AddInterpretation.condition]
+kind = "isNumeric"
+
+[transactions.items.AddInterpretation.expression_type]
+kind = "singleton"
+
+[transactions.items.AddInterpretation.output_type]
+kind = "sameAsValue"
+
+[[transactions]]
+
+[[transactions.items]]
+
+[transactions.items.AddGeneratedType.condition]
+kind = "isNumeric"
+
+[[transactions.items.AddGeneratedType.parents]]
+kind = "namedType"
+value = "Real"
+
+[[transactions]]
+
+[[transactions.items]]
+
+[[transactions.items.AddType]]
+kind = "namedType"
+value = "15"
+
+[[transactions.items.AddType]]
+kind = "namedType"
+value = "Real"
+
+[[transactions.items]]
+
+[transactions.items.AddHypothesis.root.Symbol]
+name = "="
+
+[transactions.items.AddHypothesis.root.Symbol.evaluates_to_type]
+kind = "namedType"
+value = "="
+
+[[transactions.items.AddHypothesis.children]]
+children = []
+
+[transactions.items.AddHypothesis.children.root.Symbol]
+name = "x"
+
+[transactions.items.AddHypothesis.children.root.Symbol.evaluates_to_type]
+kind = "namedType"
+value = "Real"
+
+[[transactions.items.AddHypothesis.children]]
+children = []
+
+[transactions.items.AddHypothesis.children.root.Symbol]
+name = "15"
+
+[transactions.items.AddHypothesis.children.root.Symbol.evaluates_to_type]
+kind = "namedType"
+value = "15"
+
+[[transactions]]
+
+[[transactions.items]]
+
+[[transactions.items.AddType]]
+kind = "namedType"
+value = "7"
+
+[[transactions.items.AddType]]
+kind = "namedType"
+value = "Real"
+
+[[transactions.items]]
+
+[transactions.items.AddHypothesis.root.Symbol]
+name = "="
+
+[transactions.items.AddHypothesis.root.Symbol.evaluates_to_type]
+kind = "namedType"
+value = "="
+
+[[transactions.items.AddHypothesis.children]]
+
+[transactions.items.AddHypothesis.children.root.Symbol]
+name = "+"
+
+[transactions.items.AddHypothesis.children.root.Symbol.evaluates_to_type]
+kind = "namedType"
+value = "+"
+
+[[transactions.items.AddHypothesis.children.children]]
+children = []
+
+[transactions.items.AddHypothesis.children.children.root.Symbol]
+name = "x"
+
+[transactions.items.AddHypothesis.children.children.root.Symbol.evaluates_to_type]
+kind = "namedType"
+value = "Real"
+
+[[transactions.items.AddHypothesis.children.children]]
+children = []
+
+[transactions.items.AddHypothesis.children.children.root.Symbol]
+name = "y"
+
+[transactions.items.AddHypothesis.children.children.root.Symbol.evaluates_to_type]
+kind = "namedType"
+value = "Real"
+
+[[transactions.items.AddHypothesis.children]]
+children = []
+
+[transactions.items.AddHypothesis.children.root.Symbol]
+name = "7"
+
+[transactions.items.AddHypothesis.children.root.Symbol.evaluates_to_type]
+kind = "namedType"
+value = "7"
+
+[command_history]
+commands = ["symbolic-manipulation-engine init", "symbolic-manipulation-engine add-type -- Real", "symbolic-manipulation-engine add-type -- Proposition", "symbolic-manipulation-engine add-type -- = Proposition", "symbolic-manipulation-engine add-type -- * Real", "symbolic-manipulation-engine add-type -- / Real", "symbolic-manipulation-engine add-type -- + Real", "symbolic-manipulation-engine add-type -- - Real", "symbolic-manipulation-engine add-interpretation -- Infix 1 = =", "symbolic-manipulation-engine add-interpretation -- Infix 2 + +", "symbolic-manipulation-engine add-interpretation -- Infix 2 - -", "symbolic-manipulation-engine add-interpretation -- Infix 3 * *", "symbolic-manipulation-engine add-interpretation -- Infix 3 / /", "symbolic-manipulation-engine add-interpretation -- Singleton 99 Real x", "symbolic-manipulation-engine duplicate-interpretation -- 5 y", "symbolic-manipulation-engine duplicate-interpretation -- 5 z", "symbolic-manipulation-engine add-interpretation --arbitrary -- Functional 99 Real Any", "symbolic-manipulation-engine add-transformation -- Any(x) x=x", "symbolic-manipulation-engine add-joint-transformation -- Any(x) x=y Any(y)", "symbolic-manipulation-engine undo", "symbolic-manipulation-engine redo", "symbolic-manipulation-engine hypothesize -- x=15", "symbolic-manipulation-engine hypothesize -- x+y=7", "symbolic-manipulation-engine undo", "symbolic-manipulation-engine undo", "symbolic-manipulation-engine add-interpretation -f -- Singleton 99 Real", "symbolic-manipulation-engine hypothesize -- x=15", "symbolic-manipulation-engine hypothesize -- x+y=7"]

@@ -6660,6 +6660,8 @@ kind = "namedType"
 value = "Real"
 
 [[transactions.items.AddTheorem]]
+hypotheses = []
+steps = []
 
 [transactions.items.AddTheorem.conclusion.root.Symbol]
 name = "+"
@@ -6725,6 +6727,7 @@ name = "z"
 [transactions.items.AddTheorem.conclusion.children.children.root.Symbol.evaluates_to_type]
 kind = "namedType"
 value = "Real"
+
 
 [[transactions]]
 

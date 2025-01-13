@@ -87,6 +87,25 @@ fn test_substitutes_large_expression() {
 }
 
 #[test]
+fn test_substitutes_using_substitution_axiom() {
+    let root_dir = current_dir().unwrap();
+    let dir = root_dir.join(Path::new(
+        "tests\\assets\\test_substitutes_using_substitution_axiom\\",
+    ));
+    let filesystem = FileSystem::new(dir);
+    let cli = Cli::new(filesystem, CliMode::Testing);
+    let matches = build_cli().get_matches_from(vec![
+        "symbolic-manipulation-engine",
+        "derive",
+        "--",
+        "15+y=7",
+    ]);
+    let _result = cli
+        .derive(matches.subcommand_matches("derive").unwrap())
+        .unwrap();
+}
+
+#[test]
 fn test_evaluation_works() {
     let root_dir = current_dir().unwrap();
     let dir = root_dir.join(Path::new("tests\\assets\\test_evaluation_works\\"));

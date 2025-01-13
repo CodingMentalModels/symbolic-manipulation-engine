@@ -465,6 +465,37 @@ impl Cli {
         return Ok("Transformation added.".to_string());
     }
 
+    pub fn remove_transformation(&self, sub_matches: &ArgMatches) -> Result<String, String> {
+        let mut workspace_store = self.load_workspace_store()?;
+        let workspace = workspace_store.compile();
+        match sub_matches.get_one::<String>("transformation-index") {
+            None => Err("No transformation index provided.".to_string()),
+            Some(index_string) => match index_string.parse::<usize>() {
+                Ok(transformation_index) => {
+                    let transformation = workspace
+                        .get_available_transformation(transformation_index)
+                        .map_err(|e| format!("Workspace error: {:?}", e))?
+                        .clone();
+                    let mut result = workspace_store
+                        .remove_transformation_and_all_dependents(
+                            &transformation.get_transformation(),
+                        )
+                        .map_err(|e| format!("Error removing transformation: {:?}", e))?
+                        .into_iter()
+                        .map(|n| {
+                            n.to_interpreted_string(workspace_store.compile().get_interpretations())
+                        })
+                        .collect::<Vec<_>>();
+                    result.sort_by(|a, b| a.cmp(&b));
+                    let serialized_result = to_string(&result).map_err(|e| e.to_string())?;
+                    self.update_workspace_store(workspace_store)
+                        .map_err(|e| format!("Error updating workspace store: {:?}", e))?;
+                    Ok(serialized_result)
+                }
+                Err(_) => Err(format!("Unable to parse index: {}", index_string).to_string()),
+            },
+        }
+    }
     pub fn hypothesize(&self, sub_matches: &ArgMatches) -> Result<String, String> {
         let mut workspace_store = self.load_workspace_store()?;
         match sub_matches.get_one::<String>("statement") {
