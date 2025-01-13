@@ -2507,9 +2507,13 @@ mod test_transformation {
     fn test_transformation_gets_valid_transformations() {
         let mut hierarchy =
             TypeHierarchy::chain(vec!["Real".into(), "Integer".into(), "=".into()]).unwrap();
+        hierarchy
+            .add_child_to_parent("+".into(), "Integer".into())
+            .unwrap();
         hierarchy.add_chain(vec!["Boolean".into()]).unwrap();
         let interpretations = vec![
             Interpretation::infix_operator("=".into(), 1, "=".into()),
+            Interpretation::infix_operator("+".into(), 2, "+".into()),
             Interpretation::singleton("x", "Integer".into()),
             Interpretation::singleton("y", "Integer".into()),
             Interpretation::singleton("z", "Integer".into()),
@@ -2517,7 +2521,7 @@ mod test_transformation {
         ];
         let parser = Parser::new(interpretations);
 
-        let custom_tokens = vec!["=".to_string()];
+        let custom_tokens = vec!["=".to_string(), "+".to_string()];
 
         let irrelevant_transform: Transformation = ExplicitTransformation::associativity(
             "*".to_string(),
@@ -2657,6 +2661,32 @@ mod test_transformation {
             transformation.transform(&mut hierarchy, &x_equals_y),
             Err(TransformationError::TransformCalledOnArbitrary)
         );
+
+        let x_plus_y = parser
+            .parse_from_string(custom_tokens.clone(), "x+y")
+            .unwrap();
+        let y_plus_x = parser
+            .parse_from_string(custom_tokens.clone(), "y+x")
+            .unwrap();
+        let x_plus_y_equals_x_plus_y = parser
+            .parse_from_string(custom_tokens.clone(), "x+y=x+y")
+            .unwrap();
+        let x_plus_y_equals_y_plus_x = parser
+            .parse_from_string(custom_tokens.clone(), "x+y=y+x")
+            .unwrap();
+        let y_plus_x_equals_x_plus_y = parser
+            .parse_from_string(custom_tokens.clone(), "y+x=x+y")
+            .unwrap();
+        let transformation: Transformation =
+            ExplicitTransformation::new(x_plus_y.clone(), y_plus_x.clone()).into();
+        let expected = vec![
+            y_plus_x_equals_x_plus_y.clone(),
+            x_plus_y_equals_y_plus_x.clone(),
+        ];
+
+        let actual =
+            transformation.get_valid_transformations(&hierarchy, &x_plus_y_equals_x_plus_y, None);
+        assert_eq!(actual, expected.into_iter().collect());
     }
 
     #[test]
