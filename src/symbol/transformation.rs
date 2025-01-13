@@ -1181,6 +1181,24 @@ impl Transformation {
         statement: &SymbolNode,
         max_additional_depth: Option<usize>,
     ) -> HashSet<SymbolNode> {
+        trace!(
+            "child_to_valid_transformations:\n{}",
+            child_to_valid_transformations
+                .iter()
+                .map(
+                    (|(child, transformations)| format!(
+                        "child: {}\nvalid_transformations: {}",
+                        child.to_symbol_string(),
+                        transformations
+                            .into_iter()
+                            .map(|t| t.to_symbol_string())
+                            .collect::<Vec<_>>()
+                            .join("\n")
+                    ))
+                )
+                .collect::<Vec<_>>()
+                .join("\n")
+        );
         let children = statement.get_children();
         let filtered_map: HashMap<SymbolNode, HashSet<SymbolNode>> = child_to_valid_transformations
             .clone()
@@ -1188,7 +1206,34 @@ impl Transformation {
             .filter(|(k, _)| children.contains(k))
             .collect();
 
+        trace!(
+            "filtered child_to_valid_transformations:\n{}",
+            filtered_map
+                .iter()
+                .map(
+                    (|(child, transformations)| format!(
+                        "child: {}\nvalid_transformations: {}",
+                        child.to_symbol_string(),
+                        transformations
+                            .into_iter()
+                            .map(|t| t.to_symbol_string())
+                            .collect::<Vec<_>>()
+                            .join("\n")
+                    ))
+                )
+                .collect::<Vec<_>>()
+                .join("\n")
+        );
+
         let mut new_statements = vec![statement.clone()].into_iter().collect::<HashSet<_>>();
+        trace!(
+            "new_statements: {}",
+            new_statements
+                .iter()
+                .map(|s| s.to_symbol_string())
+                .collect::<Vec<_>>()
+                .join("\n")
+        );
 
         let n_subsets = 1 << filtered_map.len();
         for bitmask in 0..n_subsets {
