@@ -220,8 +220,8 @@ fn test_duplicates_interpretations() {
         "--",
         "Singleton",
         "1",
-        "Integer",
         "a",
+        "Integer",
     ]);
     cli.add_interpretation(matches.subcommand_matches("add-interpretation").unwrap())
         .unwrap();
