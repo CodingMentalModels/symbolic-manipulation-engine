@@ -1093,8 +1093,13 @@ impl Transformation {
                 let mut valid_roots = vec![current_statement.clone()]
                     .into_iter()
                     .collect::<HashSet<_>>();
+                trace!(
+                    "transform_at(hierarchy, {}, vec![])",
+                    current_statement.to_symbol_string(),
+                );
                 match self.transform_at(hierarchy, &current_statement, vec![]) {
                     Ok(result) => {
+                        trace!("transform_at passed: {}", result.to_symbol_string());
                         let final_max_depth = max_depth.saturating_sub(depth);
 
                         // Also push the transformed statement on so that it gets processed
@@ -1131,7 +1136,10 @@ impl Transformation {
                             }
                         }
                     }
-                    _ => {}
+                    e => {
+                        trace!("transform_at errored");
+                        // trace!("{:?}", e);
+                    }
                 };
 
                 for statement_to_apply_to in valid_roots {
@@ -1318,13 +1326,26 @@ impl Transformation {
             // it
             let might_produce_correct_type = {
                 let desired_type = to_statement.get_evaluates_to_type();
-                self.might_produce_type(hierarchy, &desired_type)
-                    || hierarchy
-                        .is_subtype_of(
-                            &to_statement.get_evaluates_to_type(),
-                            &from_statement.get_evaluates_to_type(),
-                        )
-                        .unwrap_or(false)
+                trace!("desired_type: {:?}", desired_type);
+                let transformation_might_produce_type =
+                    self.might_produce_type(hierarchy, &desired_type);
+                let from_statement_might_produce_type_result =
+                    hierarchy.is_subtype_of(&desired_type, &from_statement.get_evaluates_to_type());
+                if (from_statement_might_produce_type_result.is_err()) {
+                    trace!(
+                        "hierarchy is returning an error when trying to find subtypes: {:#?}",
+                        from_statement_might_produce_type_result
+                    );
+                }
+                let from_statement_might_produce_type =
+                    from_statement_might_produce_type_result.unwrap_or(false);
+                if !transformation_might_produce_type {
+                    trace!("transformation can't produce the correct type!",);
+                }
+                if !from_statement_might_produce_type {
+                    trace!("from_statement can't produce the correct type!",);
+                }
+                transformation_might_produce_type || from_statement_might_produce_type
             };
             if !might_produce_correct_type {
                 debug!(
@@ -1604,9 +1625,19 @@ impl ExplicitTransformation {
     }
 
     pub fn might_produce_type(&self, hierarchy: &TypeHierarchy, t: &Type) -> bool {
-        hierarchy
-            .is_subtype_of(t, &self.get_to().get_evaluates_to_type())
-            .unwrap_or(false)
+        trace!(
+            "ExplicitTransformation::might_produce_type(hierarchy, {:?}) called with self.get_to().get_evaluates_to_type() = {:?}",
+            t,
+            self.get_to().get_evaluates_to_type()
+        );
+        let result = hierarchy.is_subtype_of(t, &self.get_to().get_evaluates_to_type());
+        if result.is_err() {
+            warn!(
+                "hierarchy is throwing an error in might_produce_type: {:?}",
+                result
+            );
+        }
+        result.unwrap_or(false)
     }
 
     pub fn reflexivity(

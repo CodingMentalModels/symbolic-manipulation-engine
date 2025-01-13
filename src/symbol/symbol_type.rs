@@ -919,7 +919,7 @@ mod test_type {
     #[test]
     fn test_generalizes_and_is_generalized_by() {
         let mut type_hierarchy = TypeHierarchy::chain(vec!["Integer".into()]).unwrap();
-        type_hierarchy.add_chain(vec!["Boolean".into()]);
+        type_hierarchy.add_chain(vec!["Boolean".into()]).unwrap();
         let a_equals_b = SymbolNode::new_from_symbol(
             "=".into(),
             vec![SymbolNode::leaf_object("a"), SymbolNode::leaf_object("b")],
@@ -957,7 +957,7 @@ mod test_type {
             .unwrap());
 
         let mut type_hierarchy = TypeHierarchy::chain(vec!["=".into()]).unwrap();
-        type_hierarchy.add_chain(vec!["Integer".into()]);
+        type_hierarchy.add_chain(vec!["Integer".into()]).unwrap();
         let x_equals_y_integers = SymbolNode::new_from_symbol(
             Symbol::new("y".to_string(), Type::new("=".to_string())),
             vec![
@@ -995,10 +995,16 @@ mod test_type {
         ])
         .unwrap();
 
-        type_hierarchy.add_child_to_parent(irrational.clone(), real.clone());
+        type_hierarchy
+            .add_child_to_parent(irrational.clone(), real.clone())
+            .unwrap();
 
-        type_hierarchy.add_chain(vec![unary_function.clone()]);
-        type_hierarchy.add_chain(vec![binary_function.clone(), plus.clone()]);
+        type_hierarchy
+            .add_chain(vec![unary_function.clone()])
+            .unwrap();
+        type_hierarchy
+            .add_chain(vec![binary_function.clone(), plus.clone()])
+            .unwrap();
 
         assert_eq!(
             type_hierarchy
@@ -1028,10 +1034,22 @@ mod test_type {
                 .unwrap(),
             true
         );
+        assert_eq!(
+            type_hierarchy
+                .is_subtype_of(&irrational, &quaternion)
+                .unwrap(),
+            true
+        );
 
         assert_eq!(
             type_hierarchy
                 .is_supertype_of(&Type::Object, &quaternion)
+                .unwrap(),
+            true
+        );
+        assert_eq!(
+            type_hierarchy
+                .is_subtype_of(&quaternion, &Type::Object)
                 .unwrap(),
             true
         );
@@ -1111,13 +1129,13 @@ mod test_type {
 
     #[test]
     fn test_type_hierarchy_are_compatible() {
-        let mut trivial = TypeHierarchy::new();
+        let trivial = TypeHierarchy::new();
         assert_eq!(
             TypeHierarchy::are_compatible_or_error(&trivial, &trivial),
             Ok(())
         );
 
-        let mut chain =
+        let chain =
             TypeHierarchy::chain(vec!["Real".into(), "Rational".into(), "Integer".into()]).unwrap();
 
         assert_eq!(
@@ -1135,7 +1153,7 @@ mod test_type {
             Ok(())
         );
 
-        let mut chain_with_complex = TypeHierarchy::chain(vec![
+        let chain_with_complex = TypeHierarchy::chain(vec![
             "Complex".into(),
             "Real".into(),
             "Rational".into(),
@@ -1153,7 +1171,7 @@ mod test_type {
             Ok(())
         );
 
-        let mut chain_missing_rational =
+        let chain_missing_rational =
             TypeHierarchy::chain(vec!["Real".into(), "Integer".into()]).unwrap();
 
         assert_eq!(
@@ -1166,7 +1184,7 @@ mod test_type {
             Ok(())
         );
 
-        let mut inverted_chain_missing_rational =
+        let inverted_chain_missing_rational =
             TypeHierarchy::chain(vec!["Integer".into(), "Real".into()]).unwrap();
 
         assert_eq!(
