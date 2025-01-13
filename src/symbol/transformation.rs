@@ -1227,7 +1227,7 @@ impl Transformation {
 
         let mut new_statements = vec![statement.clone()].into_iter().collect::<HashSet<_>>();
         trace!(
-            "new_statements: {}",
+            "new_statements before processing: {}",
             new_statements
                 .iter()
                 .map(|s| s.to_symbol_string())
@@ -1235,9 +1235,11 @@ impl Transformation {
                 .join("\n")
         );
 
-        let n_subsets = 1 << filtered_map.len();
+        let n_subsets = 1 << children.len();
         for bitmask in 0..n_subsets {
             // Bitmask indicates whether to take the child or its transformed versions
+
+            trace!("bitmask: {:#08b}", bitmask);
 
             let mut transformed_statements =
                 vec![statement.clone()].into_iter().collect::<HashSet<_>>();
@@ -1273,6 +1275,14 @@ impl Transformation {
                 .filter(|s| s.get_depth() <= max_depth)
                 .collect();
         }
+        trace!(
+            "new_statements after processing: {}",
+            new_statements
+                .iter()
+                .map(|s| s.to_symbol_string())
+                .collect::<Vec<_>>()
+                .join("\n")
+        );
         new_statements
     }
 
@@ -2722,11 +2732,16 @@ mod test_transformation {
         let y_plus_x_equals_x_plus_y = parser
             .parse_from_string(custom_tokens.clone(), "y+x=x+y")
             .unwrap();
+        let y_plus_x_equals_y_plus_x = parser
+            .parse_from_string(custom_tokens.clone(), "y+x=y+x")
+            .unwrap();
         let transformation: Transformation =
             ExplicitTransformation::new(x_plus_y.clone(), y_plus_x.clone()).into();
         let expected = vec![
+            x_plus_y_equals_x_plus_y.clone(),
             y_plus_x_equals_x_plus_y.clone(),
             x_plus_y_equals_y_plus_x.clone(),
+            y_plus_x_equals_y_plus_x.clone(),
         ];
 
         let actual =
